@@ -795,6 +795,32 @@ io.on('connection', (socket) => {
     }
   })
 
+  // Transferência de arquivo (P2P via socket, sem salvar no servidor)
+  socket.on('enviar-arquivo', (data) => {
+    if (!socket.userId) return
+
+    const { connectionId, recipientId, fileName, fileType, fileData } = data
+
+    // Verificar se o destinatário está online
+    const recipientSocketId = usuariosOnline.get(recipientId)
+    if (recipientSocketId) {
+      // Enviar arquivo diretamente para o destinatário
+      io.to(recipientSocketId).emit('arquivo-recebido', {
+        connectionId,
+        senderId: socket.userId,
+        fileName,
+        fileType,
+        fileData
+      })
+      console.log(`[Arquivo] ${socket.userId} -> ${recipientId}: ${fileName}`)
+    } else {
+      // Destinatário offline - avisar o remetente
+      socket.emit('arquivo-erro', {
+        error: 'Usuário offline. O arquivo não pode ser entregue.'
+      })
+    }
+  })
+
   socket.on('disconnect', () => {
     if (socket.userId) {
       usuariosOnline.delete(socket.userId)

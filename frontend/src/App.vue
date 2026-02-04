@@ -368,17 +368,28 @@
               :class="{ 'sent': msg.euEnviei, 'received': !msg.euEnviei }"
             >
               <div class="message-content">
-                <p class="message-text">{{ msg.texto }}</p>
-                <button
-                  v-if="!msg.euEnviei && msg.textoOriginal !== msg.texto"
-                  class="btn-original"
-                  @click="msg.showOriginal = !msg.showOriginal"
-                >
-                  {{ msg.showOriginal ? 'Ver tradução' : 'Ver original' }}
-                </button>
-                <p v-if="msg.showOriginal" class="original-text">
-                  Original: {{ msg.textoOriginal }}
-                </p>
+                <!-- Mensagem de arquivo -->
+                <div v-if="msg.isFile" class="file-message">
+                  <span class="file-icon">📎</span>
+                  <span class="file-name">{{ msg.fileName }}</span>
+                  <button class="btn-download" @click="downloadFile(msg)">
+                    Baixar
+                  </button>
+                </div>
+                <!-- Mensagem de texto -->
+                <template v-else>
+                  <p class="message-text">{{ msg.texto }}</p>
+                  <button
+                    v-if="!msg.euEnviei && msg.textoOriginal !== msg.texto"
+                    class="btn-original"
+                    @click="msg.showOriginal = !msg.showOriginal"
+                  >
+                    {{ msg.showOriginal ? 'Ver tradução' : 'Ver original' }}
+                  </button>
+                  <p v-if="msg.showOriginal" class="original-text">
+                    Original: {{ msg.textoOriginal }}
+                  </p>
+                </template>
                 <span class="message-time">{{ formatTime(msg.enviadoEm) }}</span>
               </div>
             </div>
@@ -391,6 +402,15 @@
 
           <!-- Input de mensagem -->
           <div class="message-input">
+            <button class="btn-attach" @click="$refs.fileInput.click()" title="Enviar arquivo">
+              +
+            </button>
+            <input
+              ref="fileInput"
+              type="file"
+              style="display: none"
+              @change="handleFileSelect"
+            />
             <input
               v-model="newMessage"
               type="text"
@@ -612,6 +632,7 @@ function initializeApp() {
   socket.on('usuario-online', handleUserOnline)
   socket.on('usuario-offline', handleUserOffline)
   socket.on('status-atualizado', handleStatusUpdate)
+  socket.on('arquivo-recebido', handleFileReceived)
 
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
@@ -853,6 +874,87 @@ async function exportChat() {
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
   }
+}
+
+// ==================== ENVIO DE ARQUIVOS ====================
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
+function handleFileSelect(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Limpar input para permitir selecionar o mesmo arquivo novamente
+  event.target.value = ''
+
+  if (file.size > MAX_FILE_SIZE) {
+    alert('Arquivo muito grande! Máximo: 10MB')
+    return
+  }
+
+  if (!selectedConnection.value) {
+    alert('Selecione uma conversa primeiro')
+    return
+  }
+
+  // Converter para base64 e enviar
+  const reader = new FileReader()
+  reader.onload = () => {
+    const base64 = reader.result
+    socket.emit('enviar-arquivo', {
+      connectionId: selectedConnection.value.connectionId,
+      recipientId: selectedConnection.value.id,
+      fileName: file.name,
+      fileType: file.type,
+      fileData: base64
+    })
+
+    // Adicionar na lista local
+    messages.value.push({
+      id: `file-${Date.now()}`,
+      euEnviei: true,
+      isFile: true,
+      fileName: file.name,
+      fileType: file.type,
+      fileData: base64,
+      enviadoEm: new Date().toISOString()
+    })
+    scrollToBottom()
+  }
+  reader.readAsDataURL(file)
+}
+
+function handleFileReceived(data) {
+  // Verificar se é uma das minhas conexões
+  const minhaConexao = connections.value.find(c => c.connectionId === data.connectionId)
+  if (!minhaConexao) return
+
+  // Tocar som se não estiver mudo
+  const estaMudo = notificacaoGlobalMudo.value || isConnectionMuted(data.connectionId)
+  if (!estaMudo) {
+    playBubblePop()
+  }
+
+  // Se está na conversa, adicionar na lista
+  if (selectedConnection.value?.connectionId === data.connectionId) {
+    messages.value.push({
+      id: `file-${Date.now()}`,
+      euEnviei: false,
+      isFile: true,
+      fileName: data.fileName,
+      fileType: data.fileType,
+      fileData: data.fileData,
+      enviadoEm: new Date().toISOString()
+    })
+    scrollToBottom()
+  }
+}
+
+function downloadFile(msg) {
+  const a = document.createElement('a')
+  a.href = msg.fileData
+  a.download = msg.fileName
+  a.click()
 }
 
 // ==================== STATUS ONLINE ====================
@@ -1787,6 +1889,62 @@ body {
 .btn-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Botão anexar arquivo */
+.btn-attach {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-attach:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+/* Mensagem de arquivo */
+.file-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-icon {
+  font-size: 1.2rem;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-download {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-download:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Mobile Menu */
