@@ -438,9 +438,6 @@ const API_URL = `${API_BASE}/api`
 // Socket.io (conecta depois do login)
 let socket = null
 
-// Arquivos pendentes (recebidos enquanto não estava na conversa)
-const arquivosPendentes = ref({})
-
 // Estado de autenticação
 const authMode = ref('login')
 const loading = ref(false)
@@ -624,7 +621,14 @@ function logout() {
 
 // ==================== INICIALIZAÇÃO ====================
 
-function initializeApp() {
+async function initializeApp() {
+  // Inicializar IndexedDB para arquivos pendentes
+  try {
+    await initIndexedDB()
+  } catch (e) {
+    console.error('Erro ao inicializar IndexedDB:', e)
+  }
+
   // Conectar socket
   socket = io(API_BASE)
   socket.emit('autenticar', token.value)
@@ -790,12 +794,16 @@ async function selectConnection(conn) {
   sidebarOpen.value = false
   await loadMessages()
 
-  // Carregar arquivos pendentes dessa conversa
-  const pendentes = arquivosPendentes.value[conn.connectionId]
-  if (pendentes && pendentes.length > 0) {
-    messages.value.push(...pendentes)
-    delete arquivosPendentes.value[conn.connectionId]
-    scrollToBottom()
+  // Carregar arquivos pendentes do IndexedDB
+  try {
+    const pendentes = await getFilesFromDB(conn.connectionId)
+    if (pendentes && pendentes.length > 0) {
+      messages.value.push(...pendentes)
+      await deleteFilesFromDB(conn.connectionId)
+      scrollToBottom()
+    }
+  } catch (e) {
+    console.error('Erro ao carregar arquivos pendentes:', e)
   }
 }
 
@@ -935,7 +943,7 @@ function handleFileSelect(event) {
   reader.readAsDataURL(file)
 }
 
-function handleFileReceived(data) {
+async function handleFileReceived(data) {
   // Verificar se é uma das minhas conexões
   const minhaConexao = connections.value.find(c => c.connectionId === data.connectionId)
   if (!minhaConexao) return
@@ -961,11 +969,12 @@ function handleFileReceived(data) {
     messages.value.push(fileMsg)
     scrollToBottom()
   } else {
-    // Guardar arquivo pendente para quando abrir a conversa
-    if (!arquivosPendentes.value[data.connectionId]) {
-      arquivosPendentes.value[data.connectionId] = []
+    // Salvar no IndexedDB (persiste mesmo com F5)
+    try {
+      await saveFileToDB(data.connectionId, fileMsg)
+    } catch (e) {
+      console.error('Erro ao salvar arquivo:', e)
     }
-    arquivosPendentes.value[data.connectionId].push(fileMsg)
 
     // Mostrar alerta de arquivo recebido
     alert(`Arquivo recebido de ${minhaConexao.nome}: ${data.fileName}`)
@@ -1019,6 +1028,78 @@ function handleStatusUpdate(data) {
     selectedConnection.value.status = status
     selectedConnection.value.online = status !== 'invisivel'
   }
+}
+
+// ==================== INDEXEDDB (ARMAZENAMENTO LOCAL) ====================
+
+let db = null
+
+async function initIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('PolyIO_Files', 1)
+
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      db = request.result
+      resolve(db)
+    }
+
+    request.onupgradeneeded = (event) => {
+      const database = event.target.result
+      if (!database.objectStoreNames.contains('pendingFiles')) {
+        database.createObjectStore('pendingFiles', { keyPath: 'id', autoIncrement: true })
+      }
+    }
+  })
+}
+
+async function saveFileToDB(connectionId, fileData) {
+  if (!db) await initIndexedDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['pendingFiles'], 'readwrite')
+    const store = transaction.objectStore('pendingFiles')
+    const request = store.add({
+      connectionId,
+      ...fileData,
+      savedAt: Date.now()
+    })
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function getFilesFromDB(connectionId) {
+  if (!db) await initIndexedDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['pendingFiles'], 'readonly')
+    const store = transaction.objectStore('pendingFiles')
+    const request = store.getAll()
+
+    request.onsuccess = () => {
+      const files = request.result.filter(f => f.connectionId === connectionId)
+      resolve(files)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function deleteFilesFromDB(connectionId) {
+  if (!db) await initIndexedDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['pendingFiles'], 'readwrite')
+    const store = transaction.objectStore('pendingFiles')
+    const request = store.getAll()
+
+    request.onsuccess = () => {
+      const files = request.result.filter(f => f.connectionId === connectionId)
+      files.forEach(file => store.delete(file.id))
+      resolve()
+    }
+    request.onerror = () => reject(request.error)
+  })
 }
 
 // ==================== CONTROLE DE NOTIFICAÇÕES ====================
