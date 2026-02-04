@@ -29,8 +29,9 @@ const io = new Server(server, {
 app.use(cors())
 app.use(express.json())
 
-// Mapa de usuários online (socket)
-const usuariosOnline = new Map()
+// Mapa de usuários online (socket) e seus status
+const usuariosOnline = new Map() // userId -> socketId
+const usuariosStatus = new Map() // userId -> 'online' | 'ausente' | 'ocupado' | 'invisivel'
 
 // ==================== MIDDLEWARE DE AUTENTICAÇÃO ====================
 
@@ -235,10 +236,35 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
 
 // ==================== ROTAS DE USUÁRIOS ====================
 
-// Listar usuários online (DEVE vir antes de /api/users/:id)
+// Listar usuários online com status (DEVE vir antes de /api/users/:id)
 app.get('/api/users/online', authMiddleware, (req, res) => {
-  const onlineIds = Array.from(usuariosOnline.keys())
-  res.json(onlineIds)
+  const onlineUsers = {}
+  for (const [userId, socketId] of usuariosOnline.entries()) {
+    const status = usuariosStatus.get(userId) || 'online'
+    // Invisível não aparece na lista
+    if (status !== 'invisivel') {
+      onlineUsers[userId] = status
+    }
+  }
+  res.json(onlineUsers)
+})
+
+// Atualizar meu status
+app.post('/api/users/status', authMiddleware, (req, res) => {
+  const { status } = req.body
+  const validStatus = ['online', 'ausente', 'ocupado', 'invisivel']
+
+  if (!validStatus.includes(status)) {
+    return res.status(400).json({ error: 'Status inválido' })
+  }
+
+  usuariosStatus.set(req.userId, status)
+
+  // Notificar todos sobre mudança de status
+  io.emit('status-atualizado', { userId: req.userId, status })
+
+  console.log(`[Status] Usuário ${req.userId} mudou para ${status}`)
+  res.json({ status })
 })
 
 // Buscar usuários (com filtros)
@@ -755,11 +781,15 @@ io.on('connection', (socket) => {
       const decoded = jwt.verify(token, JWT_SECRET)
       const userId = decoded.userId
       usuariosOnline.set(userId, socket.id)
+      usuariosStatus.set(userId, usuariosStatus.get(userId) || 'online')
       socket.userId = userId
       console.log(`[Socket] Usuário ${userId} online`)
 
       // Notificar todos sobre o novo usuário online
-      io.emit('usuario-online', userId)
+      const status = usuariosStatus.get(userId)
+      if (status !== 'invisivel') {
+        io.emit('usuario-online', { userId, status })
+      }
     } catch (error) {
       console.log('[Socket] Token inválido')
     }
@@ -768,6 +798,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (socket.userId) {
       usuariosOnline.delete(socket.userId)
+      usuariosStatus.delete(socket.userId)
       console.log(`[Socket] Usuário ${socket.userId} offline`)
       io.emit('usuario-offline', socket.userId)
     }

@@ -151,6 +151,17 @@
             <span class="user-name">{{ currentUser?.nome }}</span>
             <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
           </div>
+          <div class="status-selector">
+            <button
+              v-for="s in statusOptions"
+              :key="s.value"
+              :class="['status-btn', s.value, { active: myStatus === s.value }]"
+              @click="changeStatus(s.value)"
+              :title="s.label"
+            >
+              <span class="status-dot"></span>
+            </button>
+          </div>
         </div>
 
         <!-- Navegação -->
@@ -191,7 +202,7 @@
               :class="{ active: selectedConnection?.id === conn.id }"
               @click="selectConnection(conn)"
             >
-              <div class="user-avatar" :class="{ online: conn.online }">
+              <div class="user-avatar" :class="[conn.status || 'offline']">
                 {{ conn.nome.charAt(0).toUpperCase() }}
               </div>
               <div class="user-info">
@@ -306,12 +317,12 @@
           <!-- Header do chat -->
           <div class="chat-header">
             <div class="chat-user">
-              <div class="user-avatar" :class="{ online: selectedConnection.online }">
+              <div class="user-avatar" :class="[selectedConnection.status || 'offline']">
                 {{ selectedConnection.nome.charAt(0).toUpperCase() }}
               </div>
               <div>
                 <span class="name">{{ selectedConnection.nome }}</span>
-                <span class="status">{{ selectedConnection.online ? 'Online' : 'Offline' }}</span>
+                <span class="status" :class="[selectedConnection.status || 'offline']">{{ getStatusLabel(selectedConnection.status) }}</span>
               </div>
             </div>
             <div class="chat-actions">
@@ -421,9 +432,18 @@ const selectedConnection = ref(null)
 const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
+const myStatus = ref('online')
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
+
+// Status options
+const statusOptions = [
+  { value: 'online', label: 'Online' },
+  { value: 'ausente', label: 'Ausente' },
+  { value: 'ocupado', label: 'Ocupado' },
+  { value: 'invisivel', label: 'Invisível' }
+]
 
 // Idiomas
 const idiomas = {
@@ -442,6 +462,17 @@ const idiomas = {
 
 function getIdiomaLabel(code) {
   return idiomas[code] || code || ''
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    online: 'Online',
+    ausente: 'Ausente',
+    ocupado: 'Ocupado',
+    invisivel: 'Invisível',
+    offline: 'Offline'
+  }
+  return labels[status] || 'Offline'
 }
 
 // Headers com autenticação
@@ -558,6 +589,7 @@ function initializeApp() {
   socket.on('conexao-atualizada', loadConnections)
   socket.on('usuario-online', handleUserOnline)
   socket.on('usuario-offline', handleUserOffline)
+  socket.on('status-atualizado', handleStatusUpdate)
 
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
@@ -578,13 +610,13 @@ async function loadConnections() {
     })
     const data = await res.json()
 
-    // Buscar quem está online
-    let onlineIds = []
+    // Buscar quem está online e seus status
+    let onlineUsers = {}
     try {
       const onlineRes = await fetch(`${API_URL}/users/online`, {
         headers: authHeaders()
       })
-      onlineIds = await onlineRes.json()
+      onlineUsers = await onlineRes.json()
     } catch (e) {
       console.error('Erro ao buscar online:', e)
     }
@@ -595,10 +627,26 @@ async function loadConnections() {
       nome: c.nome,
       idioma: c.idioma,
       pais: c.pais,
-      online: onlineIds.includes(c.user_id)
+      online: c.user_id in onlineUsers,
+      status: onlineUsers[c.user_id] || 'offline'
     }))
   } catch (error) {
     console.error('Erro ao carregar conexões:', error)
+  }
+}
+
+async function changeStatus(status) {
+  try {
+    const res = await fetch(`${API_URL}/users/status`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ status })
+    })
+    if (res.ok) {
+      myStatus.value = status
+    }
+  } catch (error) {
+    console.error('Erro ao mudar status:', error)
   }
 }
 
@@ -774,19 +822,43 @@ async function exportChat() {
 
 // ==================== STATUS ONLINE ====================
 
-function handleUserOnline(userId) {
+function handleUserOnline(data) {
+  const userId = typeof data === 'object' ? data.userId : data
+  const status = typeof data === 'object' ? data.status : 'online'
+
   const conn = connections.value.find(c => c.id === userId)
-  if (conn) conn.online = true
+  if (conn) {
+    conn.online = true
+    conn.status = status
+  }
   if (selectedConnection.value?.id === userId) {
     selectedConnection.value.online = true
+    selectedConnection.value.status = status
   }
 }
 
 function handleUserOffline(userId) {
   const conn = connections.value.find(c => c.id === userId)
-  if (conn) conn.online = false
+  if (conn) {
+    conn.online = false
+    conn.status = 'offline'
+  }
   if (selectedConnection.value?.id === userId) {
     selectedConnection.value.online = false
+    selectedConnection.value.status = 'offline'
+  }
+}
+
+function handleStatusUpdate(data) {
+  const { userId, status } = data
+  const conn = connections.value.find(c => c.id === userId)
+  if (conn) {
+    conn.status = status
+    conn.online = status !== 'invisivel'
+  }
+  if (selectedConnection.value?.id === userId) {
+    selectedConnection.value.status = status
+    selectedConnection.value.online = status !== 'invisivel'
   }
 }
 
@@ -1016,6 +1088,100 @@ body {
   color: #6366f1;
 }
 
+/* Status Selector */
+.status-selector {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.status-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  background: #1a1a1a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.status-btn:hover {
+  border-color: #555;
+}
+
+.status-btn.active {
+  border-color: #fff;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.status-btn.online .status-dot { background: #10b981; }
+.status-btn.ausente .status-dot { background: #f59e0b; }
+.status-btn.ocupado .status-dot { background: #ef4444; }
+.status-btn.invisivel .status-dot { background: #6b7280; }
+
+/* Status colors for avatars */
+.user-avatar.online::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 2px solid #111;
+}
+
+.user-avatar.ausente::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #f59e0b;
+  border-radius: 50%;
+  border: 2px solid #111;
+}
+
+.user-avatar.ocupado::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #111;
+}
+
+.user-avatar.offline::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #6b7280;
+  border-radius: 50%;
+  border: 2px solid #111;
+}
+
+/* Status text colors */
+.chat-user .status.online { color: #10b981; }
+.chat-user .status.ausente { color: #f59e0b; }
+.chat-user .status.ocupado { color: #ef4444; }
+.chat-user .status.offline { color: #6b7280; }
+
 /* Navegação */
 .sidebar-nav {
   display: flex;
@@ -1140,18 +1306,6 @@ body {
   font-size: 1rem;
   flex-shrink: 0;
   position: relative;
-}
-
-.user-avatar.online::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 10px;
-  height: 10px;
-  background: #10b981;
-  border-radius: 50%;
-  border: 2px solid #111;
 }
 
 .user-info {
