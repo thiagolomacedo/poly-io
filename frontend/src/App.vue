@@ -783,13 +783,20 @@ async function sendMessage() {
 }
 
 function handleNewMessage(msg) {
-  if (!selectedConnection.value) return
-  if (msg.connectionId !== selectedConnection.value.connectionId) return
-
   // Evitar duplicatas
   if (messages.value.some(m => m.id === msg.id)) return
 
   const euEnviei = msg.senderId === currentUser.value.id
+
+  // Tocar som apenas para mensagens recebidas
+  if (!euEnviei) {
+    playWoodKnock()
+  }
+
+  // Se não está na conversa certa, apenas toca o som mas não adiciona na lista
+  if (!selectedConnection.value) return
+  if (msg.connectionId !== selectedConnection.value.connectionId) return
+
   messages.value.push({
     id: msg.id,
     euEnviei,
@@ -859,6 +866,68 @@ function handleStatusUpdate(data) {
   if (selectedConnection.value?.id === userId) {
     selectedConnection.value.status = status
     selectedConnection.value.online = status !== 'invisivel'
+  }
+}
+
+// ==================== SOM DE NOTIFICAÇÃO ====================
+
+// Contexto de áudio (criado uma vez)
+let audioContext = null
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return audioContext
+}
+
+// Som de madeira (knock) - discreto
+function playWoodKnock() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // Oscilador principal - tom grave de madeira
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(180, now)
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.08)
+
+    // Segundo oscilador - harmônico
+    const osc2 = ctx.createOscillator()
+    osc2.type = 'triangle'
+    osc2.frequency.setValueAtTime(350, now)
+    osc2.frequency.exponentialRampToValueAtTime(150, now + 0.05)
+
+    // Envelope de volume - ataque rápido, decay curto
+    const gainNode = ctx.createGain()
+    gainNode.gain.setValueAtTime(0.3, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
+
+    const gainNode2 = ctx.createGain()
+    gainNode2.gain.setValueAtTime(0.15, now)
+    gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
+
+    // Filtro para som mais "amadeirado"
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(800, now)
+    filter.Q.setValueAtTime(1, now)
+
+    // Conectar
+    osc.connect(gainNode)
+    osc2.connect(gainNode2)
+    gainNode.connect(filter)
+    gainNode2.connect(filter)
+    filter.connect(ctx.destination)
+
+    // Tocar
+    osc.start(now)
+    osc2.start(now)
+    osc.stop(now + 0.15)
+    osc2.stop(now + 0.1)
+  } catch (e) {
+    console.log('Áudio não suportado')
   }
 }
 
