@@ -790,7 +790,7 @@ function handleNewMessage(msg) {
 
   // Tocar som apenas para mensagens recebidas
   if (!euEnviei) {
-    playWoodKnock()
+    playBubblePop()
   }
 
   // Se não está na conversa certa, apenas toca o som mas não adiciona na lista
@@ -881,51 +881,30 @@ function getAudioContext() {
   return audioContext
 }
 
-// Som de madeira (knock) - discreto
-function playWoodKnock() {
+// Som de bolha (pop) - suave mas audível
+function playBubblePop() {
   try {
     const ctx = getAudioContext()
     const now = ctx.currentTime
 
-    // Oscilador principal - tom grave de madeira
+    // Oscilador - frequência que cai rapidamente (efeito "pop")
     const osc = ctx.createOscillator()
     osc.type = 'sine'
-    osc.frequency.setValueAtTime(180, now)
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.08)
+    osc.frequency.setValueAtTime(600, now)
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.15)
 
-    // Segundo oscilador - harmônico
-    const osc2 = ctx.createOscillator()
-    osc2.type = 'triangle'
-    osc2.frequency.setValueAtTime(350, now)
-    osc2.frequency.exponentialRampToValueAtTime(150, now + 0.05)
-
-    // Envelope de volume - ataque rápido, decay curto
+    // Envelope de volume
     const gainNode = ctx.createGain()
-    gainNode.gain.setValueAtTime(0.3, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
-
-    const gainNode2 = ctx.createGain()
-    gainNode2.gain.setValueAtTime(0.15, now)
-    gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
-
-    // Filtro para som mais "amadeirado"
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(800, now)
-    filter.Q.setValueAtTime(1, now)
+    gainNode.gain.setValueAtTime(0.5, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
 
     // Conectar
     osc.connect(gainNode)
-    osc2.connect(gainNode2)
-    gainNode.connect(filter)
-    gainNode2.connect(filter)
-    filter.connect(ctx.destination)
+    gainNode.connect(ctx.destination)
 
     // Tocar
     osc.start(now)
-    osc2.start(now)
-    osc.stop(now + 0.15)
-    osc2.stop(now + 0.1)
+    osc.stop(now + 0.2)
   } catch (e) {
     console.log('Áudio não suportado')
   }
