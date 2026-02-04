@@ -438,6 +438,9 @@ const API_URL = `${API_BASE}/api`
 // Socket.io (conecta depois do login)
 let socket = null
 
+// Arquivos pendentes (recebidos enquanto não estava na conversa)
+const arquivosPendentes = ref({})
+
 // Estado de autenticação
 const authMode = ref('login')
 const loading = ref(false)
@@ -786,6 +789,14 @@ async function selectConnection(conn) {
   selectedConnection.value = conn
   sidebarOpen.value = false
   await loadMessages()
+
+  // Carregar arquivos pendentes dessa conversa
+  const pendentes = arquivosPendentes.value[conn.connectionId]
+  if (pendentes && pendentes.length > 0) {
+    messages.value.push(...pendentes)
+    delete arquivosPendentes.value[conn.connectionId]
+    scrollToBottom()
+  }
 }
 
 async function loadMessages() {
@@ -935,18 +946,29 @@ function handleFileReceived(data) {
     playBubblePop()
   }
 
+  const fileMsg = {
+    id: `file-${Date.now()}`,
+    euEnviei: false,
+    isFile: true,
+    fileName: data.fileName,
+    fileType: data.fileType,
+    fileData: data.fileData,
+    enviadoEm: new Date().toISOString()
+  }
+
   // Se está na conversa, adicionar na lista
   if (selectedConnection.value?.connectionId === data.connectionId) {
-    messages.value.push({
-      id: `file-${Date.now()}`,
-      euEnviei: false,
-      isFile: true,
-      fileName: data.fileName,
-      fileType: data.fileType,
-      fileData: data.fileData,
-      enviadoEm: new Date().toISOString()
-    })
+    messages.value.push(fileMsg)
     scrollToBottom()
+  } else {
+    // Guardar arquivo pendente para quando abrir a conversa
+    if (!arquivosPendentes.value[data.connectionId]) {
+      arquivosPendentes.value[data.connectionId] = []
+    }
+    arquivosPendentes.value[data.connectionId].push(fileMsg)
+
+    // Mostrar alerta de arquivo recebido
+    alert(`Arquivo recebido de ${minhaConexao.nome}: ${data.fileName}`)
   }
 }
 
