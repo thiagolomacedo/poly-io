@@ -821,6 +821,30 @@ io.on('connection', (socket) => {
     }
   })
 
+  // Transferência de áudio (P2P via socket, sem salvar no servidor)
+  socket.on('enviar-audio', (data) => {
+    if (!socket.userId) return
+
+    const { connectionId, recipientId, audioData } = data
+
+    // Verificar se o destinatário está online
+    const recipientSocketId = usuariosOnline.get(recipientId)
+    if (recipientSocketId) {
+      // Enviar áudio diretamente para o destinatário
+      io.to(recipientSocketId).emit('audio-recebido', {
+        connectionId,
+        senderId: socket.userId,
+        audioData
+      })
+      console.log(`[Áudio] ${socket.userId} -> ${recipientId}`)
+    } else {
+      // Destinatário offline - avisar o remetente
+      socket.emit('audio-erro', {
+        error: 'Usuário offline. O áudio não pode ser entregue.'
+      })
+    }
+  })
+
   socket.on('disconnect', () => {
     if (socket.userId) {
       usuariosOnline.delete(socket.userId)

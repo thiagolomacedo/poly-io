@@ -368,8 +368,13 @@
               :class="{ 'sent': msg.euEnviei, 'received': !msg.euEnviei }"
             >
               <div class="message-content">
+                <!-- Mensagem de áudio -->
+                <div v-if="msg.isAudio" class="audio-message">
+                  <span class="audio-icon">🎤</span>
+                  <audio :src="msg.audioData" controls class="audio-player"></audio>
+                </div>
                 <!-- Mensagem de arquivo -->
-                <div v-if="msg.isFile" class="file-message">
+                <div v-else-if="msg.isFile" class="file-message">
                   <span class="file-icon">📎</span>
                   <span class="file-name">{{ msg.fileName }}</span>
                   <button class="btn-download" @click="downloadFile(msg)">
@@ -411,13 +416,26 @@
               style="display: none"
               @change="handleFileSelect"
             />
+            <button
+              class="btn-mic"
+              :class="{ recording: isRecording }"
+              @mousedown="startRecording"
+              @mouseup="stopRecording"
+              @mouseleave="stopRecording"
+              @touchstart.prevent="startRecording"
+              @touchend.prevent="stopRecording"
+              :title="isRecording ? 'Solte para enviar' : 'Segure para gravar'"
+            >
+              {{ isRecording ? '⏹' : '🎤' }}
+            </button>
             <input
               v-model="newMessage"
               type="text"
-              :placeholder="'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...'"
+              :placeholder="isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...'"
               @keyup.enter="sendMessage"
+              :disabled="isRecording"
             />
-            <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim()">
+            <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording">
               Enviar
             </button>
           </div>
@@ -475,6 +493,11 @@ const myStatus = ref('online')
 // Configurações de notificação
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
 const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
+
+// Gravação de áudio
+const isRecording = ref(false)
+let mediaRecorder = null
+let audioChunks = []
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
@@ -640,6 +663,7 @@ async function initializeApp() {
   socket.on('usuario-offline', handleUserOffline)
   socket.on('status-atualizado', handleStatusUpdate)
   socket.on('arquivo-recebido', handleFileReceived)
+  socket.on('audio-recebido', handleAudioReceived)
 
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
@@ -986,6 +1010,108 @@ function downloadFile(msg) {
   a.href = msg.fileData
   a.download = msg.fileName
   a.click()
+}
+
+// ==================== GRAVAÇÃO DE ÁUDIO ====================
+
+async function startRecording() {
+  if (!selectedConnection.value) {
+    alert('Selecione uma conversa primeiro')
+    return
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+    audioChunks = []
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data)
+      }
+    }
+
+    mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        const base64 = reader.result
+        sendAudio(base64)
+      }
+      reader.readAsDataURL(audioBlob)
+
+      // Parar todas as tracks do stream
+      stream.getTracks().forEach(track => track.stop())
+    }
+
+    mediaRecorder.start()
+    isRecording.value = true
+  } catch (error) {
+    console.error('Erro ao acessar microfone:', error)
+    alert('Não foi possível acessar o microfone. Verifique as permissões.')
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording.value) {
+    mediaRecorder.stop()
+    isRecording.value = false
+  }
+}
+
+function sendAudio(audioData) {
+  if (!selectedConnection.value) return
+
+  socket.emit('enviar-audio', {
+    connectionId: selectedConnection.value.connectionId,
+    recipientId: selectedConnection.value.id,
+    audioData
+  })
+
+  // Adicionar na lista local
+  messages.value.push({
+    id: `audio-${Date.now()}`,
+    euEnviei: true,
+    isAudio: true,
+    audioData,
+    enviadoEm: new Date().toISOString()
+  })
+  scrollToBottom()
+}
+
+function handleAudioReceived(data) {
+  // Verificar se é uma das minhas conexões
+  const minhaConexao = connections.value.find(c => c.connectionId === data.connectionId)
+  if (!minhaConexao) return
+
+  // Tocar som se não estiver mudo
+  const estaMudo = notificacaoGlobalMudo.value || isConnectionMuted(data.connectionId)
+  if (!estaMudo) {
+    playBubblePop()
+  }
+
+  const audioMsg = {
+    id: `audio-${Date.now()}`,
+    euEnviei: false,
+    isAudio: true,
+    audioData: data.audioData,
+    enviadoEm: new Date().toISOString()
+  }
+
+  // Se está na conversa, adicionar na lista
+  if (selectedConnection.value?.connectionId === data.connectionId) {
+    messages.value.push(audioMsg)
+    scrollToBottom()
+  } else {
+    // Salvar no IndexedDB
+    try {
+      saveFileToDB(data.connectionId, audioMsg)
+    } catch (e) {
+      console.error('Erro ao salvar áudio:', e)
+    }
+    alert(`Áudio recebido de ${minhaConexao.nome}`)
+  }
 }
 
 // ==================== STATUS ONLINE ====================
@@ -2048,6 +2174,61 @@ body {
 
 .btn-download:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Botão microfone */
+.btn-mic {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-mic:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.btn-mic.recording {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Mensagem de áudio */
+.audio-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-icon {
+  font-size: 1.2rem;
+}
+
+.audio-player {
+  height: 36px;
+  max-width: 200px;
+  border-radius: 18px;
+}
+
+.audio-player::-webkit-media-controls-panel {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile Menu */
