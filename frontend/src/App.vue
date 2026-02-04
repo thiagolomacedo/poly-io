@@ -647,14 +647,20 @@ async function sendConnectionRequest(userId) {
       headers: authHeaders()
     })
 
+    const data = await res.json()
+
     if (res.ok) {
       // Marcar como enviado
       const user = searchResults.value.find(u => u.id === userId)
       if (user) user.requestSent = true
       loadPendingRequests()
+      alert('Solicitação enviada!')
+    } else {
+      alert(data.error || 'Erro ao enviar solicitação')
     }
   } catch (error) {
     console.error('Erro ao enviar solicitação:', error)
+    alert('Erro ao conectar com o servidor')
   }
 }
 

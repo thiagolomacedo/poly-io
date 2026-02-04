@@ -429,6 +429,10 @@ app.post('/api/connections/request/:userId', authMiddleware, async (req, res) =>
       if (conn.status === 'pendente') {
         return res.status(400).json({ error: 'Solicitação já enviada' })
       }
+      // Se foi recusada ou removida, deletar para permitir nova solicitação
+      if (conn.status === 'recusada') {
+        await pool.query('DELETE FROM connections WHERE id = $1', [conn.id])
+      }
     }
 
     // Criar solicitação
