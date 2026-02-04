@@ -2391,6 +2391,10 @@ body {
     left: 0;
     right: 0;
     z-index: 49;
+    flex-wrap: wrap;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 0.7rem;
   }
 
   /* Área de mensagens com scroll */
