@@ -355,7 +355,7 @@
 
           <!-- Aviso de expiração -->
           <div class="expiration-notice">
-            As mensagens expiram automaticamente após 3 dias.
+            As mensagens expiram automaticamente após 24 horas.
             <button @click="exportChat">Baixar conversa</button>
           </div>
 

@@ -57,7 +57,7 @@ async function initDatabase() {
         idioma_destino VARCHAR(10),
         enviado_em TIMESTAMP DEFAULT NOW(),
         lido BOOLEAN DEFAULT FALSE,
-        expira_em TIMESTAMP DEFAULT (NOW() + INTERVAL '3 days')
+        expira_em TIMESTAMP DEFAULT (NOW() + INTERVAL '24 hours')
       )
     `)
     console.log('[DB] Tabela messages OK')
