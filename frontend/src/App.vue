@@ -419,12 +419,8 @@
             <button
               class="btn-mic"
               :class="{ recording: isRecording }"
-              @mousedown="startRecording"
-              @mouseup="stopRecording"
-              @mouseleave="stopRecording"
-              @touchstart.prevent="startRecording"
-              @touchend.prevent="stopRecording"
-              :title="isRecording ? 'Solte para enviar' : 'Segure para gravar'"
+              @click="toggleRecording"
+              :title="isRecording ? 'Clique para enviar' : 'Clique para gravar'"
             >
               {{ isRecording ? '⏹' : '🎤' }}
             </button>
@@ -1014,6 +1010,16 @@ function downloadFile(msg) {
 
 // ==================== GRAVAÇÃO DE ÁUDIO ====================
 
+let currentStream = null
+
+function toggleRecording() {
+  if (isRecording.value) {
+    stopRecording()
+  } else {
+    startRecording()
+  }
+}
+
 async function startRecording() {
   if (!selectedConnection.value) {
     alert('Selecione uma conversa primeiro')
@@ -1021,8 +1027,8 @@ async function startRecording() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+    currentStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'audio/webm' })
     audioChunks = []
 
     mediaRecorder.ondataavailable = (event) => {
@@ -1042,7 +1048,10 @@ async function startRecording() {
       reader.readAsDataURL(audioBlob)
 
       // Parar todas as tracks do stream
-      stream.getTracks().forEach(track => track.stop())
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop())
+        currentStream = null
+      }
     }
 
     mediaRecorder.start()
