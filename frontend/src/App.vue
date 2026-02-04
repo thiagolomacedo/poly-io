@@ -1,53 +1,133 @@
 <template>
   <div class="app">
     <!-- Tela de Login/Registro -->
-    <div v-if="!currentUser" class="login-screen">
-      <div class="login-card">
+    <div v-if="!isLoggedIn" class="auth-screen">
+      <div class="auth-card">
         <div class="logo">
           <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
         </div>
         <p class="tagline">Chat sem barreiras de idioma</p>
 
-        <div class="form-group">
-          <label>Seu nome</label>
-          <input
-            v-model="loginForm.nome"
-            type="text"
-            placeholder="Como quer ser chamado?"
-            @keyup.enter="entrar"
-          />
+        <!-- Tabs Login/Registro -->
+        <div class="auth-tabs">
+          <button
+            :class="{ active: authMode === 'login' }"
+            @click="authMode = 'login'"
+          >
+            Entrar
+          </button>
+          <button
+            :class="{ active: authMode === 'register' }"
+            @click="authMode = 'register'"
+          >
+            Criar Conta
+          </button>
         </div>
 
-        <div class="form-group">
-          <label>Seu idioma</label>
-          <select v-model="loginForm.idioma">
-            <option value="pt">Português</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="it">Italiano</option>
-            <option value="ja">日本語</option>
-            <option value="ko">한국어</option>
-            <option value="zh">中文</option>
-            <option value="ru">Русский</option>
-            <option value="ar">العربية</option>
-          </select>
-        </div>
+        <!-- Formulário de Login -->
+        <form v-if="authMode === 'login'" @submit.prevent="login" class="auth-form">
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              v-model="loginForm.email"
+              type="email"
+              placeholder="seu@email.com"
+              required
+            />
+          </div>
 
-        <button class="btn-primary" @click="entrar">
-          Entrar no Chat
-        </button>
+          <div class="form-group">
+            <label>Senha</label>
+            <input
+              v-model="loginForm.senha"
+              type="password"
+              placeholder="Sua senha"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="loading">
+            {{ loading ? 'Entrando...' : 'Entrar' }}
+          </button>
+        </form>
+
+        <!-- Formulário de Registro -->
+        <form v-else @submit.prevent="register" class="auth-form">
+          <div class="form-group">
+            <label>Nome</label>
+            <input
+              v-model="registerForm.nome"
+              type="text"
+              placeholder="Seu nome"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              v-model="registerForm.email"
+              type="email"
+              placeholder="seu@email.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Senha</label>
+            <input
+              v-model="registerForm.senha"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              minlength="6"
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Idioma</label>
+              <select v-model="registerForm.idioma" required>
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="it">Italiano</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+                <option value="zh">中文</option>
+                <option value="ru">Русский</option>
+                <option value="ar">العربية</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>País</label>
+              <input
+                v-model="registerForm.pais"
+                type="text"
+                placeholder="Brasil"
+              />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="loading">
+            {{ loading ? 'Criando...' : 'Criar Conta' }}
+          </button>
+        </form>
+
+        <p v-if="authError" class="error-text">{{ authError }}</p>
 
         <p class="info-text">
-          Você escreve no seu idioma.<br>
+          Escreva no seu idioma.<br>
           A outra pessoa lê no idioma dela.
         </p>
       </div>
     </div>
 
-    <!-- Tela Principal do Chat -->
-    <div v-else class="chat-screen">
+    <!-- Tela Principal -->
+    <div v-else class="main-screen">
       <!-- Botão Menu Mobile -->
       <button class="mobile-menu-btn" @click="sidebarOpen = !sidebarOpen">
         <span v-if="!sidebarOpen">☰</span>
@@ -61,66 +141,193 @@
         @click="sidebarOpen = false"
       ></div>
 
-      <!-- Sidebar com usuários -->
+      <!-- Sidebar -->
       <aside class="sidebar" :class="{ open: sidebarOpen }">
         <div class="sidebar-header">
           <div class="logo-small">
             <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
           </div>
           <div class="current-user">
-            <span class="user-name">{{ currentUser.nome }}</span>
-            <span class="user-lang">{{ getIdiomaLabel(currentUser.idioma) }}</span>
+            <span class="user-name">{{ currentUser?.nome }}</span>
+            <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
           </div>
         </div>
 
-        <div class="users-list">
-          <h3>Usuários Online</h3>
-          <div
-            v-for="user in outrosUsuarios"
-            :key="user.id"
-            class="user-item"
-            :class="{ active: selectedUser?.id === user.id }"
-            @click="selecionarUsuario(user)"
+        <!-- Navegação -->
+        <nav class="sidebar-nav">
+          <button
+            :class="{ active: currentTab === 'connections' }"
+            @click="currentTab = 'connections'"
           >
-            <div class="user-avatar">{{ user.nome.charAt(0).toUpperCase() }}</div>
-            <div class="user-info">
-              <span class="name">{{ user.nome }}</span>
-              <span class="lang">{{ getIdiomaLabel(user.idioma) }}</span>
+            <span class="nav-icon">👥</span>
+            Conexões
+            <span v-if="connections.length" class="badge">{{ connections.length }}</span>
+          </button>
+          <button
+            :class="{ active: currentTab === 'search' }"
+            @click="currentTab = 'search'"
+          >
+            <span class="nav-icon">🔍</span>
+            Buscar
+          </button>
+          <button
+            :class="{ active: currentTab === 'requests' }"
+            @click="currentTab = 'requests'"
+          >
+            <span class="nav-icon">📨</span>
+            Solicitações
+            <span v-if="pendingRequests.length" class="badge highlight">{{ pendingRequests.length }}</span>
+          </button>
+        </nav>
+
+        <!-- Lista baseada na tab atual -->
+        <div class="sidebar-content">
+          <!-- Tab: Conexões -->
+          <div v-if="currentTab === 'connections'" class="tab-content">
+            <div
+              v-for="conn in connections"
+              :key="conn.id"
+              class="user-item"
+              :class="{ active: selectedConnection?.id === conn.id }"
+              @click="selectConnection(conn)"
+            >
+              <div class="user-avatar" :class="{ online: conn.online }">
+                {{ conn.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="name">{{ conn.nome }}</span>
+                <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ conn.pais || '?' }}</span>
+              </div>
             </div>
+            <p v-if="connections.length === 0" class="empty-state">
+              Nenhuma conexão ainda.<br>
+              Busque usuários para conectar!
+            </p>
           </div>
 
-          <p v-if="outrosUsuarios.length === 0" class="no-users">
-            Nenhum outro usuário online.<br>
-            Compartilhe o link!
-          </p>
+          <!-- Tab: Buscar -->
+          <div v-if="currentTab === 'search'" class="tab-content">
+            <div class="search-box">
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Buscar por nome..."
+                @input="searchUsers"
+              />
+            </div>
+            <div
+              v-for="user in searchResults"
+              :key="user.id"
+              class="user-item"
+            >
+              <div class="user-avatar">
+                {{ user.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="name">{{ user.nome }}</span>
+                <span class="lang">{{ getIdiomaLabel(user.idioma) }} · {{ user.pais || '?' }}</span>
+              </div>
+              <button
+                class="btn-connect"
+                @click="sendConnectionRequest(user.id)"
+                :disabled="user.requestSent"
+              >
+                {{ user.requestSent ? 'Enviado' : 'Conectar' }}
+              </button>
+            </div>
+            <p v-if="searchQuery && searchResults.length === 0" class="empty-state">
+              Nenhum usuário encontrado.
+            </p>
+            <p v-if="!searchQuery" class="empty-state">
+              Digite um nome para buscar.
+            </p>
+          </div>
+
+          <!-- Tab: Solicitações -->
+          <div v-if="currentTab === 'requests'" class="tab-content">
+            <h4 class="section-title">Recebidas</h4>
+            <div
+              v-for="req in pendingRequests"
+              :key="req.id"
+              class="user-item request-item"
+            >
+              <div class="user-avatar">
+                {{ req.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="name">{{ req.nome }}</span>
+                <span class="lang">{{ getIdiomaLabel(req.idioma) }}</span>
+              </div>
+              <div class="request-actions">
+                <button class="btn-accept" @click="acceptRequest(req.connectionId)">✓</button>
+                <button class="btn-reject" @click="rejectRequest(req.connectionId)">✕</button>
+              </div>
+            </div>
+            <p v-if="pendingRequests.length === 0" class="empty-state small">
+              Nenhuma solicitação pendente.
+            </p>
+
+            <h4 class="section-title">Enviadas</h4>
+            <div
+              v-for="req in sentRequests"
+              :key="req.id"
+              class="user-item"
+            >
+              <div class="user-avatar">
+                {{ req.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="name">{{ req.nome }}</span>
+                <span class="lang">Aguardando...</span>
+              </div>
+            </div>
+            <p v-if="sentRequests.length === 0" class="empty-state small">
+              Nenhuma solicitação enviada.
+            </p>
+          </div>
         </div>
 
-        <button class="btn-logout" @click="sair">Sair</button>
+        <button class="btn-logout" @click="logout">Sair</button>
       </aside>
 
-      <!-- Área do Chat -->
-      <main class="chat-area">
-        <div v-if="!selectedUser" class="no-chat">
+      <!-- Área Principal -->
+      <main class="main-area">
+        <!-- Nenhuma conversa selecionada -->
+        <div v-if="!selectedConnection" class="no-chat">
           <div class="logo-big">
             <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
           </div>
-          <p>Selecione um usuário para conversar</p>
-          <p class="hint">Ou compartilhe o link para convidar alguém</p>
+          <p>Selecione uma conexão para conversar</p>
+          <p class="hint">Ou busque novos usuários para se conectar</p>
         </div>
 
+        <!-- Chat ativo -->
         <template v-else>
           <!-- Header do chat -->
           <div class="chat-header">
             <div class="chat-user">
-              <div class="user-avatar">{{ selectedUser.nome.charAt(0).toUpperCase() }}</div>
+              <div class="user-avatar" :class="{ online: selectedConnection.online }">
+                {{ selectedConnection.nome.charAt(0).toUpperCase() }}
+              </div>
               <div>
-                <span class="name">{{ selectedUser.nome }}</span>
-                <span class="lang">Fala {{ getIdiomaLabel(selectedUser.idioma) }}</span>
+                <span class="name">{{ selectedConnection.nome }}</span>
+                <span class="status">{{ selectedConnection.online ? 'Online' : 'Offline' }}</span>
               </div>
             </div>
-            <div class="translation-badge">
-              {{ getIdiomaLabel(currentUser.idioma) }} ↔ {{ getIdiomaLabel(selectedUser.idioma) }}
+            <div class="chat-actions">
+              <span class="translation-badge">
+                {{ getIdiomaLabel(currentUser?.idioma) }} ↔ {{ getIdiomaLabel(selectedConnection.idioma) }}
+              </span>
+              <button class="btn-icon" @click="exportChat" title="Exportar conversa">
+                📥
+              </button>
             </div>
+          </div>
+
+          <!-- Aviso de expiração -->
+          <div class="expiration-notice">
+            As mensagens expiram automaticamente após 7 dias.
+            <button @click="exportChat">Baixar conversa</button>
           </div>
 
           <!-- Mensagens -->
@@ -136,7 +343,7 @@
                 <button
                   v-if="!msg.euEnviei && msg.textoOriginal !== msg.texto"
                   class="btn-original"
-                  @click="toggleOriginal(msg)"
+                  @click="msg.showOriginal = !msg.showOriginal"
                 >
                   {{ msg.showOriginal ? 'Ver tradução' : 'Ver original' }}
                 </button>
@@ -149,7 +356,7 @@
 
             <p v-if="messages.length === 0" class="no-messages">
               Nenhuma mensagem ainda.<br>
-              Diga olá! 👋
+              Diga olá!
             </p>
           </div>
 
@@ -158,10 +365,10 @@
             <input
               v-model="newMessage"
               type="text"
-              :placeholder="'Escreva em ' + getIdiomaLabel(currentUser.idioma) + '...'"
-              @keyup.enter="enviarMensagem"
+              :placeholder="'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...'"
+              @keyup.enter="sendMessage"
             />
-            <button class="btn-send" @click="enviarMensagem" :disabled="!newMessage.trim()">
+            <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim()">
               Enviar
             </button>
           </div>
@@ -175,29 +382,48 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { io } from 'socket.io-client'
 
-// Configuração da API (usa variável de ambiente em produção)
+// Configuração da API
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const API_URL = `${API_BASE}/api`
-const socket = io(API_BASE)
 
-// Estado
+// Socket.io (conecta depois do login)
+let socket = null
+
+// Estado de autenticação
+const authMode = ref('login')
+const loading = ref(false)
+const authError = ref('')
+const token = ref(localStorage.getItem('poly_token') || '')
 const currentUser = ref(null)
-const users = ref([])
-const selectedUser = ref(null)
+
+const loginForm = ref({
+  email: '',
+  senha: ''
+})
+
+const registerForm = ref({
+  nome: '',
+  email: '',
+  senha: '',
+  idioma: 'pt',
+  pais: ''
+})
+
+// Estado da aplicação
+const sidebarOpen = ref(true)
+const currentTab = ref('connections')
+const connections = ref([])
+const pendingRequests = ref([])
+const sentRequests = ref([])
+const searchQuery = ref('')
+const searchResults = ref([])
+const selectedConnection = ref(null)
 const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
-const sidebarOpen = ref(true) // Sidebar visível no mobile
-
-const loginForm = ref({
-  nome: '',
-  idioma: 'pt'
-})
 
 // Computed
-const outrosUsuarios = computed(() => {
-  return users.value.filter(u => u.id !== currentUser.value?.id)
-})
+const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
 
 // Idiomas
 const idiomas = {
@@ -215,77 +441,256 @@ const idiomas = {
 }
 
 function getIdiomaLabel(code) {
-  return idiomas[code] || code
+  return idiomas[code] || code || ''
 }
 
-// Funções
-async function entrar() {
-  if (!loginForm.value.nome.trim()) return
+// Headers com autenticação
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token.value}`
+  }
+}
+
+// ==================== AUTENTICAÇÃO ====================
+
+async function login() {
+  loading.value = true
+  authError.value = ''
 
   try {
-    const res = await fetch(`${API_URL}/users`, {
+    const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(loginForm.value)
     })
-    currentUser.value = await res.json()
 
-    // Registrar no socket
-    socket.emit('registrar', currentUser.value.id)
+    const data = await res.json()
 
-    // Carregar usuários
-    await carregarUsuarios()
+    if (!res.ok) {
+      throw new Error(data.erro || 'Erro ao fazer login')
+    }
+
+    token.value = data.token
+    currentUser.value = data.user
+    localStorage.setItem('poly_token', data.token)
+
+    initializeApp()
   } catch (error) {
-    console.error('Erro ao entrar:', error)
-    alert('Erro ao conectar. Verifique se o servidor está rodando.')
+    authError.value = error.message
+  } finally {
+    loading.value = false
   }
 }
 
-function sair() {
+async function register() {
+  loading.value = true
+  authError.value = ''
+
+  try {
+    const res = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(registerForm.value)
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.erro || 'Erro ao criar conta')
+    }
+
+    token.value = data.token
+    currentUser.value = data.user
+    localStorage.setItem('poly_token', data.token)
+
+    initializeApp()
+  } catch (error) {
+    authError.value = error.message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function checkAuth() {
+  if (!token.value) return
+
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: authHeaders()
+    })
+
+    if (!res.ok) {
+      throw new Error('Token inválido')
+    }
+
+    currentUser.value = await res.json()
+    initializeApp()
+  } catch (error) {
+    logout()
+  }
+}
+
+function logout() {
+  token.value = ''
   currentUser.value = null
-  selectedUser.value = null
+  localStorage.removeItem('poly_token')
+  if (socket) {
+    socket.disconnect()
+    socket = null
+  }
+  connections.value = []
+  pendingRequests.value = []
+  sentRequests.value = []
+  selectedConnection.value = null
   messages.value = []
 }
 
-async function carregarUsuarios() {
+// ==================== INICIALIZAÇÃO ====================
+
+function initializeApp() {
+  // Conectar socket
+  socket = io(API_BASE)
+  socket.emit('autenticar', token.value)
+
+  // Listeners do socket
+  socket.on('nova-mensagem', handleNewMessage)
+  socket.on('conexao-atualizada', loadConnections)
+  socket.on('usuario-online', handleUserOnline)
+  socket.on('usuario-offline', handleUserOffline)
+
+  // Carregar dados
+  loadConnections()
+  loadPendingRequests()
+}
+
+// ==================== CONEXÕES ====================
+
+async function loadConnections() {
   try {
-    const res = await fetch(`${API_URL}/users`)
-    users.value = await res.json()
+    const res = await fetch(`${API_URL}/connections`, {
+      headers: authHeaders()
+    })
+    const data = await res.json()
+    connections.value = data.map(c => ({ ...c, online: false }))
   } catch (error) {
-    console.error('Erro ao carregar usuários:', error)
+    console.error('Erro ao carregar conexões:', error)
   }
 }
 
-async function selecionarUsuario(user) {
-  selectedUser.value = user
-  sidebarOpen.value = false // Fechar sidebar no mobile
-  await carregarMensagens()
+async function loadPendingRequests() {
+  try {
+    const res = await fetch(`${API_URL}/connections/pending`, {
+      headers: authHeaders()
+    })
+    const data = await res.json()
+    pendingRequests.value = data.recebidas || []
+    sentRequests.value = data.enviadas || []
+  } catch (error) {
+    console.error('Erro ao carregar solicitações:', error)
+  }
 }
 
-async function carregarMensagens() {
-  if (!currentUser.value || !selectedUser.value) return
+async function searchUsers() {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
 
   try {
-    const res = await fetch(`${API_URL}/messages/${currentUser.value.id}/${selectedUser.value.id}`)
-    messages.value = await res.json()
+    const res = await fetch(`${API_URL}/users?busca=${encodeURIComponent(searchQuery.value)}`, {
+      headers: authHeaders()
+    })
+    searchResults.value = await res.json()
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error)
+  }
+}
+
+async function sendConnectionRequest(userId) {
+  try {
+    const res = await fetch(`${API_URL}/connections/request`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ userId })
+    })
+
+    if (res.ok) {
+      // Marcar como enviado
+      const user = searchResults.value.find(u => u.id === userId)
+      if (user) user.requestSent = true
+      loadPendingRequests()
+    }
+  } catch (error) {
+    console.error('Erro ao enviar solicitação:', error)
+  }
+}
+
+async function acceptRequest(connectionId) {
+  try {
+    await fetch(`${API_URL}/connections/accept`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ connectionId })
+    })
+    loadConnections()
+    loadPendingRequests()
+  } catch (error) {
+    console.error('Erro ao aceitar solicitação:', error)
+  }
+}
+
+async function rejectRequest(connectionId) {
+  try {
+    await fetch(`${API_URL}/connections/reject`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ connectionId })
+    })
+    loadPendingRequests()
+  } catch (error) {
+    console.error('Erro ao rejeitar solicitação:', error)
+  }
+}
+
+// ==================== CHAT ====================
+
+async function selectConnection(conn) {
+  selectedConnection.value = conn
+  sidebarOpen.value = false
+  await loadMessages()
+}
+
+async function loadMessages() {
+  if (!selectedConnection.value) return
+
+  try {
+    const res = await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
+      headers: authHeaders()
+    })
+    const data = await res.json()
+    messages.value = data.map(m => ({
+      ...m,
+      euEnviei: m.sender_id === currentUser.value.id,
+      texto: m.sender_id === currentUser.value.id ? m.texto_original : (m.texto_traduzido || m.texto_original),
+      textoOriginal: m.texto_original,
+      enviadoEm: m.enviado_em,
+      showOriginal: false
+    }))
     scrollToBottom()
   } catch (error) {
     console.error('Erro ao carregar mensagens:', error)
   }
 }
 
-async function enviarMensagem() {
-  if (!newMessage.value.trim() || !selectedUser.value) return
+async function sendMessage() {
+  if (!newMessage.value.trim() || !selectedConnection.value) return
 
   try {
-    await fetch(`${API_URL}/messages`, {
+    await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        remetenteId: currentUser.value.id,
-        destinatarioId: selectedUser.value.id,
-        texto: newMessage.value
-      })
+      headers: authHeaders(),
+      body: JSON.stringify({ texto: newMessage.value })
     })
     newMessage.value = ''
   } catch (error) {
@@ -293,13 +698,71 @@ async function enviarMensagem() {
   }
 }
 
-function toggleOriginal(msg) {
-  msg.showOriginal = !msg.showOriginal
+function handleNewMessage(msg) {
+  if (!selectedConnection.value) return
+  if (msg.connection_id !== selectedConnection.value.connectionId) return
+
+  const euEnviei = msg.sender_id === currentUser.value.id
+  messages.value.push({
+    id: msg.id,
+    euEnviei,
+    texto: euEnviei ? msg.texto_original : (msg.texto_traduzido || msg.texto_original),
+    textoOriginal: msg.texto_original,
+    enviadoEm: msg.enviado_em,
+    showOriginal: false
+  })
+  scrollToBottom()
 }
+
+async function exportChat() {
+  if (!selectedConnection.value) return
+
+  try {
+    const res = await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}/export`, {
+      headers: authHeaders()
+    })
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `chat-${selectedConnection.value.nome}-${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Erro ao exportar chat:', error)
+  }
+}
+
+// ==================== STATUS ONLINE ====================
+
+function handleUserOnline(userId) {
+  const conn = connections.value.find(c => c.id === userId)
+  if (conn) conn.online = true
+  if (selectedConnection.value?.id === userId) {
+    selectedConnection.value.online = true
+  }
+}
+
+function handleUserOffline(userId) {
+  const conn = connections.value.find(c => c.id === userId)
+  if (conn) conn.online = false
+  if (selectedConnection.value?.id === userId) {
+    selectedConnection.value.online = false
+  }
+}
+
+// ==================== UTILITÁRIOS ====================
 
 function formatTime(dateStr) {
   const date = new Date(dateStr)
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+
+  if (isToday) {
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  }
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) +
+         ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 function scrollToBottom() {
@@ -310,44 +773,12 @@ function scrollToBottom() {
   })
 }
 
-// Socket.io - receber mensagens em tempo real
-socket.on('nova-mensagem', (msg) => {
-  // Verificar se a mensagem é da conversa atual
-  if (!currentUser.value || !selectedUser.value) return
+// ==================== LIFECYCLE ====================
 
-  const isFromSelectedUser = msg.remetente_id === selectedUser.value.id
-  const isToMe = msg.destinatario_id === currentUser.value.id
-  const isFromMe = msg.remetente_id === currentUser.value.id
-  const isToSelectedUser = msg.destinatario_id === selectedUser.value.id
-
-  if ((isFromSelectedUser && isToMe) || (isFromMe && isToSelectedUser)) {
-    const euEnviei = msg.remetente_id === currentUser.value.id
-    messages.value.push({
-      id: msg.id,
-      remetenteId: msg.remetente_id,
-      texto: euEnviei ? msg.textoParaRemetente : msg.textoParaDestinatario,
-      textoOriginal: msg.texto_original,
-      enviadoEm: msg.enviado_em,
-      euEnviei
-    })
-    scrollToBottom()
-  }
-
-  // Atualizar lista de usuários (pode ter usuário novo)
-  carregarUsuarios()
-})
-
-// Socket.io - atualizar lista quando alguém entra/sai
-socket.on('usuarios-atualizados', () => {
-  carregarUsuarios()
-})
-
-// Atualizar usuários periodicamente (backup)
 onMounted(() => {
-  setInterval(carregarUsuarios, 10000)
+  checkAuth()
 })
 
-// Watch para scroll quando mensagens mudam
 watch(messages, scrollToBottom, { deep: true })
 </script>
 
@@ -359,7 +790,7 @@ watch(messages, scrollToBottom, { deep: true })
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: #0a0a0a;
   color: #fff;
   min-height: 100vh;
@@ -369,22 +800,23 @@ body {
   min-height: 100vh;
 }
 
-/* ==================== LOGIN ==================== */
-.login-screen {
+/* ==================== AUTH SCREEN ==================== */
+.auth-screen {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+  padding: 20px;
 }
 
-.login-card {
+.auth-card {
   background: #111;
   border: 1px solid #222;
   border-radius: 16px;
-  padding: 48px;
+  padding: 40px;
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
 }
 
@@ -394,22 +826,44 @@ body {
   margin-bottom: 8px;
 }
 
-.logo-poly {
-  color: #fff;
-}
-
-.logo-io {
-  color: #6366f1;
-}
+.logo-poly { color: #fff; }
+.logo-io { color: #6366f1; }
 
 .tagline {
   color: #666;
   margin-bottom: 32px;
 }
 
-.form-group {
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.auth-tabs button {
+  flex: 1;
+  padding: 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-tabs button.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.auth-form {
   text-align: left;
-  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
 }
 
 .form-group label {
@@ -422,12 +876,12 @@ body {
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 8px;
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -437,13 +891,18 @@ body {
   border-color: #6366f1;
 }
 
-.form-group select {
-  cursor: pointer;
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
 }
 
 .btn-primary {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   background: #6366f1;
   color: #fff;
   border: none;
@@ -452,28 +911,40 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  margin-top: 8px;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #5558e3;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-text {
+  color: #f43f5e;
+  font-size: 0.875rem;
+  margin-top: 16px;
 }
 
 .info-text {
   margin-top: 24px;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: #666;
   line-height: 1.5;
 }
 
-/* ==================== CHAT SCREEN ==================== */
-.chat-screen {
+/* ==================== MAIN SCREEN ==================== */
+.main-screen {
   display: flex;
   height: 100vh;
 }
 
 /* Sidebar */
 .sidebar {
-  width: 280px;
+  width: 300px;
   background: #111;
   border-right: 1px solid #222;
   display: flex;
@@ -506,25 +977,105 @@ body {
   color: #6366f1;
 }
 
-.users-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+/* Navegação */
+.sidebar-nav {
+  display: flex;
+  padding: 12px;
+  gap: 8px;
+  border-bottom: 1px solid #222;
 }
 
-.users-list h3 {
+.sidebar-nav button {
+  flex: 1;
+  padding: 10px 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #888;
   font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.sidebar-nav button.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #333;
+  color: #fff;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.badge.highlight {
+  background: #f43f5e;
+}
+
+/* Sidebar Content */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #666;
+  margin: 12px 0 8px;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.search-box {
   margin-bottom: 12px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: #6366f1;
 }
 
 .user-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
@@ -548,9 +1099,25 @@ body {
   justify-content: center;
   font-weight: 600;
   font-size: 1rem;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.user-avatar.online::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 2px solid #111;
 }
 
 .user-info {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -558,6 +1125,10 @@ body {
 
 .user-info .name {
   font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-info .lang {
@@ -569,16 +1140,74 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.no-users {
+.btn-connect {
+  padding: 6px 12px;
+  background: #6366f1;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-connect:hover:not(:disabled) {
+  background: #5558e3;
+}
+
+.btn-connect:disabled {
+  background: #333;
+  cursor: default;
+}
+
+.request-item {
+  flex-wrap: wrap;
+}
+
+.request-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-accept, .btn-reject {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-accept {
+  background: #10b981;
+  color: #fff;
+}
+
+.btn-reject {
+  background: #333;
+  color: #888;
+}
+
+.btn-reject:hover {
+  background: #f43f5e;
+  color: #fff;
+}
+
+.empty-state {
   text-align: center;
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
+  padding: 24px 12px;
   line-height: 1.5;
-  padding: 20px;
+}
+
+.empty-state.small {
+  padding: 12px;
+  font-size: 0.75rem;
 }
 
 .btn-logout {
-  margin: 16px;
+  margin: 12px;
   padding: 12px;
   background: transparent;
   border: 1px solid #333;
@@ -593,8 +1222,8 @@ body {
   color: #f43f5e;
 }
 
-/* Chat Area */
-.chat-area {
+/* ==================== MAIN AREA ==================== */
+.main-area {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -621,6 +1250,7 @@ body {
   margin-top: 8px;
 }
 
+/* Chat Header */
 .chat-header {
   padding: 16px 24px;
   border-bottom: 1px solid #222;
@@ -640,9 +1270,15 @@ body {
   display: block;
 }
 
-.chat-user .lang {
+.chat-user .status {
   font-size: 0.75rem;
   color: #888;
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .translation-badge {
@@ -653,6 +1289,46 @@ body {
   color: #6366f1;
 }
 
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  border-color: #6366f1;
+}
+
+/* Expiration Notice */
+.expiration-notice {
+  padding: 10px 24px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #222;
+  font-size: 0.75rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.expiration-notice button {
+  background: none;
+  border: none;
+  color: #6366f1;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.75rem;
+}
+
 /* Messages */
 .messages {
   flex: 1;
@@ -660,7 +1336,7 @@ body {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .message {
@@ -692,13 +1368,13 @@ body {
 }
 
 .message-text {
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
   line-height: 1.4;
 }
 
 .message-time {
   display: block;
-  font-size: 0.6875rem;
+  font-size: 0.65rem;
   color: rgba(255, 255, 255, 0.5);
   margin-top: 6px;
 }
@@ -707,18 +1383,14 @@ body {
   background: transparent;
   border: none;
   color: rgba(255, 255, 255, 0.6);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   cursor: pointer;
   padding: 4px 0;
   text-decoration: underline;
 }
 
-.btn-original:hover {
-  color: #fff;
-}
-
 .original-text {
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.6);
   font-style: italic;
   margin-top: 8px;
@@ -748,9 +1420,8 @@ body {
   border: 1px solid #333;
   border-radius: 24px;
   color: #fff;
-  font-size: 0.9375rem;
+  font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
 }
 
 .message-input input:focus {
@@ -777,7 +1448,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Mobile Menu Button */
+/* Mobile Menu */
 .mobile-menu-btn {
   display: none;
   position: fixed;
@@ -797,7 +1468,6 @@ body {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
-/* Sidebar Overlay */
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -833,7 +1503,7 @@ body {
     transform: translateX(0);
   }
 
-  .chat-area {
+  .main-area {
     width: 100%;
   }
 
@@ -843,6 +1513,14 @@ body {
 
   .logo-big {
     font-size: 2.5rem;
+  }
+
+  .chat-header {
+    padding-left: 70px;
+  }
+
+  .message {
+    max-width: 85%;
   }
 }
 </style>
