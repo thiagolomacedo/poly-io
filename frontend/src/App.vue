@@ -559,9 +559,14 @@ function initializeApp() {
   socket.on('usuario-online', handleUserOnline)
   socket.on('usuario-offline', handleUserOffline)
 
-  // Carregar dados
-  loadConnections()
-  loadPendingRequests()
+  // Carregar dados após pequeno delay para socket conectar
+  setTimeout(() => {
+    loadConnections()
+    loadPendingRequests()
+  }, 500)
+
+  // Atualizar status online periodicamente
+  setInterval(loadConnections, 30000)
 }
 
 // ==================== CONEXÕES ====================
@@ -572,13 +577,25 @@ async function loadConnections() {
       headers: authHeaders()
     })
     const data = await res.json()
+
+    // Buscar quem está online
+    let onlineIds = []
+    try {
+      const onlineRes = await fetch(`${API_URL}/users/online`, {
+        headers: authHeaders()
+      })
+      onlineIds = await onlineRes.json()
+    } catch (e) {
+      console.error('Erro ao buscar online:', e)
+    }
+
     connections.value = data.map(c => ({
       id: c.user_id,
       connectionId: c.connection_id,
       nome: c.nome,
       idioma: c.idioma,
       pais: c.pais,
-      online: false
+      online: onlineIds.includes(c.user_id)
     }))
   } catch (error) {
     console.error('Erro ao carregar conexões:', error)
@@ -714,6 +731,9 @@ async function sendMessage() {
 function handleNewMessage(msg) {
   if (!selectedConnection.value) return
   if (msg.connectionId !== selectedConnection.value.connectionId) return
+
+  // Evitar duplicatas
+  if (messages.value.some(m => m.id === msg.id)) return
 
   const euEnviei = msg.senderId === currentUser.value.id
   messages.value.push({

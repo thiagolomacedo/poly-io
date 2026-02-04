@@ -732,6 +732,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+// Listar usuários online
+app.get('/api/users/online', authMiddleware, (req, res) => {
+  const onlineIds = Array.from(usuariosOnline.keys())
+  res.json(onlineIds)
+})
+
 // ==================== SOCKET.IO ====================
 
 const usuariosOnline = new Map()
