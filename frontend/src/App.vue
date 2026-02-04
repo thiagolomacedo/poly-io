@@ -2090,6 +2090,8 @@ body {
 .message-content {
   padding: 12px 16px;
   border-radius: 16px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .message.sent .message-content {
@@ -2105,6 +2107,9 @@ body {
 .message-text {
   font-size: 0.9rem;
   line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .message-time {
@@ -2393,7 +2398,9 @@ body {
     flex: 1;
     margin-top: 120px;
     margin-bottom: 80px;
+    padding: 16px;
     padding-bottom: 20px;
+    overflow-x: hidden;
   }
 
   /* Input fixo no rodapé */
@@ -2409,7 +2416,11 @@ body {
   }
 
   .message {
-    max-width: 85%;
+    max-width: 80%;
+  }
+
+  .message-content {
+    word-break: break-word;
   }
 }
 </style>
