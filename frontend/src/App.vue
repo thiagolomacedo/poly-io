@@ -128,10 +128,9 @@
 
     <!-- Tela Principal -->
     <div v-else class="main-screen">
-      <!-- Botão Menu Mobile -->
-      <button class="mobile-menu-btn" @click="sidebarOpen = !sidebarOpen">
-        <span v-if="!sidebarOpen">☰</span>
-        <span v-else>✕</span>
+      <!-- Botão Menu Mobile (só aparece quando fechado) -->
+      <button v-if="!sidebarOpen" class="mobile-menu-btn" @click="sidebarOpen = true">
+        ☰
       </button>
 
       <!-- Overlay para fechar sidebar no mobile -->
@@ -144,8 +143,11 @@
       <!-- Sidebar -->
       <aside class="sidebar" :class="{ open: sidebarOpen }">
         <div class="sidebar-header">
-          <div class="logo-small">
-            <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
+          <div class="sidebar-header-top">
+            <div class="logo-small">
+              <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
+            </div>
+            <button class="btn-close-sidebar" @click="sidebarOpen = false">✕</button>
           </div>
           <div class="current-user">
             <span class="user-name">{{ currentUser?.nome }}</span>
@@ -1531,10 +1533,35 @@ body {
   border-bottom: 1px solid #222;
 }
 
+.sidebar-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-close-sidebar {
+  display: none;
+  width: 32px;
+  height: 32px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #888;
+  font-size: 1rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-close-sidebar:hover {
+  border-color: #f43f5e;
+  color: #f43f5e;
+}
+
 .logo-small {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 12px;
 }
 
 .current-user {
@@ -2306,6 +2333,10 @@ body {
 
   .sidebar-overlay {
     display: block;
+  }
+
+  .btn-close-sidebar {
+    display: flex;
   }
 
   .sidebar {
