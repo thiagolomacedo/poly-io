@@ -210,9 +210,11 @@ app.post('/api/users', (req, res) => {
   res.json(user)
 })
 
-// Listar usuários
+// Listar apenas usuários ONLINE
 app.get('/api/users', (req, res) => {
-  res.json(db.users)
+  // Filtrar apenas usuários que estão conectados via Socket.io
+  const onlineUsers = db.users.filter(user => usuariosOnline.has(user.id))
+  res.json(onlineUsers)
 })
 
 // Buscar usuário por ID
@@ -324,12 +326,18 @@ io.on('connection', (socket) => {
 
   socket.on('registrar', (userId) => {
     usuariosOnline.set(userId, socket.id)
+    console.log(`[Socket] Usuário ${userId} online`)
+    // Avisar todos que a lista de usuários mudou
+    io.emit('usuarios-atualizados')
   })
 
   socket.on('disconnect', () => {
     for (const [userId, socketId] of usuariosOnline.entries()) {
       if (socketId === socket.id) {
         usuariosOnline.delete(userId)
+        console.log(`[Socket] Usuário ${userId} offline`)
+        // Avisar todos que a lista de usuários mudou
+        io.emit('usuarios-atualizados')
         break
       }
     }

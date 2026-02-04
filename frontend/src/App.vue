@@ -322,9 +322,14 @@ socket.on('nova-mensagem', (msg) => {
   carregarUsuarios()
 })
 
-// Atualizar usuários periodicamente
+// Socket.io - atualizar lista quando alguém entra/sai
+socket.on('usuarios-atualizados', () => {
+  carregarUsuarios()
+})
+
+// Atualizar usuários periodicamente (backup)
 onMounted(() => {
-  setInterval(carregarUsuarios, 5000)
+  setInterval(carregarUsuarios, 10000)
 })
 
 // Watch para scroll quando mensagens mudam
