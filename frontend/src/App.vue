@@ -1026,9 +1026,29 @@ async function startRecording() {
     return
   }
 
+  // Verificar se o navegador suporta gravação
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Seu navegador não suporta gravação de áudio. Tente usar Chrome ou Firefox.')
+    return
+  }
+
   try {
     currentStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'audio/webm' })
+
+    // Tentar diferentes formatos de áudio (compatibilidade mobile)
+    let mimeType = 'audio/webm'
+    if (!MediaRecorder.isTypeSupported('audio/webm')) {
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4'
+      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+        mimeType = 'audio/ogg'
+      } else {
+        mimeType = '' // Usar padrão do navegador
+      }
+    }
+
+    const options = mimeType ? { mimeType } : {}
+    mediaRecorder = new MediaRecorder(currentStream, options)
     audioChunks = []
 
     mediaRecorder.ondataavailable = (event) => {
@@ -1038,7 +1058,7 @@ async function startRecording() {
     }
 
     mediaRecorder.onstop = () => {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+      const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' })
       const reader = new FileReader()
 
       reader.onload = () => {
@@ -1058,7 +1078,14 @@ async function startRecording() {
     isRecording.value = true
   } catch (error) {
     console.error('Erro ao acessar microfone:', error)
-    alert('Não foi possível acessar o microfone. Verifique as permissões.')
+
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      alert('Permissão negada. Vá nas configurações do navegador e permita o acesso ao microfone para este site.')
+    } else if (error.name === 'NotFoundError') {
+      alert('Nenhum microfone encontrado no dispositivo.')
+    } else {
+      alert('Não foi possível acessar o microfone. Verifique as permissões do navegador.')
+    }
   }
 }
 
