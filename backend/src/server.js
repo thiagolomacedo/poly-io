@@ -739,18 +739,26 @@ const usuariosOnline = new Map()
 io.on('connection', (socket) => {
   console.log('[Socket] Conectado:', socket.id)
 
-  socket.on('registrar', (userId) => {
-    usuariosOnline.set(userId, socket.id)
-    io.emit('usuarios-atualizados')
+  socket.on('autenticar', async (token) => {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET)
+      const userId = decoded.userId
+      usuariosOnline.set(userId, socket.id)
+      socket.userId = userId
+      console.log(`[Socket] Usuário ${userId} online`)
+
+      // Notificar todos sobre o novo usuário online
+      io.emit('usuario-online', userId)
+    } catch (error) {
+      console.log('[Socket] Token inválido')
+    }
   })
 
   socket.on('disconnect', () => {
-    for (const [userId, socketId] of usuariosOnline.entries()) {
-      if (socketId === socket.id) {
-        usuariosOnline.delete(userId)
-        io.emit('usuarios-atualizados')
-        break
-      }
+    if (socket.userId) {
+      usuariosOnline.delete(socket.userId)
+      console.log(`[Socket] Usuário ${socket.userId} offline`)
+      io.emit('usuario-offline', socket.userId)
     }
   })
 })
