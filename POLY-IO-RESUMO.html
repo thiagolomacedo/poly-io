@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poly.io - Resumo do Projeto</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #6366f1;
+    }
+
+    .logo {
+      font-size: 4rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .logo-poly { color: #fff; }
+    .logo-io { color: #6366f1; }
+
+    .tagline {
+      font-size: 1.5rem;
+      color: #888;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #6366f1;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+
+    p {
+      color: #ccc;
+      margin-bottom: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+
+    th {
+      background: #1a1a2e;
+      color: #6366f1;
+      font-weight: 600;
+    }
+
+    td {
+      color: #ccc;
+    }
+
+    tr:hover {
+      background: #111;
+    }
+
+    .highlight {
+      background: #1a1a2e;
+      padding: 20px;
+      border-radius: 10px;
+      border-left: 4px solid #6366f1;
+      margin-bottom: 20px;
+    }
+
+    .highlight-title {
+      color: #6366f1;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .url {
+      color: #6366f1;
+      word-break: break-all;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #6366f1;
+      color: #fff;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin: 2px;
+    }
+
+    .badge-free {
+      background: #10b981;
+    }
+
+    .tech-stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 1px solid #333;
+      color: #666;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        padding: 20px;
+      }
+
+      .logo-poly { color: #000; }
+
+      th {
+        background: #f0f0f0;
+      }
+
+      td, p {
+        color: #333;
+      }
+
+      .highlight {
+        background: #f5f5f5;
+        border-left-color: #6366f1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">
+      <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
+    </div>
+    <p class="tagline">Chat sem barreiras de idioma</p>
+  </div>
+
+  <div class="section">
+    <h2>Sobre o Projeto</h2>
+    <p>
+      O <strong>Poly.io</strong> é uma plataforma de chat com tradução automática em tempo real.
+      Cada usuário escreve mensagens no seu idioma nativo, e o destinatário recebe automaticamente
+      a mensagem traduzida para o idioma configurado no seu perfil.
+    </p>
+    <p>
+      A tradução é invisível para o usuário final, criando uma experiência fluida de comunicação
+      entre pessoas de diferentes países e idiomas.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>Funcionalidades</h2>
+    <table>
+      <tr>
+        <th>Funcionalidade</th>
+        <th>Descrição</th>
+      </tr>
+      <tr>
+        <td>Tradução Automática</td>
+        <td>Mensagens traduzidas em tempo real para o idioma do destinatário</td>
+      </tr>
+      <tr>
+        <td>Detecção de Idioma</td>
+        <td>Identifica automaticamente o idioma da mensagem enviada</td>
+      </tr>
+      <tr>
+        <td>Chat em Tempo Real</td>
+        <td>Mensagens entregues instantaneamente via WebSocket</td>
+      </tr>
+      <tr>
+        <td>Ver Original</td>
+        <td>Botão para visualizar o texto original da mensagem</td>
+      </tr>
+      <tr>
+        <td>Status Online</td>
+        <td>Lista apenas usuários que estão conectados no momento</td>
+      </tr>
+      <tr>
+        <td>Seleção de Idioma</td>
+        <td>Usuário escolhe seu idioma ao entrar no chat</td>
+      </tr>
+      <tr>
+        <td>Interface Responsiva</td>
+        <td>Funciona em desktop e dispositivos móveis</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Idiomas Suportados</h2>
+    <table>
+      <tr>
+        <th>Código</th>
+        <th>Idioma</th>
+        <th>Nome Nativo</th>
+      </tr>
+      <tr><td>pt</td><td>Português</td><td>Português</td></tr>
+      <tr><td>en</td><td>Inglês</td><td>English</td></tr>
+      <tr><td>es</td><td>Espanhol</td><td>Español</td></tr>
+      <tr><td>fr</td><td>Francês</td><td>Français</td></tr>
+      <tr><td>de</td><td>Alemão</td><td>Deutsch</td></tr>
+      <tr><td>it</td><td>Italiano</td><td>Italiano</td></tr>
+      <tr><td>ja</td><td>Japonês</td><td>日本語</td></tr>
+      <tr><td>ko</td><td>Coreano</td><td>한국어</td></tr>
+      <tr><td>zh</td><td>Chinês</td><td>中文</td></tr>
+      <tr><td>ru</td><td>Russo</td><td>Русский</td></tr>
+      <tr><td>ar</td><td>Árabe</td><td>العربية</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Arquitetura Técnica</h2>
+
+    <div class="highlight">
+      <div class="highlight-title">Stack Tecnológica</div>
+      <div class="tech-stack">
+        <span class="badge">Vue.js 3</span>
+        <span class="badge">Vite</span>
+        <span class="badge">Node.js</span>
+        <span class="badge">Express</span>
+        <span class="badge">Socket.io</span>
+        <span class="badge">MyMemory API</span>
+      </div>
+    </div>
+
+    <table>
+      <tr>
+        <th>Camada</th>
+        <th>Tecnologia</th>
+        <th>Função</th>
+      </tr>
+      <tr>
+        <td>Frontend</td>
+        <td>Vue.js 3 + Vite</td>
+        <td>Interface do usuário</td>
+      </tr>
+      <tr>
+        <td>Backend</td>
+        <td>Node.js + Express</td>
+        <td>API REST e lógica de negócio</td>
+      </tr>
+      <tr>
+        <td>Tempo Real</td>
+        <td>Socket.io</td>
+        <td>Comunicação WebSocket</td>
+      </tr>
+      <tr>
+        <td>Tradução</td>
+        <td>MyMemory API</td>
+        <td>Serviço de tradução gratuito</td>
+      </tr>
+      <tr>
+        <td>Tradução (Opcional)</td>
+        <td>Azure Translator</td>
+        <td>2M caracteres/mês grátis</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Hospedagem</h2>
+
+    <div class="highlight">
+      <div class="highlight-title">URLs de Produção</div>
+      <p><strong>Frontend:</strong> <span class="url">https://poly-io.vercel.app</span></p>
+      <p><strong>Backend:</strong> <span class="url">https://poly-io-api.onrender.com</span></p>
+      <p><strong>Repositório:</strong> <span class="url">https://github.com/thiagolomacedo/poly-io</span></p>
+    </div>
+
+    <table>
+      <tr>
+        <th>Serviço</th>
+        <th>Plataforma</th>
+        <th>Plano</th>
+        <th>Custo</th>
+      </tr>
+      <tr>
+        <td>Frontend</td>
+        <td>Vercel</td>
+        <td>Hobby</td>
+        <td><span class="badge badge-free">Grátis</span></td>
+      </tr>
+      <tr>
+        <td>Backend</td>
+        <td>Render</td>
+        <td>Free</td>
+        <td><span class="badge badge-free">Grátis</span></td>
+      </tr>
+      <tr>
+        <td>Código</td>
+        <td>GitHub</td>
+        <td>Free</td>
+        <td><span class="badge badge-free">Grátis</span></td>
+      </tr>
+      <tr>
+        <td>Tradução</td>
+        <td>MyMemory</td>
+        <td>Free</td>
+        <td><span class="badge badge-free">Grátis</span></td>
+      </tr>
+    </table>
+
+    <div class="highlight">
+      <div class="highlight-title">Custo Total Mensal</div>
+      <p style="font-size: 2rem; color: #10b981; font-weight: bold;">R$ 0,00</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Fluxo de Funcionamento</h2>
+    <table>
+      <tr>
+        <th>Passo</th>
+        <th>Ação</th>
+        <th>Resultado</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>Usuário A entra no chat</td>
+        <td>Escolhe nome e idioma (ex: Português)</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Usuário B entra no chat</td>
+        <td>Escolhe nome e idioma (ex: Inglês)</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>A envia: "Olá, tudo bem?"</td>
+        <td>Backend detecta: Português</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Backend traduz</td>
+        <td>Português → Inglês</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>B recebe</td>
+        <td>"Hello, how are you?"</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>B pode ver original</td>
+        <td>Botão "Ver original"</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Estrutura do Projeto</h2>
+    <div class="highlight">
+      <pre style="color: #ccc; font-family: monospace; white-space: pre-wrap;">
+C:\Poly.io\
+├── backend/
+│   ├── src/
+│   │   └── server.js         # API + Socket.io + Tradução
+│   └── package.json
+│
+├── frontend/
+│   ├── src/
+│   │   ├── main.js
+│   │   └── App.vue           # Interface completa
+│   ├── vercel.json           # Config deploy Vercel
+│   └── package.json
+│
+├── README.md                  # Documentação
+└── POLY-IO-RESUMO.html       # Este documento
+      </pre>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Potencial de Mercado</h2>
+    <table>
+      <tr>
+        <th>Segmento</th>
+        <th>Caso de Uso</th>
+      </tr>
+      <tr>
+        <td>Empresas Multinacionais</td>
+        <td>Comunicação entre equipes de diferentes países</td>
+      </tr>
+      <tr>
+        <td>E-commerce Global</td>
+        <td>Suporte ao cliente em múltiplos idiomas</td>
+      </tr>
+      <tr>
+        <td>Educação</td>
+        <td>Interação entre alunos internacionais</td>
+      </tr>
+      <tr>
+        <td>Turismo</td>
+        <td>Comunicação entre viajantes e locais</td>
+      </tr>
+      <tr>
+        <td>Relacionamentos</td>
+        <td>Conexão entre pessoas de diferentes países</td>
+      </tr>
+      <tr>
+        <td>Comunidades Online</td>
+        <td>Fóruns e grupos multilíngues</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Roadmap Futuro</h2>
+    <table>
+      <tr>
+        <th>Versão</th>
+        <th>Funcionalidade</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>v1.0</td>
+        <td>Chat com tradução automática</td>
+        <td><span class="badge badge-free">Concluído</span></td>
+      </tr>
+      <tr>
+        <td>v1.1</td>
+        <td>Banco de dados persistente</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v1.2</td>
+        <td>Autenticação (login/senha)</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v1.3</td>
+        <td>Foto de perfil</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v2.0</td>
+        <td>Grupos de conversa</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v2.1</td>
+        <td>Indicador "digitando..."</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v3.0</td>
+        <td>Aplicativo mobile</td>
+        <td>Planejado</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p><strong>Poly.io</strong> - Desenvolvido por Thiago Macedo</p>
+    <p>Documento gerado em Fevereiro de 2026</p>
+    <p style="margin-top: 10px; color: #6366f1;">Da ideia à realidade. Chat sem fronteiras.</p>
+  </div>
+
+</body>
+</html>

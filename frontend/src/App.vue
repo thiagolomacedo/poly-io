@@ -48,8 +48,21 @@
 
     <!-- Tela Principal do Chat -->
     <div v-else class="chat-screen">
+      <!-- Botão Menu Mobile -->
+      <button class="mobile-menu-btn" @click="sidebarOpen = !sidebarOpen">
+        <span v-if="!sidebarOpen">☰</span>
+        <span v-else>✕</span>
+      </button>
+
+      <!-- Overlay para fechar sidebar no mobile -->
+      <div
+        v-if="sidebarOpen"
+        class="sidebar-overlay"
+        @click="sidebarOpen = false"
+      ></div>
+
       <!-- Sidebar com usuários -->
-      <aside class="sidebar">
+      <aside class="sidebar" :class="{ open: sidebarOpen }">
         <div class="sidebar-header">
           <div class="logo-small">
             <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
@@ -174,6 +187,7 @@ const selectedUser = ref(null)
 const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
+const sidebarOpen = ref(true) // Sidebar visível no mobile
 
 const loginForm = ref({
   nome: '',
@@ -244,6 +258,7 @@ async function carregarUsuarios() {
 
 async function selecionarUsuario(user) {
   selectedUser.value = user
+  sidebarOpen.value = false // Fechar sidebar no mobile
   await carregarMensagens()
 }
 
@@ -762,8 +777,48 @@ body {
   cursor: not-allowed;
 }
 
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  width: 44px;
+  height: 44px;
+  background: #6366f1;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 90;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -780,6 +835,14 @@ body {
 
   .chat-area {
     width: 100%;
+  }
+
+  .no-chat {
+    padding-top: 80px;
+  }
+
+  .logo-big {
+    font-size: 2.5rem;
   }
 }
 </style>
