@@ -29,6 +29,9 @@ const io = new Server(server, {
 app.use(cors())
 app.use(express.json())
 
+// Mapa de usuários online (socket)
+const usuariosOnline = new Map()
+
 // ==================== MIDDLEWARE DE AUTENTICAÇÃO ====================
 
 function authMiddleware(req, res, next) {
@@ -231,6 +234,12 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
 })
 
 // ==================== ROTAS DE USUÁRIOS ====================
+
+// Listar usuários online (DEVE vir antes de /api/users/:id)
+app.get('/api/users/online', authMiddleware, (req, res) => {
+  const onlineIds = Array.from(usuariosOnline.keys())
+  res.json(onlineIds)
+})
 
 // Buscar usuários (com filtros)
 app.get('/api/users', authMiddleware, async (req, res) => {
@@ -736,15 +745,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
-// Listar usuários online
-app.get('/api/users/online', authMiddleware, (req, res) => {
-  const onlineIds = Array.from(usuariosOnline.keys())
-  res.json(onlineIds)
-})
-
 // ==================== SOCKET.IO ====================
-
-const usuariosOnline = new Map()
 
 io.on('connection', (socket) => {
   console.log('[Socket] Conectado:', socket.id)
