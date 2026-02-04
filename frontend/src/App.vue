@@ -2355,6 +2355,9 @@ body {
 
   .main-area {
     width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .no-chat {
@@ -2365,8 +2368,44 @@ body {
     font-size: 2.5rem;
   }
 
+  /* Header fixo no topo */
   .chat-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: #111;
     padding-left: 70px;
+  }
+
+  /* Aviso de expiração fixo abaixo do header */
+  .expiration-notice {
+    position: fixed;
+    top: 73px;
+    left: 0;
+    right: 0;
+    z-index: 49;
+  }
+
+  /* Área de mensagens com scroll */
+  .messages {
+    flex: 1;
+    margin-top: 120px;
+    margin-bottom: 80px;
+    padding-bottom: 20px;
+  }
+
+  /* Input fixo no rodapé */
+  .message-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: #0a0a0a;
+    padding: 12px 16px;
+    border-top: 1px solid #222;
   }
 
   .message {
