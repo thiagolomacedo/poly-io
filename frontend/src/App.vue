@@ -2391,16 +2391,20 @@ body {
     left: 0;
     right: 0;
     z-index: 49;
-    flex-wrap: wrap;
     text-align: center;
-    padding: 8px 12px;
-    font-size: 0.7rem;
+    padding: 6px 12px;
+    font-size: 0.65rem;
+  }
+
+  /* Esconder botão no mobile (já tem o ícone no header) */
+  .expiration-notice button {
+    display: none;
   }
 
   /* Área de mensagens com scroll */
   .messages {
     flex: 1;
-    margin-top: 120px;
+    margin-top: 105px;
     margin-bottom: 80px;
     padding: 16px;
     padding-bottom: 20px;
