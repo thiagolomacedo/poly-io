@@ -468,7 +468,7 @@ async function login() {
     const data = await res.json()
 
     if (!res.ok) {
-      throw new Error(data.erro || 'Erro ao fazer login')
+      throw new Error(data.error || data.erro || 'Erro ao fazer login')
     }
 
     token.value = data.token
@@ -497,7 +497,7 @@ async function register() {
     const data = await res.json()
 
     if (!res.ok) {
-      throw new Error(data.erro || 'Erro ao criar conta')
+      throw new Error(data.error || data.erro || 'Erro ao criar conta')
     }
 
     token.value = data.token
@@ -572,7 +572,14 @@ async function loadConnections() {
       headers: authHeaders()
     })
     const data = await res.json()
-    connections.value = data.map(c => ({ ...c, online: false }))
+    connections.value = data.map(c => ({
+      id: c.user_id,
+      connectionId: c.connection_id,
+      nome: c.nome,
+      idioma: c.idioma,
+      pais: c.pais,
+      online: false
+    }))
   } catch (error) {
     console.error('Erro ao carregar conexões:', error)
   }
@@ -584,8 +591,17 @@ async function loadPendingRequests() {
       headers: authHeaders()
     })
     const data = await res.json()
-    pendingRequests.value = data.recebidas || []
-    sentRequests.value = data.enviadas || []
+    // Mapear para formato esperado
+    pendingRequests.value = (data.recebidas || data || []).map(r => ({
+      id: r.user_id,
+      connectionId: r.connection_id,
+      nome: r.nome,
+      idioma: r.idioma
+    }))
+    sentRequests.value = (data.enviadas || []).map(r => ({
+      id: r.user_id,
+      nome: r.nome
+    }))
   } catch (error) {
     console.error('Erro ao carregar solicitações:', error)
   }
@@ -598,7 +614,7 @@ async function searchUsers() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/users?busca=${encodeURIComponent(searchQuery.value)}`, {
+    const res = await fetch(`${API_URL}/users?search=${encodeURIComponent(searchQuery.value)}`, {
       headers: authHeaders()
     })
     searchResults.value = await res.json()
@@ -609,10 +625,9 @@ async function searchUsers() {
 
 async function sendConnectionRequest(userId) {
   try {
-    const res = await fetch(`${API_URL}/connections/request`, {
+    const res = await fetch(`${API_URL}/connections/request/${userId}`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ userId })
+      headers: authHeaders()
     })
 
     if (res.ok) {
@@ -628,10 +643,9 @@ async function sendConnectionRequest(userId) {
 
 async function acceptRequest(connectionId) {
   try {
-    await fetch(`${API_URL}/connections/accept`, {
+    await fetch(`${API_URL}/connections/accept/${connectionId}`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ connectionId })
+      headers: authHeaders()
     })
     loadConnections()
     loadPendingRequests()
@@ -642,10 +656,9 @@ async function acceptRequest(connectionId) {
 
 async function rejectRequest(connectionId) {
   try {
-    await fetch(`${API_URL}/connections/reject`, {
+    await fetch(`${API_URL}/connections/reject/${connectionId}`, {
       method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ connectionId })
+      headers: authHeaders()
     })
     loadPendingRequests()
   } catch (error) {
@@ -670,11 +683,11 @@ async function loadMessages() {
     })
     const data = await res.json()
     messages.value = data.map(m => ({
-      ...m,
-      euEnviei: m.sender_id === currentUser.value.id,
-      texto: m.sender_id === currentUser.value.id ? m.texto_original : (m.texto_traduzido || m.texto_original),
-      textoOriginal: m.texto_original,
-      enviadoEm: m.enviado_em,
+      id: m.id,
+      euEnviei: m.euEnviei,
+      texto: m.texto,
+      textoOriginal: m.textoOriginal,
+      enviadoEm: m.enviadoEm,
       showOriginal: false
     }))
     scrollToBottom()
@@ -700,15 +713,15 @@ async function sendMessage() {
 
 function handleNewMessage(msg) {
   if (!selectedConnection.value) return
-  if (msg.connection_id !== selectedConnection.value.connectionId) return
+  if (msg.connectionId !== selectedConnection.value.connectionId) return
 
-  const euEnviei = msg.sender_id === currentUser.value.id
+  const euEnviei = msg.senderId === currentUser.value.id
   messages.value.push({
     id: msg.id,
     euEnviei,
-    texto: euEnviei ? msg.texto_original : (msg.texto_traduzido || msg.texto_original),
-    textoOriginal: msg.texto_original,
-    enviadoEm: msg.enviado_em,
+    texto: euEnviei ? msg.texto : msg.textoTraduzido,
+    textoOriginal: msg.texto,
+    enviadoEm: msg.enviadoEm,
     showOriginal: false
   })
   scrollToBottom()

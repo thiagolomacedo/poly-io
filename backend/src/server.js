@@ -348,10 +348,11 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
   }
 })
 
-// Listar solicitações pendentes (recebidas)
+// Listar solicitações pendentes (recebidas e enviadas)
 app.get('/api/connections/pending', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query(`
+    // Solicitações recebidas
+    const recebidas = await pool.query(`
       SELECT
         c.id as connection_id,
         c.criado_em,
@@ -367,7 +368,32 @@ app.get('/api/connections/pending', authMiddleware, async (req, res) => {
       ORDER BY c.criado_em DESC
     `, [req.userId])
 
-    res.json(result.rows)
+    // Solicitações enviadas
+    const enviadas = await pool.query(`
+      SELECT
+        c.id as connection_id,
+        c.criado_em,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.id
+          ELSE u1.id
+        END as user_id,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.nome
+          ELSE u1.nome
+        END as nome
+      FROM connections c
+      JOIN users u1 ON c.user_a_id = u1.id
+      JOIN users u2 ON c.user_b_id = u2.id
+      WHERE (c.user_a_id = $1 OR c.user_b_id = $1)
+        AND c.solicitado_por = $1
+        AND c.status = 'pendente'
+      ORDER BY c.criado_em DESC
+    `, [req.userId])
+
+    res.json({
+      recebidas: recebidas.rows,
+      enviadas: enviadas.rows
+    })
   } catch (error) {
     console.error('[Connections] Erro ao listar pendentes:', error.message)
     res.status(500).json({ error: 'Erro ao listar solicitações' })
