@@ -151,15 +151,25 @@
             <span class="user-name">{{ currentUser?.nome }}</span>
             <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
           </div>
-          <div class="status-selector">
+          <div class="status-row">
+            <div class="status-selector">
+              <button
+                v-for="s in statusOptions"
+                :key="s.value"
+                :class="['status-btn', s.value, { active: myStatus === s.value }]"
+                @click="changeStatus(s.value)"
+                :title="s.label"
+              >
+                <span class="status-dot"></span>
+              </button>
+            </div>
             <button
-              v-for="s in statusOptions"
-              :key="s.value"
-              :class="['status-btn', s.value, { active: myStatus === s.value }]"
-              @click="changeStatus(s.value)"
-              :title="s.label"
+              class="btn-mute-all"
+              :class="{ muted: notificacaoGlobalMudo }"
+              @click="toggleMuteAll"
+              :title="notificacaoGlobalMudo ? 'Ativar sons' : 'Silenciar tudo'"
             >
-              <span class="status-dot"></span>
+              {{ notificacaoGlobalMudo ? '🔇' : '🔔' }}
             </button>
           </div>
         </div>
@@ -209,6 +219,14 @@
                 <span class="name">{{ conn.nome }}</span>
                 <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ conn.pais || '?' }}</span>
               </div>
+              <button
+                class="btn-mute-connection"
+                :class="{ muted: isConnectionMuted(conn.connectionId) }"
+                @click.stop="toggleMuteConnection(conn.connectionId)"
+                :title="isConnectionMuted(conn.connectionId) ? 'Ativar som' : 'Silenciar'"
+              >
+                {{ isConnectionMuted(conn.connectionId) ? '🔇' : '🔔' }}
+              </button>
             </div>
             <p v-if="connections.length === 0" class="empty-state">
               Nenhuma conexão ainda.<br>
@@ -433,6 +451,10 @@ const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
 const myStatus = ref('online')
+
+// Configurações de notificação
+const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
+const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
@@ -791,9 +813,12 @@ function handleNewMessage(msg) {
   // Verificar se a mensagem é de uma das MINHAS conexões
   const minhaConexao = connections.value.find(c => c.connectionId === msg.connectionId)
 
-  // Tocar som apenas se: não fui eu que enviei E é uma conexão minha
+  // Tocar som apenas se: não fui eu que enviei E é uma conexão minha E não está mudo
   if (!euEnviei && minhaConexao) {
-    playBubblePop()
+    const estaMudo = notificacaoGlobalMudo.value || isConnectionMuted(msg.connectionId)
+    if (!estaMudo) {
+      playBubblePop()
+    }
   }
 
   // Se não está na conversa selecionada, não adiciona na lista visível
@@ -870,6 +895,27 @@ function handleStatusUpdate(data) {
     selectedConnection.value.status = status
     selectedConnection.value.online = status !== 'invisivel'
   }
+}
+
+// ==================== CONTROLE DE NOTIFICAÇÕES ====================
+
+function toggleMuteAll() {
+  notificacaoGlobalMudo.value = !notificacaoGlobalMudo.value
+  localStorage.setItem('poly_mute_all', notificacaoGlobalMudo.value)
+}
+
+function toggleMuteConnection(connectionId) {
+  const index = conexoesMudas.value.indexOf(connectionId)
+  if (index === -1) {
+    conexoesMudas.value.push(connectionId)
+  } else {
+    conexoesMudas.value.splice(index, 1)
+  }
+  localStorage.setItem('poly_mute_connections', JSON.stringify(conexoesMudas.value))
+}
+
+function isConnectionMuted(connectionId) {
+  return conexoesMudas.value.includes(connectionId)
 }
 
 // ==================== SOM DE NOTIFICAÇÃO ====================
@@ -1139,11 +1185,62 @@ body {
   color: #6366f1;
 }
 
-/* Status Selector */
+/* Status Row */
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
 .status-selector {
   display: flex;
   gap: 8px;
-  margin-top: 12px;
+}
+
+/* Botão silenciar tudo */
+.btn-mute-all {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.btn-mute-all:hover {
+  border-color: #555;
+}
+
+.btn-mute-all.muted {
+  background: #333;
+  border-color: #f59e0b;
+}
+
+/* Botão silenciar conexão */
+.btn-mute-connection {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-mute-connection:hover {
+  opacity: 1;
+  background: #222;
+}
+
+.btn-mute-connection.muted {
+  opacity: 1;
+  background: #333;
 }
 
 .status-btn {
