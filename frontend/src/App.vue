@@ -788,12 +788,15 @@ function handleNewMessage(msg) {
 
   const euEnviei = msg.senderId === currentUser.value.id
 
-  // Tocar som apenas para mensagens recebidas
-  if (!euEnviei) {
+  // Verificar se a mensagem é de uma das MINHAS conexões
+  const minhaConexao = connections.value.find(c => c.connectionId === msg.connectionId)
+
+  // Tocar som apenas se: não fui eu que enviei E é uma conexão minha
+  if (!euEnviei && minhaConexao) {
     playBubblePop()
   }
 
-  // Se não está na conversa certa, apenas toca o som mas não adiciona na lista
+  // Se não está na conversa selecionada, não adiciona na lista visível
   if (!selectedConnection.value) return
   if (msg.connectionId !== selectedConnection.value.connectionId) return
 
