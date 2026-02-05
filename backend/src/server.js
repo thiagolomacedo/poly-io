@@ -800,6 +800,26 @@ app.delete('/api/chat/:connectionId/messages', authMiddleware, async (req, res) 
   }
 })
 
+// Excluir uma mensagem específica (apenas o remetente pode excluir)
+app.delete('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      DELETE FROM messages
+      WHERE id = $1 AND sender_id = $2
+      RETURNING id
+    `, [req.params.messageId, req.userId])
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Mensagem não encontrada ou sem permissão' })
+    }
+
+    res.json({ message: 'Mensagem excluída' })
+  } catch (error) {
+    console.error('[Chat] Erro ao excluir mensagem:', error.message)
+    res.status(500).json({ error: 'Erro ao excluir mensagem' })
+  }
+})
+
 // ==================== ROTAS PÚBLICAS ====================
 
 app.get('/', (req, res) => {

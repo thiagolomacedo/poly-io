@@ -438,6 +438,9 @@
               <button class="btn-icon" @click="exportChat" title="Exportar conversa">
                 📥
               </button>
+              <button class="btn-icon btn-clear" @click="clearConversation" title="Limpar conversa">
+                🗑️
+              </button>
             </div>
           </div>
 
@@ -454,8 +457,17 @@
               :key="msg.id"
               class="message"
               :class="{ 'sent': msg.euEnviei, 'received': !msg.euEnviei }"
+              @click="msg.euEnviei ? toggleMessageMenu(msg) : null"
             >
               <div class="message-content">
+                <!-- Botão excluir (apenas para mensagens enviadas) -->
+                <button
+                  v-if="msg.euEnviei && msg.showMenu"
+                  class="btn-delete-msg"
+                  @click.stop="deleteMessage(msg)"
+                >
+                  🗑️ Excluir
+                </button>
                 <!-- Mensagem de áudio -->
                 <div v-if="msg.isAudio" class="audio-message">
                   <span class="audio-icon">🎤</span>
@@ -465,7 +477,7 @@
                 <div v-else-if="msg.isFile" class="file-message">
                   <span class="file-icon">📎</span>
                   <span class="file-name">{{ msg.fileName }}</span>
-                  <button class="btn-download" @click="downloadFile(msg)">
+                  <button class="btn-download" @click.stop="downloadFile(msg)">
                     Baixar
                   </button>
                 </div>
@@ -475,7 +487,7 @@
                   <button
                     v-if="!msg.euEnviei && msg.textoOriginal !== msg.texto"
                     class="btn-original"
-                    @click="msg.showOriginal = !msg.showOriginal"
+                    @click.stop="msg.showOriginal = !msg.showOriginal"
                   >
                     {{ msg.showOriginal ? 'Ver tradução' : 'Ver original' }}
                   </button>
@@ -1207,6 +1219,67 @@ async function exportChat() {
     URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
+  }
+}
+
+// ==================== EXCLUIR MENSAGENS ====================
+
+function toggleMessageMenu(msg) {
+  // Fechar menu de outras mensagens
+  messages.value.forEach(m => {
+    if (m.id !== msg.id) m.showMenu = false
+  })
+  // Toggle menu desta mensagem
+  msg.showMenu = !msg.showMenu
+}
+
+async function deleteMessage(msg) {
+  if (!confirm('Excluir esta mensagem?')) return
+
+  // Se for mensagem local (áudio/arquivo P2P), apenas remover do array
+  if (String(msg.id).startsWith('audio-') || String(msg.id).startsWith('file-')) {
+    messages.value = messages.value.filter(m => m.id !== msg.id)
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/chat/message/${msg.id}`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      messages.value = messages.value.filter(m => m.id !== msg.id)
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao excluir mensagem')
+    }
+  } catch (error) {
+    console.error('Erro ao excluir mensagem:', error)
+    alert('Erro ao excluir mensagem')
+  }
+}
+
+async function clearConversation() {
+  if (!selectedConnection.value) return
+
+  if (!confirm('Limpar toda a conversa?\n\nIsso irá excluir todas as mensagens permanentemente.')) return
+
+  try {
+    const res = await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}/messages`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      messages.value = []
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao limpar conversa')
+    }
+  } catch (error) {
+    console.error('Erro ao limpar conversa:', error)
+    alert('Erro ao limpar conversa')
   }
 }
 
@@ -2481,6 +2554,30 @@ body {
 
 .btn-icon:hover {
   border-color: #6366f1;
+}
+
+.btn-icon.btn-clear:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Botão excluir mensagem */
+.btn-delete-msg {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #ef4444;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-delete-msg:hover {
+  background: #dc2626;
 }
 
 /* Expiration Notice */
