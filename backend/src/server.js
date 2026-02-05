@@ -647,6 +647,9 @@ app.delete('/api/connections/:connectionId', authMiddleware, async (req, res) =>
 // Buscar histórico de mensagens
 app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
   try {
+    // Idioma de destino personalizado (opcional - se não passar, usa o padrão do perfil)
+    const idiomaDestino = req.query.idiomaDestino
+
     // Verificar se usuário faz parte da conexão
     const connResult = await pool.query(`
       SELECT c.*, u1.idioma as idioma_a, u2.idioma as idioma_b
@@ -668,6 +671,7 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         m.texto_original,
         m.texto_traduzido,
         m.idioma_original,
+        m.idioma_destino,
         m.enviado_em,
         m.lido,
         u.nome as sender_nome
@@ -677,22 +681,59 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       ORDER BY m.enviado_em ASC
     `, [req.params.connectionId])
 
-    // Formatar mensagens para o usuário
-    const messages = result.rows.map(msg => ({
-      id: msg.id,
-      senderId: msg.sender_id,
-      senderNome: msg.sender_nome,
-      texto: msg.sender_id === req.userId ? msg.texto_original : msg.texto_traduzido,
-      textoOriginal: msg.texto_original,
-      enviadoEm: msg.enviado_em,
-      lido: msg.lido,
-      euEnviei: msg.sender_id === req.userId
+    // Formatar mensagens (traduz sob demanda apenas se idioma diferente do salvo)
+    const messages = await Promise.all(result.rows.map(async (msg) => {
+      let texto
+
+      if (msg.sender_id === req.userId) {
+        // Mensagem que EU enviei - mostrar original
+        texto = msg.texto_original
+      } else if (idiomaDestino && idiomaDestino !== msg.idioma_destino) {
+        // Usuário escolheu outro idioma no dropdown - traduzir
+        texto = await traduzirTexto(msg.texto_original, msg.idioma_original, idiomaDestino)
+      } else {
+        // Comportamento padrão - usar tradução já salva (idioma do cadastro)
+        texto = msg.texto_traduzido
+      }
+
+      return {
+        id: msg.id,
+        senderId: msg.sender_id,
+        senderNome: msg.sender_nome,
+        texto,
+        textoOriginal: msg.texto_original,
+        idiomaOriginal: msg.idioma_original,
+        enviadoEm: msg.enviado_em,
+        lido: msg.lido,
+        euEnviei: msg.sender_id === req.userId
+      }
     }))
 
     res.json(messages)
   } catch (error) {
     console.error('[Chat] Erro ao buscar histórico:', error.message)
     res.status(500).json({ error: 'Erro ao buscar mensagens' })
+  }
+})
+
+// Traduzir texto sob demanda (para mensagens novas quando idioma diferente)
+app.post('/api/translate', authMiddleware, async (req, res) => {
+  const { texto, idiomaOrigem, idiomaDestino } = req.body
+
+  if (!texto || !idiomaOrigem || !idiomaDestino) {
+    return res.status(400).json({ error: 'Parâmetros inválidos' })
+  }
+
+  try {
+    if (idiomaOrigem === idiomaDestino) {
+      return res.json({ traduzido: texto })
+    }
+
+    const traduzido = await traduzirTexto(texto, idiomaOrigem, idiomaDestino)
+    res.json({ traduzido })
+  } catch (error) {
+    console.error('[Translate] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao traduzir' })
   }
 })
 
@@ -743,6 +784,7 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       senderId: req.userId,
       texto: texto,
       textoTraduzido: textoTraduzido,
+      idiomaOriginal: idiomaOriginal,
       enviadoEm: msgResult.rows[0].enviado_em
     }
 

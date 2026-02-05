@@ -490,9 +490,19 @@
               </div>
             </div>
             <div class="chat-actions">
-              <span class="translation-badge">
-                {{ getIdiomaLabel(currentUser?.idioma) }} ↔ {{ getIdiomaLabel(selectedConnection.idioma) }}
-              </span>
+              <select
+                v-model="idiomaRecepcao"
+                class="idioma-select"
+                @change="onIdiomaRecepcaoChange"
+                title="Idioma para receber traduções"
+              >
+                <option :value="null">{{ getIdiomaLabel(currentUser?.idioma) }} (Padrão)</option>
+                <option v-for="lang in idiomasDisponiveis" :key="lang.code" :value="lang.code">
+                  {{ lang.label }}
+                </option>
+              </select>
+              <span class="translation-arrow">↔</span>
+              <span class="translation-badge">{{ getIdiomaLabel(selectedConnection.idioma) }}</span>
               <button class="btn-icon" @click="exportChat" title="Exportar conversa">
                 📥
               </button>
@@ -653,6 +663,7 @@ const codeQuery = ref('')
 const codeResult = ref(null)
 const codeError = ref('')
 const selectedConnection = ref(null)
+const idiomaRecepcao = ref(null) // null = usar idioma do perfil (padrão)
 const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
@@ -706,8 +717,20 @@ const idiomas = {
   ar: 'العربية'
 }
 
+// Lista de idiomas para o dropdown (exclui o idioma do perfil)
+const idiomasDisponiveis = computed(() => {
+  return Object.entries(idiomas)
+    .filter(([code]) => code !== currentUser.value?.idioma)
+    .map(([code, label]) => ({ code, label }))
+})
+
 function getIdiomaLabel(code) {
   return idiomas[code] || code || ''
+}
+
+// Quando usuário muda o idioma de recepção no dropdown
+async function onIdiomaRecepcaoChange() {
+  await loadMessages()
 }
 
 // Retorna o país ou um padrão baseado no idioma
@@ -1246,6 +1269,7 @@ async function rejectRequest(connectionId) {
 
 async function selectConnection(conn) {
   selectedConnection.value = conn
+  idiomaRecepcao.value = null // Reset para idioma padrão ao mudar de conversa
   sidebarOpen.value = false
   await loadMessages()
 
@@ -1266,7 +1290,13 @@ async function loadMessages() {
   if (!selectedConnection.value) return
 
   try {
-    const res = await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
+    // Monta URL com idioma de recepção se diferente do padrão
+    let url = `${API_URL}/chat/${selectedConnection.value.connectionId}`
+    if (idiomaRecepcao.value) {
+      url += `?idiomaDestino=${idiomaRecepcao.value}`
+    }
+
+    const res = await fetch(url, {
       headers: authHeaders()
     })
     const data = await res.json()
@@ -1275,6 +1305,7 @@ async function loadMessages() {
       euEnviei: m.euEnviei,
       texto: m.texto,
       textoOriginal: m.textoOriginal,
+      idiomaOriginal: m.idiomaOriginal,
       enviadoEm: m.enviadoEm,
       showOriginal: false
     }))
@@ -1299,7 +1330,7 @@ async function sendMessage() {
   }
 }
 
-function handleNewMessage(msg) {
+async function handleNewMessage(msg) {
   // Evitar duplicatas
   if (messages.value.some(m => m.id === msg.id)) return
 
@@ -1320,11 +1351,36 @@ function handleNewMessage(msg) {
   if (!selectedConnection.value) return
   if (msg.connectionId !== selectedConnection.value.connectionId) return
 
+  // Determinar texto a exibir
+  let textoExibir = euEnviei ? msg.texto : msg.textoTraduzido
+
+  // Se usuário escolheu outro idioma no dropdown, traduzir a nova mensagem
+  if (!euEnviei && idiomaRecepcao.value && msg.idiomaOriginal) {
+    try {
+      const res = await fetch(`${API_URL}/translate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          texto: msg.texto,
+          idiomaOrigem: msg.idiomaOriginal,
+          idiomaDestino: idiomaRecepcao.value
+        })
+      })
+      const data = await res.json()
+      if (data.traduzido) {
+        textoExibir = data.traduzido
+      }
+    } catch (e) {
+      console.error('Erro ao traduzir mensagem:', e)
+    }
+  }
+
   messages.value.push({
     id: msg.id,
     euEnviei,
-    texto: euEnviei ? msg.texto : msg.textoTraduzido,
+    texto: textoExibir,
     textoOriginal: msg.texto,
+    idiomaOriginal: msg.idiomaOriginal,
     enviadoEm: msg.enviadoEm,
     showOriginal: false
   })
@@ -2774,6 +2830,34 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.idioma-select {
+  padding: 6px 10px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: #6366f1;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.idioma-select:hover,
+.idioma-select:focus {
+  border-color: #6366f1;
+}
+
+.idioma-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.translation-arrow {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0 4px;
 }
 
 .translation-badge {
