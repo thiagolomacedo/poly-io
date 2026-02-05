@@ -1192,7 +1192,18 @@ async function initializeApp() {
 
   // Conectar socket
   socket = io(API_BASE)
-  socket.emit('autenticar', token.value)
+
+  // Autenticar quando conectar (importante para mobile)
+  socket.on('connect', () => {
+    console.log('[Socket] Conectado, autenticando...')
+    socket.emit('autenticar', token.value)
+  })
+
+  // Re-autenticar em reconexão (mobile pode perder conexão)
+  socket.on('reconnect', () => {
+    console.log('[Socket] Reconectado, re-autenticando...')
+    socket.emit('autenticar', token.value)
+  })
 
   // Listeners do socket
   socket.on('nova-mensagem', handleNewMessage)
