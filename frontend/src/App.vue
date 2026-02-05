@@ -198,6 +198,11 @@
           </div>
 
           <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
+
+          <!-- Botão Excluir Conta -->
+          <button class="btn-delete-account" @click="deleteAccount">
+            Excluir minha conta
+          </button>
         </div>
       </div>
 
@@ -580,6 +585,7 @@ let audioChunks = []
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
+const isOwnProfile = computed(() => profileUser.value?.id === currentUser.value?.id)
 
 // Status options
 const statusOptions = [
@@ -879,6 +885,37 @@ function logout() {
   sentRequests.value = []
   selectedConnection.value = null
   messages.value = []
+}
+
+async function deleteAccount() {
+  const confirmed = confirm(
+    'Tem certeza que deseja excluir sua conta?\n\n' +
+    'Esta ação é IRREVERSÍVEL.\n' +
+    'Todas as suas conexões e mensagens serão perdidas.'
+  )
+
+  if (!confirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      }
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error || 'Erro ao excluir conta')
+      return
+    }
+
+    alert('Conta excluída com sucesso!')
+    showProfileModal.value = false
+    logout()
+  } catch (error) {
+    alert('Erro ao excluir conta. Tente novamente.')
+  }
 }
 
 // ==================== INICIALIZAÇÃO ====================
@@ -2686,6 +2723,8 @@ body {
   width: 100%;
   text-align: center;
   position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .profile-close {
@@ -2843,6 +2882,23 @@ body {
   font-size: 0.7rem;
   color: #555;
   margin-top: 20px;
+}
+
+.btn-delete-account {
+  margin-top: 25px;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #c53030;
+  color: #c53030;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-delete-account:hover {
+  background: #c53030;
+  color: white;
 }
 
 /* Responsive */

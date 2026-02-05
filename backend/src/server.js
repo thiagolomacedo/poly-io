@@ -256,6 +256,28 @@ app.put('/api/auth/profile', authMiddleware, async (req, res) => {
   }
 })
 
+// Excluir conta do usuário
+app.delete('/api/auth/account', authMiddleware, async (req, res) => {
+  try {
+    // Deletar usuário (conexões e mensagens são deletadas via CASCADE)
+    const result = await pool.query(
+      'DELETE FROM users WHERE id = $1 RETURNING email',
+      [req.userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    console.log(`[Auth] Conta excluída: ${result.rows[0].email}`)
+
+    res.json({ message: 'Conta excluída com sucesso' })
+  } catch (error) {
+    console.error('[Auth] Erro ao excluir conta:', error.message)
+    res.status(500).json({ error: 'Erro ao excluir conta' })
+  }
+})
+
 // ==================== ROTAS DE USUÁRIOS ====================
 
 // Listar usuários online com status (DEVE vir antes de /api/users/:id)
