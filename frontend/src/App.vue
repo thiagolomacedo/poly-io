@@ -1422,38 +1422,32 @@ function startSpeechToText() {
                            currentUser.value?.idioma === 'ru' ? 'ru-RU' :
                            currentUser.value?.idioma === 'ar' ? 'ar-SA' : 'pt-BR'
 
-  speechRecognition.continuous = true
-  speechRecognition.interimResults = true
+  // Modo simples: captura uma frase por vez
+  speechRecognition.continuous = false
+  speechRecognition.interimResults = false
 
   speechRecognition.onstart = () => {
     isListening.value = true
   }
 
   speechRecognition.onresult = (event) => {
-    let finalTranscript = ''
-    let interimTranscript = ''
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript
-      } else {
-        interimTranscript = transcript
-      }
+    const transcript = event.results[0][0].transcript
+    // Adicionar espaço se já tiver texto
+    if (newMessage.value && !newMessage.value.endsWith(' ')) {
+      newMessage.value += ' '
     }
-
-    // Mostrar resultado final ou parcial
-    if (finalTranscript) {
-      newMessage.value += finalTranscript
-    }
+    newMessage.value += transcript
   }
 
   speechRecognition.onerror = (event) => {
     console.error('Erro no reconhecimento de voz:', event.error)
     if (event.error === 'not-allowed') {
       alert('Permissão de microfone negada. Permita o acesso ao microfone.')
+    } else if (event.error !== 'no-speech') {
+      // Não mostrar erro se só não detectou fala
+      console.log('Erro:', event.error)
     }
-    stopSpeechToText()
+    isListening.value = false
   }
 
   speechRecognition.onend = () => {
