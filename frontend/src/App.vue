@@ -326,7 +326,7 @@
               </div>
               <div class="user-info">
                 <span class="name">{{ conn.nome }}</span>
-                <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ conn.pais || '?' }}</span>
+                <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ getPaisLabel(conn.pais, conn.idioma) }}</span>
               </div>
               <button
                 class="btn-mute-connection"
@@ -365,7 +365,7 @@
               </div>
               <div class="user-info">
                 <span class="name">{{ codeResult.nome }}</span>
-                <span class="lang">{{ getIdiomaLabel(codeResult.idioma) }} · {{ codeResult.pais || '?' }}</span>
+                <span class="lang">{{ getIdiomaLabel(codeResult.idioma) }} · {{ getPaisLabel(codeResult.pais, codeResult.idioma) }}</span>
               </div>
               <button
                 class="btn-connect"
@@ -397,7 +397,7 @@
               </div>
               <div class="user-info">
                 <span class="name">{{ user.nome }}</span>
-                <span class="lang">{{ getIdiomaLabel(user.idioma) }} · {{ user.pais || '?' }}</span>
+                <span class="lang">{{ getIdiomaLabel(user.idioma) }} · {{ getPaisLabel(user.pais, user.idioma) }}</span>
               </div>
               <button
                 class="btn-connect"
@@ -708,6 +708,28 @@ const idiomas = {
 
 function getIdiomaLabel(code) {
   return idiomas[code] || code || ''
+}
+
+// Retorna o país ou um padrão baseado no idioma
+function getPaisLabel(pais, idioma) {
+  if (pais) return pais
+
+  // Países padrão por idioma
+  const paisPadrao = {
+    pt: 'Brasil',
+    en: 'USA',
+    es: 'España',
+    fr: 'France',
+    de: 'Alemanha',
+    it: 'Itália',
+    ja: 'Japão',
+    ko: 'Coreia',
+    zh: 'China',
+    ru: 'Rússia',
+    ar: 'Arábia'
+  }
+
+  return paisPadrao[idioma] || ''
 }
 
 // Gerar URL do Gravatar a partir do email
