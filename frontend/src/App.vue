@@ -1602,12 +1602,29 @@ function toggleSpeechToText() {
   }
 }
 
-function startSpeechToText() {
+async function startSpeechToText() {
   // Verificar suporte do navegador
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
   if (!SpeechRecognition) {
     alert('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.')
+    return
+  }
+
+  // No desktop, solicitar permissão do microfone explicitamente primeiro
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // Parar o stream imediatamente - só precisamos da permissão
+    stream.getTracks().forEach(track => track.stop())
+  } catch (err) {
+    console.error('Erro ao solicitar microfone:', err)
+    if (err.name === 'NotAllowedError') {
+      alert('Permissão de microfone negada. Clique no ícone de cadeado na barra de endereços e permita o acesso ao microfone.')
+    } else if (err.name === 'NotFoundError') {
+      alert('Nenhum microfone encontrado. Conecte um microfone e tente novamente.')
+    } else {
+      alert('Erro ao acessar microfone: ' + err.message)
+    }
     return
   }
 
@@ -1631,11 +1648,13 @@ function startSpeechToText() {
   speechRecognition.interimResults = false
 
   speechRecognition.onstart = () => {
+    console.log('Reconhecimento de voz iniciado')
     isListening.value = true
   }
 
   speechRecognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript
+    console.log('Transcrição:', transcript)
     // Adicionar espaço se já tiver texto
     if (newMessage.value && !newMessage.value.endsWith(' ')) {
       newMessage.value += ' '
@@ -1646,15 +1665,19 @@ function startSpeechToText() {
   speechRecognition.onerror = (event) => {
     console.error('Erro no reconhecimento de voz:', event.error)
     if (event.error === 'not-allowed') {
-      alert('Permissão de microfone negada. Permita o acesso ao microfone.')
+      alert('Permissão de microfone negada. Permita o acesso ao microfone nas configurações do navegador.')
+    } else if (event.error === 'network') {
+      alert('Erro de rede. Verifique sua conexão com a internet.')
+    } else if (event.error === 'aborted') {
+      console.log('Reconhecimento cancelado')
     } else if (event.error !== 'no-speech') {
-      // Não mostrar erro se só não detectou fala
       console.log('Erro:', event.error)
     }
     isListening.value = false
   }
 
   speechRecognition.onend = () => {
+    console.log('Reconhecimento de voz finalizado')
     isListening.value = false
   }
 
@@ -1662,6 +1685,7 @@ function startSpeechToText() {
     speechRecognition.start()
   } catch (e) {
     console.error('Erro ao iniciar reconhecimento:', e)
+    alert('Erro ao iniciar reconhecimento de voz. Tente novamente.')
     isListening.value = false
   }
 }
