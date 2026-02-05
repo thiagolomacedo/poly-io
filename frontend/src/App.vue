@@ -1602,7 +1602,11 @@ function toggleSpeechToText() {
   }
 }
 
-async function startSpeechToText() {
+// Contador de tentativas para retry em caso de erro de rede
+let speechRetryCount = 0
+const MAX_SPEECH_RETRIES = 2
+
+function startSpeechToText() {
   // Verificar suporte do navegador
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
@@ -1611,66 +1615,60 @@ async function startSpeechToText() {
     return
   }
 
-  // No desktop, solicitar permissão do microfone explicitamente primeiro
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    // Parar o stream imediatamente - só precisamos da permissão
-    stream.getTracks().forEach(track => track.stop())
-  } catch (err) {
-    console.error('Erro ao solicitar microfone:', err)
-    if (err.name === 'NotAllowedError') {
-      alert('Permissão de microfone negada. Clique no ícone de cadeado na barra de endereços e permita o acesso ao microfone.')
-    } else if (err.name === 'NotFoundError') {
-      alert('Nenhum microfone encontrado. Conecte um microfone e tente novamente.')
-    } else {
-      alert('Erro ao acessar microfone: ' + err.message)
-    }
-    return
-  }
-
   speechRecognition = new SpeechRecognition()
 
   // Configurações
-  speechRecognition.lang = currentUser.value?.idioma === 'pt' ? 'pt-BR' :
-                           currentUser.value?.idioma === 'en' ? 'en-US' :
-                           currentUser.value?.idioma === 'es' ? 'es-ES' :
-                           currentUser.value?.idioma === 'fr' ? 'fr-FR' :
-                           currentUser.value?.idioma === 'de' ? 'de-DE' :
-                           currentUser.value?.idioma === 'it' ? 'it-IT' :
-                           currentUser.value?.idioma === 'ja' ? 'ja-JP' :
-                           currentUser.value?.idioma === 'ko' ? 'ko-KR' :
-                           currentUser.value?.idioma === 'zh' ? 'zh-CN' :
-                           currentUser.value?.idioma === 'ru' ? 'ru-RU' :
-                           currentUser.value?.idioma === 'ar' ? 'ar-SA' : 'pt-BR'
-
-  // Modo simples: captura uma frase por vez
+  const langMap = {
+    pt: 'pt-BR', en: 'en-US', es: 'es-ES', fr: 'fr-FR',
+    de: 'de-DE', it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR',
+    zh: 'zh-CN', ru: 'ru-RU', ar: 'ar-SA'
+  }
+  speechRecognition.lang = langMap[currentUser.value?.idioma] || 'pt-BR'
   speechRecognition.continuous = false
   speechRecognition.interimResults = false
+  speechRecognition.maxAlternatives = 1
 
   speechRecognition.onstart = () => {
     console.log('Reconhecimento de voz iniciado')
     isListening.value = true
+    speechRetryCount = 0 // Reset retry count on successful start
   }
 
   speechRecognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript
     console.log('Transcrição:', transcript)
-    // Adicionar espaço se já tiver texto
     if (newMessage.value && !newMessage.value.endsWith(' ')) {
       newMessage.value += ' '
     }
     newMessage.value += transcript
+    speechRetryCount = 0
   }
 
   speechRecognition.onerror = (event) => {
     console.error('Erro no reconhecimento de voz:', event.error)
-    if (event.error === 'not-allowed') {
-      alert('Permissão de microfone negada. Permita o acesso ao microfone nas configurações do navegador.')
-    } else if (event.error === 'network') {
-      alert('Erro de rede. Verifique sua conexão com a internet.')
+
+    if (event.error === 'network') {
+      // Tentar novamente automaticamente
+      if (speechRetryCount < MAX_SPEECH_RETRIES) {
+        speechRetryCount++
+        console.log(`Tentativa ${speechRetryCount} de ${MAX_SPEECH_RETRIES}...`)
+        isListening.value = false
+        setTimeout(() => {
+          startSpeechToText()
+        }, 500)
+        return
+      } else {
+        alert('Erro ao conectar com o serviço de voz. Tente novamente em alguns segundos.')
+        speechRetryCount = 0
+      }
+    } else if (event.error === 'not-allowed') {
+      alert('Permissão de microfone negada. Clique no cadeado na barra de endereços e permita o microfone.')
+    } else if (event.error === 'no-speech') {
+      // Silencioso - usuário não falou nada
+      console.log('Nenhuma fala detectada')
     } else if (event.error === 'aborted') {
       console.log('Reconhecimento cancelado')
-    } else if (event.error !== 'no-speech') {
+    } else {
       console.log('Erro:', event.error)
     }
     isListening.value = false
@@ -1685,6 +1683,10 @@ async function startSpeechToText() {
     speechRecognition.start()
   } catch (e) {
     console.error('Erro ao iniciar reconhecimento:', e)
+    if (e.message?.includes('already started')) {
+      // Já está rodando, ignorar
+      return
+    }
     alert('Erro ao iniciar reconhecimento de voz. Tente novamente.')
     isListening.value = false
   }
