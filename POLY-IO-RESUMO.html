@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Poly.io v2.0 - Resumo do Projeto</title>
+  <title>Poly.io v2.1 - Resumo do Projeto</title>
   <style>
     * {
       margin: 0;
@@ -177,7 +177,7 @@
     <div class="logo">
       <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
     </div>
-    <span class="version">v2.0 - Profissional</span>
+    <span class="version">v2.1 - Profissional</span>
     <p class="tagline">Chat profissional sem barreiras de idioma</p>
   </div>
 
@@ -196,7 +196,7 @@
   </div>
 
   <div class="section">
-    <h2>Funcionalidades v2.0</h2>
+    <h2>Funcionalidades v2.1</h2>
     <table>
       <tr>
         <th>Funcionalidade</th>
@@ -211,11 +211,11 @@
         <td>Solicitar, aceitar ou recusar conexões com outros usuários</td>
       </tr>
       <tr>
-        <td>Código de Amigo <span class="badge badge-new">Novo</span></td>
+        <td>Código de Amigo</td>
         <td>Código único (6 caracteres) para encontrar usuários facilmente</td>
       </tr>
       <tr>
-        <td>Link de Convite <span class="badge badge-new">Novo</span></td>
+        <td>Link de Convite</td>
         <td>Compartilhe link que abre direto na busca pelo seu código</td>
       </tr>
       <tr>
@@ -227,8 +227,16 @@
         <td>Mensagens são automaticamente excluídas após 24 horas</td>
       </tr>
       <tr>
-        <td>Excluir Mensagens <span class="badge badge-new">Novo</span></td>
+        <td>Excluir Mensagens</td>
         <td>Apague mensagens individuais ou limpe toda a conversa</td>
+      </tr>
+      <tr>
+        <td>Editar Mensagens <span class="badge badge-new">Novo</span></td>
+        <td>Edite mensagens enviadas (re-traduz automaticamente)</td>
+      </tr>
+      <tr>
+        <td>Indicador "Digitando" <span class="badge badge-new">Novo</span></td>
+        <td>Mostra quando o outro usuário está digitando (bolinhas animadas)</td>
       </tr>
       <tr>
         <td>Exportar Conversa</td>
@@ -241,6 +249,10 @@
       <tr>
         <td>Tradução Automática</td>
         <td>Mensagens traduzidas em tempo real para o idioma do destinatário</td>
+      </tr>
+      <tr>
+        <td>Seletor de Idioma no Chat <span class="badge badge-new">Novo</span></td>
+        <td>Escolha receber traduções em outro idioma (temporário, por sessão)</td>
       </tr>
       <tr>
         <td>Detecção de Idioma</td>
@@ -279,27 +291,23 @@
         <td>Grave e envie áudios direto pelo navegador (WebM/Opus)</td>
       </tr>
       <tr>
-        <td>Speech-to-Text <span class="badge badge-new">Novo</span></td>
+        <td>Speech-to-Text</td>
         <td>Fale e o texto é digitado automaticamente (Web Speech API)</td>
       </tr>
       <tr>
-        <td>Foto de Perfil (Gravatar) <span class="badge badge-new">Novo</span></td>
+        <td>Foto de Perfil (Gravatar)</td>
         <td>Foto automática via Gravatar usando email (custo zero)</td>
       </tr>
       <tr>
-        <td>LinkedIn no Perfil <span class="badge badge-new">Novo</span></td>
-        <td>Adicione URL do LinkedIn ao seu perfil</td>
+        <td>Rede Social no Perfil <span class="badge badge-new">Novo</span></td>
+        <td>Adicione qualquer rede social (LinkedIn, GitHub, Instagram, etc.)</td>
       </tr>
       <tr>
-        <td>Editar Perfil <span class="badge badge-new">Novo</span></td>
-        <td>Atualize LinkedIn e veja seu código de amigo</td>
-      </tr>
-      <tr>
-        <td>Excluir Conta <span class="badge badge-new">Novo</span></td>
+        <td>Excluir Conta</td>
         <td>Opção de excluir conta permanentemente</td>
       </tr>
       <tr>
-        <td>Preview de Link <span class="badge badge-new">Novo</span></td>
+        <td>Preview de Link</td>
         <td>Open Graph tags para preview bonito ao compartilhar</td>
       </tr>
       <tr>
@@ -310,6 +318,30 @@
         <td>Interface Responsiva</td>
         <td>Layout otimizado para desktop e mobile</td>
       </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Redes Sociais Suportadas no Perfil</h2>
+    <table>
+      <tr>
+        <th>Ícone</th>
+        <th>Rede</th>
+        <th>Categoria</th>
+      </tr>
+      <tr><td>💼</td><td>LinkedIn</td><td>Profissional</td></tr>
+      <tr><td>🐙</td><td>GitHub</td><td>Profissional / Dev</td></tr>
+      <tr><td>🎨</td><td>Behance</td><td>Portfólio</td></tr>
+      <tr><td>🏀</td><td>Dribbble</td><td>Portfólio / Design</td></tr>
+      <tr><td>🌐</td><td>Website</td><td>Portfólio</td></tr>
+      <tr><td>▶️</td><td>YouTube</td><td>Conteúdo</td></tr>
+      <tr><td>📷</td><td>Instagram</td><td>Conteúdo</td></tr>
+      <tr><td>🎵</td><td>TikTok</td><td>Conteúdo</td></tr>
+      <tr><td>🐦</td><td>X (Twitter)</td><td>Comunidade</td></tr>
+      <tr><td>💬</td><td>Discord</td><td>Comunidade</td></tr>
+      <tr><td>🤖</td><td>Reddit</td><td>Comunidade</td></tr>
+      <tr><td>🎮</td><td>Twitch</td><td>Games / Lives</td></tr>
+      <tr><td>🎯</td><td>Steam</td><td>Games</td></tr>
     </table>
   </div>
 
@@ -336,7 +368,7 @@
   </div>
 
   <div class="section">
-    <h2>Arquitetura Técnica v2.0</h2>
+    <h2>Arquitetura Técnica v2.1</h2>
 
     <div class="highlight">
       <div class="highlight-title">Stack Tecnológica</div>
@@ -479,11 +511,12 @@
     <div class="highlight">
       <div class="highlight-title">Custo Total Mensal</div>
       <p style="font-size: 2rem; color: #10b981; font-weight: bold;">R$ 0,00</p>
+      <p style="color: #888; font-size: 0.9rem;">Usando ~32MB de 512MB disponíveis no Neon (6%)</p>
     </div>
   </div>
 
   <div class="section">
-    <h2>Fluxo de Funcionamento v2.0</h2>
+    <h2>Fluxo de Funcionamento v2.1</h2>
     <table>
       <tr>
         <th>Passo</th>
@@ -517,31 +550,36 @@
       </tr>
       <tr>
         <td>6</td>
+        <td>A começa a digitar</td>
+        <td>B vê "A está digitando..." com bolinhas animadas</td>
+      </tr>
+      <tr>
+        <td>7</td>
         <td>A envia: "Olá, tudo bem?"</td>
         <td>Backend detecta: Português</td>
       </tr>
       <tr>
-        <td>7</td>
+        <td>8</td>
         <td>Backend traduz</td>
         <td>Português para Inglês (idioma de B)</td>
       </tr>
       <tr>
-        <td>8</td>
+        <td>9</td>
         <td>B recebe</td>
         <td>"Hello, how are you?" + som de notificação</td>
       </tr>
       <tr>
-        <td>9</td>
-        <td>B pode ver original</td>
-        <td>Botão "Ver original" mostra texto em português</td>
-      </tr>
-      <tr>
         <td>10</td>
-        <td>B usa voz-para-texto</td>
-        <td>Fala e o texto é digitado automaticamente</td>
+        <td>B muda idioma no dropdown</td>
+        <td>Mensagens re-traduzem para o idioma escolhido</td>
       </tr>
       <tr>
         <td>11</td>
+        <td>A percebe erro e edita</td>
+        <td>Mensagem atualiza para B em tempo real</td>
+      </tr>
+      <tr>
+        <td>12</td>
         <td>Após 24 horas</td>
         <td>Mensagens expiram (podem ser exportadas antes)</td>
       </tr>
@@ -556,7 +594,7 @@ C:\Poly.io\
 |-- backend/
 |   |-- src/
 |   |   |-- server.js         # API + Socket.io + Tradução
-|   |   |-- db.js             # Conexão PostgreSQL + Friend Code
+|   |   |-- db.js             # Conexão PostgreSQL + Migrações
 |   |-- package.json
 |
 |-- frontend/
@@ -684,11 +722,6 @@ C:\Poly.io\
       </tr>
       <tr>
         <td>v2.0</td>
-        <td>LinkedIn no perfil</td>
-        <td><span class="badge badge-free">Concluído</span></td>
-      </tr>
-      <tr>
-        <td>v2.0</td>
         <td>Código de amigo único</td>
         <td><span class="badge badge-free">Concluído</span></td>
       </tr>
@@ -719,12 +752,37 @@ C:\Poly.io\
       </tr>
       <tr>
         <td>v2.1</td>
-        <td>Indicador "digitando..."</td>
-        <td>Planejado</td>
+        <td>Seletor de idioma de recepção no chat</td>
+        <td><span class="badge badge-free">Concluído</span></td>
+      </tr>
+      <tr>
+        <td>v2.1</td>
+        <td>Rede social genérica no perfil (13 opções)</td>
+        <td><span class="badge badge-free">Concluído</span></td>
+      </tr>
+      <tr>
+        <td>v2.1</td>
+        <td>Indicador "digitando..." com animação</td>
+        <td><span class="badge badge-free">Concluído</span></td>
+      </tr>
+      <tr>
+        <td>v2.1</td>
+        <td>Editar mensagens enviadas</td>
+        <td><span class="badge badge-free">Concluído</span></td>
+      </tr>
+      <tr>
+        <td>v2.1</td>
+        <td>Layout mobile compacto (header otimizado)</td>
+        <td><span class="badge badge-free">Concluído</span></td>
       </tr>
       <tr>
         <td>v3.0</td>
         <td>Grupos de conversa</td>
+        <td>Planejado</td>
+      </tr>
+      <tr>
+        <td>v3.0</td>
+        <td>PWA (instalar no celular)</td>
         <td>Planejado</td>
       </tr>
       <tr>
@@ -736,8 +794,8 @@ C:\Poly.io\
   </div>
 
   <div class="footer">
-    <p><strong>Poly.io v2.0</strong> - Desenvolvido por Thiago Macedo</p>
-    <p>Documento atualizado em Fevereiro de 2026</p>
+    <p><strong>Poly.io v2.1</strong> - Desenvolvido por Thiago Macedo</p>
+    <p>Documento atualizado em 05 de Fevereiro de 2026</p>
     <p style="margin-top: 10px; color: #6366f1;">Da ideia à realidade. Chat profissional sem fronteiras.</p>
   </div>
 
