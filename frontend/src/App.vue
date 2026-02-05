@@ -495,15 +495,14 @@
 
           <!-- Input de mensagem -->
           <div class="message-input">
-            <button class="btn-attach" @click="$refs.fileInput.click()" title="Enviar arquivo">
+            <label class="btn-attach" title="Enviar arquivo">
               +
-            </button>
-            <input
-              ref="fileInput"
-              type="file"
-              style="display: none"
-              @change="handleFileSelect"
-            />
+              <input
+                type="file"
+                class="file-input-hidden"
+                @change="handleFileSelect"
+              />
+            </label>
             <button
               class="btn-mic"
               :class="{ recording: isRecording }"
@@ -2628,6 +2627,7 @@ body {
 
 /* Botão anexar arquivo */
 .btn-attach {
+  position: relative;
   width: 48px;
   height: 48px;
   background: #1a1a1a;
@@ -2646,6 +2646,17 @@ body {
 .btn-attach:hover {
   border-color: #6366f1;
   color: #6366f1;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 /* Mensagem de arquivo */
