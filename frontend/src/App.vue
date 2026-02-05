@@ -210,9 +210,23 @@
             </div>
             <button class="btn-close-sidebar" @click="sidebarOpen = false">✕</button>
           </div>
-          <div class="current-user">
-            <span class="user-name">{{ currentUser?.nome }}</span>
-            <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
+          <div class="current-user" @click="openProfile(currentUser)" style="cursor: pointer;">
+            <div class="current-user-avatar">
+              <img
+                v-if="currentUser?.email"
+                :src="getGravatarUrl(currentUser.email, 80)"
+                class="gravatar-small"
+                @error="$event.target.style.display='none'"
+              />
+              <span class="avatar-letter-small">{{ currentUser?.nome?.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="current-user-info">
+              <span class="user-name">{{ currentUser?.nome }}</span>
+              <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
+            </div>
+            <button class="btn-edit-profile" @click.stop="openProfile(currentUser)" title="Editar perfil">
+              ✏️
+            </button>
           </div>
           <div class="status-row">
             <div class="status-selector">
@@ -1793,8 +1807,57 @@ body {
 
 .current-user {
   display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  margin: -10px;
+  margin-top: 0;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.current-user:hover {
+  background: #1a1a1a;
+}
+
+.current-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.gravatar-small {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-letter-small {
+  position: relative;
+  z-index: 1;
+}
+
+.current-user-avatar .gravatar-small + .avatar-letter-small {
+  display: none;
+}
+
+.current-user-info {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .current-user .user-name {
@@ -1804,6 +1867,23 @@ body {
 .current-user .user-lang {
   font-size: 0.75rem;
   color: #6366f1;
+}
+
+.btn-edit-profile {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+.btn-edit-profile:hover {
+  background: #333;
+  opacity: 1;
 }
 
 /* Status Row */
