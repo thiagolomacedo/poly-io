@@ -30,9 +30,24 @@ async function initDatabase() {
       )
     `)
 
-    // Adicionar coluna linkedin_url se não existir (migração)
+    // Adicionar coluna linkedin_url se não existir (migração legada)
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(255)
+    `)
+
+    // Adicionar colunas para rede social genérica (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tipo VARCHAR(50)
+    `)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS social_url VARCHAR(255)
+    `)
+
+    // Migrar linkedin_url existente para o novo formato
+    await client.query(`
+      UPDATE users
+      SET social_tipo = 'linkedin', social_url = linkedin_url
+      WHERE linkedin_url IS NOT NULL AND social_tipo IS NULL
     `)
 
     // Adicionar coluna codigo_amigo se não existir (migração)

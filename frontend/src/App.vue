@@ -181,41 +181,63 @@
             </button>
           </div>
 
-          <!-- LinkedIn -->
+          <!-- Rede Social -->
           <div class="profile-social">
-            <div v-if="profileUser?.id === currentUser?.id" class="linkedin-edit">
-              <div v-if="!editingLinkedIn" class="linkedin-display">
+            <!-- Meu perfil - posso editar -->
+            <div v-if="profileUser?.id === currentUser?.id" class="social-edit">
+              <!-- Modo visualização -->
+              <div v-if="!editingSocial" class="social-display">
                 <a
-                  v-if="profileUser?.linkedin_url"
-                  :href="profileUser.linkedin_url"
+                  v-if="profileUser?.social_tipo && profileUser?.social_url"
+                  :href="profileUser.social_url"
                   target="_blank"
-                  class="linkedin-link"
+                  class="social-link"
                 >
-                  <span class="linkedin-icon">in</span>
-                  LinkedIn
+                  <span class="social-icon">{{ getSocialInfo(profileUser.social_tipo).icone }}</span>
+                  {{ getSocialInfo(profileUser.social_tipo).nome }}
                 </a>
-                <span v-else class="linkedin-empty">Sem LinkedIn</span>
-                <button class="btn-edit-linkedin" @click="editingLinkedIn = true">Editar</button>
+                <span v-else class="social-empty">Sem rede social</span>
+                <button class="btn-edit-social" @click="editingSocial = true">
+                  {{ profileUser?.social_tipo ? 'Editar' : 'Adicionar' }}
+                </button>
               </div>
-              <div v-else class="linkedin-form">
+              <!-- Modo edição -->
+              <div v-else class="social-form">
+                <select v-model="socialTipoInput" class="social-select">
+                  <option value="">Selecione a rede</option>
+                  <option v-for="(info, key) in redesSociais" :key="key" :value="key">
+                    {{ info.icone }} {{ info.nome }}
+                  </option>
+                </select>
                 <input
-                  v-model="linkedInInput"
+                  v-model="socialUrlInput"
                   type="url"
-                  placeholder="https://linkedin.com/in/seu-perfil"
+                  :placeholder="socialTipoInput ? getSocialInfo(socialTipoInput).placeholder : 'URL do perfil'"
+                  class="social-input"
                 />
-                <button class="btn-save" @click="saveLinkedIn">Salvar</button>
-                <button class="btn-cancel" @click="editingLinkedIn = false">Cancelar</button>
+                <div class="social-buttons">
+                  <button class="btn-save" @click="saveSocial">Salvar</button>
+                  <button class="btn-cancel" @click="editingSocial = false">Cancelar</button>
+                  <button
+                    v-if="profileUser?.social_tipo"
+                    class="btn-remove"
+                    @click="removeSocial"
+                  >
+                    Remover
+                  </button>
+                </div>
               </div>
             </div>
+            <!-- Perfil de outro usuário - só visualizar -->
             <div v-else>
               <a
-                v-if="profileUser?.linkedin_url"
-                :href="profileUser.linkedin_url"
+                v-if="profileUser?.social_tipo && profileUser?.social_url"
+                :href="profileUser.social_url"
                 target="_blank"
-                class="linkedin-link"
+                class="social-link"
               >
-                <span class="linkedin-icon">in</span>
-                LinkedIn
+                <span class="social-icon">{{ getSocialInfo(profileUser.social_tipo).icone }}</span>
+                {{ getSocialInfo(profileUser.social_tipo).nome }}
               </a>
             </div>
           </div>
@@ -697,10 +719,28 @@ const statusOptions = [
 // Modal de perfil
 const showProfileModal = ref(false)
 const profileUser = ref(null)
-const editingLinkedIn = ref(false)
-const linkedInInput = ref('')
+const editingSocial = ref(false)
+const socialTipoInput = ref('')
+const socialUrlInput = ref('')
 const codeCopied = ref(false)
 const linkCopied = ref(false)
+
+// Tipos de redes sociais disponíveis
+const redesSociais = {
+  linkedin: { nome: 'LinkedIn', icone: '💼', placeholder: 'https://linkedin.com/in/seu-perfil' },
+  github: { nome: 'GitHub', icone: '🐙', placeholder: 'https://github.com/seu-usuario' },
+  instagram: { nome: 'Instagram', icone: '📷', placeholder: 'https://instagram.com/seu-perfil' },
+  youtube: { nome: 'YouTube', icone: '▶️', placeholder: 'https://youtube.com/@seu-canal' },
+  twitter: { nome: 'X (Twitter)', icone: '🐦', placeholder: 'https://x.com/seu-usuario' },
+  behance: { nome: 'Behance', icone: '🎨', placeholder: 'https://behance.net/seu-perfil' },
+  dribbble: { nome: 'Dribbble', icone: '🏀', placeholder: 'https://dribbble.com/seu-perfil' },
+  discord: { nome: 'Discord', icone: '💬', placeholder: 'https://discord.gg/seu-servidor' },
+  tiktok: { nome: 'TikTok', icone: '🎵', placeholder: 'https://tiktok.com/@seu-perfil' },
+  twitch: { nome: 'Twitch', icone: '🎮', placeholder: 'https://twitch.tv/seu-canal' },
+  reddit: { nome: 'Reddit', icone: '🤖', placeholder: 'https://reddit.com/u/seu-usuario' },
+  steam: { nome: 'Steam', icone: '🎯', placeholder: 'https://steamcommunity.com/id/seu-perfil' },
+  website: { nome: 'Website', icone: '🌐', placeholder: 'https://seu-site.com' }
+}
 
 // Idiomas
 const idiomas = {
@@ -885,28 +925,67 @@ async function openProfile(user) {
       profileUser.value = user
     }
   }
-  linkedInInput.value = profileUser.value.linkedin_url || ''
-  editingLinkedIn.value = false
+  socialTipoInput.value = profileUser.value.social_tipo || ''
+  socialUrlInput.value = profileUser.value.social_url || ''
+  editingSocial.value = false
   showProfileModal.value = true
 }
 
-// Salvar LinkedIn
-async function saveLinkedIn() {
+// Salvar rede social
+async function saveSocial() {
+  if (!socialTipoInput.value || !socialUrlInput.value.trim()) {
+    alert('Selecione uma rede e informe a URL')
+    return
+  }
+
   try {
-    const res = await fetch(`${API_URL}/auth/profile`, {
+    const res = await fetch(`${API_URL}/profile/social`, {
       method: 'PUT',
       headers: authHeaders(),
-      body: JSON.stringify({ linkedin_url: linkedInInput.value })
+      body: JSON.stringify({
+        tipo: socialTipoInput.value,
+        url: socialUrlInput.value.trim()
+      })
     })
     if (res.ok) {
       const updated = await res.json()
-      currentUser.value.linkedin_url = updated.linkedin_url
-      profileUser.value.linkedin_url = updated.linkedin_url
-      editingLinkedIn.value = false
+      currentUser.value.social_tipo = updated.social_tipo
+      currentUser.value.social_url = updated.social_url
+      profileUser.value.social_tipo = updated.social_tipo
+      profileUser.value.social_url = updated.social_url
+      editingSocial.value = false
     }
   } catch (e) {
-    console.error('Erro ao salvar LinkedIn:', e)
+    console.error('Erro ao salvar rede social:', e)
   }
+}
+
+// Remover rede social
+async function removeSocial() {
+  if (!confirm('Remover rede social do perfil?')) return
+
+  try {
+    const res = await fetch(`${API_URL}/profile/social`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      currentUser.value.social_tipo = null
+      currentUser.value.social_url = null
+      profileUser.value.social_tipo = null
+      profileUser.value.social_url = null
+      socialTipoInput.value = ''
+      socialUrlInput.value = ''
+      editingSocial.value = false
+    }
+  } catch (e) {
+    console.error('Erro ao remover rede social:', e)
+  }
+}
+
+// Helper para obter info da rede social
+function getSocialInfo(tipo) {
+  return redesSociais[tipo] || { nome: tipo, icone: '🔗', placeholder: '' }
 }
 
 // Copiar código de amigo
@@ -3435,41 +3514,41 @@ body {
   margin-bottom: 20px;
 }
 
-.linkedin-link {
+.social-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #0077b5;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   text-decoration: none;
   border-radius: 8px;
   font-size: 0.9rem;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.linkedin-link:hover {
-  background: #005885;
+.social-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
-.linkedin-icon {
-  font-weight: 700;
-  font-style: normal;
+.social-icon {
+  font-size: 1.1rem;
 }
 
-.linkedin-empty {
+.social-empty {
   color: #666;
   font-size: 0.85rem;
 }
 
-.linkedin-display {
+.social-display {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
 }
 
-.btn-edit-linkedin {
+.btn-edit-social {
   padding: 8px 16px;
   background: #333;
   border: none;
@@ -3479,18 +3558,33 @@ body {
   cursor: pointer;
 }
 
-.btn-edit-linkedin:hover {
+.btn-edit-social:hover {
   background: #444;
   color: #fff;
 }
 
-.linkedin-form {
+.social-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.linkedin-form input {
+.social-select {
+  padding: 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.social-select:focus {
+  border-color: #6366f1;
+  outline: none;
+}
+
+.social-input {
   padding: 12px;
   background: #1a1a1a;
   border: 1px solid #333;
@@ -3499,12 +3593,18 @@ body {
   font-size: 0.9rem;
 }
 
-.linkedin-form input:focus {
+.social-input:focus {
   border-color: #6366f1;
   outline: none;
 }
 
-.linkedin-form .btn-save {
+.social-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.social-buttons .btn-save {
+  flex: 1;
   padding: 10px;
   background: #6366f1;
   border: none;
@@ -3513,13 +3613,27 @@ body {
   cursor: pointer;
 }
 
-.linkedin-form .btn-cancel {
+.social-buttons .btn-cancel {
+  flex: 1;
   padding: 10px;
   background: #333;
   border: none;
   border-radius: 8px;
   color: #888;
   cursor: pointer;
+}
+
+.social-buttons .btn-remove {
+  padding: 10px;
+  background: #dc2626;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.social-buttons .btn-remove:hover {
+  background: #b91c1c;
 }
 
 .profile-tip {

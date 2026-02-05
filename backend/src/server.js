@@ -231,7 +231,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, linkedin_url, codigo_amigo, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo, criado_em FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -246,25 +246,44 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
   }
 })
 
-// Atualizar perfil do usuário
-app.put('/api/auth/profile', authMiddleware, async (req, res) => {
+// Atualizar rede social do perfil
+app.put('/api/profile/social', authMiddleware, async (req, res) => {
   try {
-    const { linkedin_url } = req.body
+    const { tipo, url } = req.body
+
+    if (!tipo || !url) {
+      return res.status(400).json({ error: 'Tipo e URL são obrigatórios' })
+    }
 
     await pool.query(
-      'UPDATE users SET linkedin_url = $1 WHERE id = $2',
-      [linkedin_url || null, req.userId]
+      'UPDATE users SET social_tipo = $1, social_url = $2 WHERE id = $3',
+      [tipo, url.trim(), req.userId]
     )
 
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, linkedin_url FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo FROM users WHERE id = $1',
       [req.userId]
     )
 
     res.json(result.rows[0])
   } catch (error) {
-    console.error('[Auth] Erro ao atualizar perfil:', error.message)
-    res.status(500).json({ error: 'Erro ao atualizar perfil' })
+    console.error('[Profile] Erro ao atualizar rede social:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar rede social' })
+  }
+})
+
+// Remover rede social do perfil
+app.delete('/api/profile/social', authMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE users SET social_tipo = NULL, social_url = NULL WHERE id = $1',
+      [req.userId]
+    )
+
+    res.json({ message: 'Rede social removida' })
+  } catch (error) {
+    console.error('[Profile] Erro ao remover rede social:', error.message)
+    res.status(500).json({ error: 'Erro ao remover rede social' })
   }
 })
 
@@ -385,7 +404,7 @@ app.get('/api/users', authMiddleware, async (req, res) => {
 app.get('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, linkedin_url, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, criado_em FROM users WHERE id = $1',
       [req.params.id]
     )
 
