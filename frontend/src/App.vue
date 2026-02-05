@@ -255,6 +255,39 @@
         </div>
       </div>
 
+      <!-- Modal: Chamada Recebida -->
+      <div v-if="incomingCall" class="call-modal-overlay">
+        <div class="call-modal">
+          <div class="call-icon">📞</div>
+          <h3>Chamada de Vídeo</h3>
+          <p class="caller-name">{{ incomingCall.callerName }}</p>
+          <p class="call-text">está ligando...</p>
+          <div class="call-buttons">
+            <button class="btn-accept-call" @click="acceptCall">
+              ✓ Atender
+            </button>
+            <button class="btn-reject-call" @click="rejectCall">
+              ✕ Recusar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overlay: Chamada de Vídeo Ativa (Jitsi) -->
+      <div v-if="activeCall" class="video-call-overlay">
+        <div class="video-call-header">
+          <span>Chamada com {{ activeCall.remoteName }}</span>
+          <button class="btn-end-call" @click="endCall">
+            ✕ Encerrar
+          </button>
+        </div>
+        <iframe
+          :src="jitsiUrl"
+          class="jitsi-iframe"
+          allow="camera; microphone; fullscreen; display-capture"
+        ></iframe>
+      </div>
+
       <!-- Sidebar -->
       <aside class="sidebar" :class="{ open: sidebarOpen }">
         <div class="sidebar-header">
@@ -525,6 +558,14 @@
               </select>
               <span class="translation-arrow">↔</span>
               <span class="translation-badge">{{ getIdiomaLabel(selectedConnection.idioma) }}</span>
+              <button
+                class="btn-icon btn-video"
+                @click="startVideoCall"
+                :disabled="selectedConnection?.status === 'offline'"
+                :title="selectedConnection?.status === 'offline' ? 'Usuário offline' : 'Iniciar chamada de vídeo'"
+              >
+                📹
+              </button>
               <button class="btn-icon" @click="exportChat" title="Exportar conversa">
                 📥
               </button>
@@ -734,6 +775,16 @@ let audioChunks = []
 // Speech-to-Text (voz para texto)
 const isListening = ref(false)
 let speechRecognition = null
+
+// Chamada de vídeo (Jitsi)
+const incomingCall = ref(null)  // { callerId, callerName, connectionId, roomName }
+const activeCall = ref(null)    // { roomName, remoteName, remoteId }
+const jitsiUrl = computed(() => {
+  if (!activeCall.value) return ''
+  const room = activeCall.value.roomName
+  const displayName = encodeURIComponent(currentUser.value?.nome || 'Usuário')
+  return `https://meet.jit.si/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
+})
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
@@ -1217,6 +1268,13 @@ async function initializeApp() {
   socket.on('usuario-parou-digitar', handleUserStoppedTyping)
   socket.on('mensagem-editada', handleMessageEdited)
 
+  // Eventos de chamada de vídeo
+  socket.on('chamada-recebida', handleIncomingCall)
+  socket.on('chamada-aceita', handleCallAccepted)
+  socket.on('chamada-recusada', handleCallRejected)
+  socket.on('chamada-encerrada', handleCallEnded)
+  socket.on('chamada-erro', handleCallError)
+
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
     loadConnections()
@@ -1634,6 +1692,117 @@ function handleMessageEdited(data) {
     msg.textoOriginal = data.textoOriginal
     msg.editado = true
   }
+}
+
+// ==================== CHAMADA DE VÍDEO (Jitsi) ====================
+
+function startVideoCall() {
+  if (!selectedConnection.value || !socket) return
+
+  if (selectedConnection.value.status === 'offline') {
+    alert('Usuário está offline. Não é possível iniciar chamada.')
+    return
+  }
+
+  // Gerar nome da sala único
+  const timestamp = Date.now()
+  const roomName = `PolyIO-${selectedConnection.value.connectionId}-${timestamp}`
+
+  // Enviar convite via socket
+  socket.emit('iniciar-chamada', {
+    recipientId: selectedConnection.value.id,
+    connectionId: selectedConnection.value.connectionId,
+    roomName
+  })
+
+  // Entrar na chamada imediatamente (aguardando o outro aceitar)
+  activeCall.value = {
+    roomName,
+    remoteName: selectedConnection.value.nome,
+    remoteId: selectedConnection.value.id
+  }
+
+  console.log('[Chamada] Iniciando:', roomName)
+}
+
+function handleIncomingCall(data) {
+  console.log('[Chamada] Recebida de:', data.callerName)
+  incomingCall.value = data
+
+  // Tocar som de chamada (opcional)
+  try {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdG2BnZ2tnJyMfnRwa3Z7f4qXqLa3sauknJOKhYCAg4mPl6Csua+lnpWMhYB/f4OIjpScoaalpaCblpCKhYODhomNkpacn5+dnJmWkoyJh4eIioyOkJKTk5OSkZCPjo2NjY2Ojg==')
+    audio.volume = 0.5
+    audio.play().catch(() => {})
+  } catch (e) {}
+}
+
+function acceptCall() {
+  if (!incomingCall.value || !socket) return
+
+  const call = incomingCall.value
+
+  // Notificar quem ligou
+  socket.emit('aceitar-chamada', {
+    callerId: call.callerId,
+    roomName: call.roomName
+  })
+
+  // Entrar na chamada
+  activeCall.value = {
+    roomName: call.roomName,
+    remoteName: call.callerName,
+    remoteId: call.callerId
+  }
+
+  // Limpar modal
+  incomingCall.value = null
+
+  console.log('[Chamada] Aceita, entrando na sala:', call.roomName)
+}
+
+function rejectCall() {
+  if (!incomingCall.value || !socket) return
+
+  socket.emit('recusar-chamada', {
+    callerId: incomingCall.value.callerId
+  })
+
+  incomingCall.value = null
+  console.log('[Chamada] Recusada')
+}
+
+function endCall() {
+  if (!activeCall.value || !socket) return
+
+  socket.emit('encerrar-chamada', {
+    recipientId: activeCall.value.remoteId
+  })
+
+  activeCall.value = null
+  console.log('[Chamada] Encerrada')
+}
+
+function handleCallAccepted(data) {
+  console.log('[Chamada] Aceita pelo destinatário')
+  // Já estamos na chamada, só confirma
+}
+
+function handleCallRejected(data) {
+  console.log('[Chamada] Recusada pelo destinatário')
+  activeCall.value = null
+  alert('Chamada recusada')
+}
+
+function handleCallEnded(data) {
+  console.log('[Chamada] Encerrada pelo outro usuário')
+  activeCall.value = null
+}
+
+function handleCallError(data) {
+  console.log('[Chamada] Erro:', data.error)
+  activeCall.value = null
+  alert(data.error)
 }
 
 async function clearConversation() {
@@ -4132,6 +4301,181 @@ body {
 
   .message-actions .btn-edit-msg {
     width: 100%;
+  }
+}
+
+/* ==================== CHAMADA DE VÍDEO ==================== */
+
+/* Modal de chamada recebida */
+.call-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.call-modal {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  max-width: 320px;
+  animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.call-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: ring 1s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+.call-modal h3 {
+  font-size: 1.2rem;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.caller-name {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.call-text {
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.call-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-accept-call,
+.btn-reject-call {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-accept-call {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-accept-call:hover {
+  background: #16a34a;
+  transform: scale(1.05);
+}
+
+.btn-reject-call {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-reject-call:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+/* Overlay de chamada ativa (Jitsi) */
+.video-call-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-call-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
+.video-call-header span {
+  font-weight: 500;
+}
+
+.btn-end-call {
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-end-call:hover {
+  background: #dc2626;
+}
+
+.jitsi-iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+/* Botão de vídeo no header do chat */
+.btn-video {
+  transition: all 0.2s;
+}
+
+.btn-video:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-video:not(:disabled):hover {
+  background: #22c55e !important;
+}
+
+/* Mobile: ajustar modal de chamada */
+@media (max-width: 768px) {
+  .call-modal {
+    margin: 20px;
+    padding: 30px 20px;
+  }
+
+  .call-buttons {
+    flex-direction: column;
+  }
+
+  .btn-accept-call,
+  .btn-reject-call {
+    width: 100%;
+  }
+
+  .video-call-header {
+    padding: 10px 16px;
   }
 }
 </style>

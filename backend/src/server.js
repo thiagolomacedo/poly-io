@@ -1048,6 +1048,84 @@ io.on('connection', (socket) => {
     }
   })
 
+  // ==================== CHAMADA DE VÍDEO (Jitsi) ====================
+
+  // Iniciar chamada de vídeo
+  socket.on('iniciar-chamada', async (data) => {
+    if (!socket.userId) return
+
+    const { recipientId, connectionId, roomName } = data
+    const recipientSocketId = usuariosOnline.get(recipientId)
+
+    // Buscar nome do chamador
+    let callerName = 'Usuário'
+    try {
+      const result = await pool.query('SELECT nome FROM users WHERE id = $1', [socket.userId])
+      if (result.rows.length > 0) callerName = result.rows[0].nome
+    } catch (e) {}
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('chamada-recebida', {
+        callerId: socket.userId,
+        callerName,
+        connectionId,
+        roomName
+      })
+      console.log(`[Chamada] ${socket.userId} -> ${recipientId} sala: ${roomName}`)
+    } else {
+      // Usuário offline
+      socket.emit('chamada-erro', {
+        error: 'Usuário está offline. Não é possível iniciar chamada.'
+      })
+    }
+  })
+
+  // Aceitar chamada
+  socket.on('aceitar-chamada', (data) => {
+    if (!socket.userId) return
+
+    const { callerId, roomName } = data
+    const callerSocketId = usuariosOnline.get(callerId)
+
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('chamada-aceita', {
+        odestinandoId: socket.userId,
+        roomName
+      })
+      console.log(`[Chamada] Aceita por ${socket.userId}`)
+    }
+  })
+
+  // Recusar chamada
+  socket.on('recusar-chamada', (data) => {
+    if (!socket.userId) return
+
+    const { callerId } = data
+    const callerSocketId = usuariosOnline.get(callerId)
+
+    if (callerSocketId) {
+      io.to(callerSocketId).emit('chamada-recusada', {
+        odestinandoId: socket.userId
+      })
+      console.log(`[Chamada] Recusada por ${socket.userId}`)
+    }
+  })
+
+  // Encerrar chamada
+  socket.on('encerrar-chamada', (data) => {
+    if (!socket.userId) return
+
+    const { recipientId } = data
+    const recipientSocketId = usuariosOnline.get(recipientId)
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('chamada-encerrada', {
+        odestinandoId: socket.userId
+      })
+      console.log(`[Chamada] Encerrada por ${socket.userId}`)
+    }
+  })
+
   // Transferência de arquivo (P2P via socket, sem salvar no servidor)
   socket.on('enviar-arquivo', (data) => {
     if (!socket.userId) return
