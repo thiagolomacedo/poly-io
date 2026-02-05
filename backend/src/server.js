@@ -953,6 +953,36 @@ io.on('connection', (socket) => {
     }
   })
 
+  // Indicador de digitação
+  socket.on('digitando', (data) => {
+    if (!socket.userId) return
+
+    const { recipientId, connectionId } = data
+    const recipientSocketId = usuariosOnline.get(recipientId)
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('usuario-digitando', {
+        senderId: socket.userId,
+        connectionId
+      })
+    }
+  })
+
+  // Parou de digitar
+  socket.on('parou-digitar', (data) => {
+    if (!socket.userId) return
+
+    const { recipientId, connectionId } = data
+    const recipientSocketId = usuariosOnline.get(recipientId)
+
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('usuario-parou-digitar', {
+        senderId: socket.userId,
+        connectionId
+      })
+    }
+  })
+
   // Transferência de arquivo (P2P via socket, sem salvar no servidor)
   socket.on('enviar-arquivo', (data) => {
     if (!socket.userId) return

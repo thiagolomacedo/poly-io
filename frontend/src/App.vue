@@ -595,6 +595,16 @@
             </p>
           </div>
 
+          <!-- Indicador de digitação -->
+          <div v-if="isOtherTyping" class="typing-indicator">
+            <span class="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <span class="typing-text">{{ selectedConnection?.nome }} está digitando...</span>
+          </div>
+
           <!-- Input de mensagem -->
           <div class="message-input">
             <div class="input-row">
@@ -603,6 +613,7 @@
                 type="text"
                 :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
                 @keyup.enter="sendMessage"
+                @input="emitTyping"
                 :disabled="isRecording"
               />
             </div>
@@ -690,6 +701,8 @@ const messages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
 const myStatus = ref('online')
+const isOtherTyping = ref(false) // Indica se o outro usuário está digitando
+let typingTimeout = null // Timer para resetar o indicador
 
 // Configurações de notificação
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
@@ -1171,6 +1184,8 @@ async function initializeApp() {
   socket.on('status-atualizado', handleStatusUpdate)
   socket.on('arquivo-recebido', handleFileReceived)
   socket.on('audio-recebido', handleAudioReceived)
+  socket.on('usuario-digitando', handleUserTyping)
+  socket.on('usuario-parou-digitar', handleUserStoppedTyping)
 
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
@@ -1349,6 +1364,7 @@ async function rejectRequest(connectionId) {
 async function selectConnection(conn) {
   selectedConnection.value = conn
   idiomaRecepcao.value = null // Reset para idioma padrão ao mudar de conversa
+  isOtherTyping.value = false // Reset indicador de digitação
   sidebarOpen.value = false
   await loadMessages()
 
@@ -1396,6 +1412,9 @@ async function loadMessages() {
 
 async function sendMessage() {
   if (!newMessage.value.trim() || !selectedConnection.value) return
+
+  // Parar indicador de digitação
+  emitStoppedTyping()
 
   try {
     await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
@@ -1895,6 +1914,54 @@ function handleAudioReceived(data) {
     }
     alert(`Áudio recebido de ${minhaConexao.nome}`)
   }
+}
+
+// ==================== INDICADOR DE DIGITAÇÃO ====================
+
+function handleUserTyping(data) {
+  // Só mostrar se for da conversa atual
+  if (selectedConnection.value?.connectionId === data.connectionId) {
+    isOtherTyping.value = true
+
+    // Resetar após 3 segundos se não receber mais eventos
+    clearTimeout(typingTimeout)
+    typingTimeout = setTimeout(() => {
+      isOtherTyping.value = false
+    }, 3000)
+  }
+}
+
+function handleUserStoppedTyping(data) {
+  if (selectedConnection.value?.connectionId === data.connectionId) {
+    isOtherTyping.value = false
+    clearTimeout(typingTimeout)
+  }
+}
+
+// Emitir evento de digitação (com debounce)
+let lastTypingEmit = 0
+function emitTyping() {
+  if (!selectedConnection.value || !socket) return
+
+  const now = Date.now()
+  // Emitir no máximo a cada 1 segundo
+  if (now - lastTypingEmit > 1000) {
+    lastTypingEmit = now
+    socket.emit('digitando', {
+      recipientId: selectedConnection.value.id,
+      connectionId: selectedConnection.value.connectionId
+    })
+  }
+}
+
+// Emitir quando parar de digitar
+function emitStoppedTyping() {
+  if (!selectedConnection.value || !socket) return
+
+  socket.emit('parou-digitar', {
+    recipientId: selectedConnection.value.id,
+    connectionId: selectedConnection.value.connectionId
+  })
 }
 
 // ==================== STATUS ONLINE ====================
@@ -3093,6 +3160,52 @@ body {
 }
 
 /* Message Input */
+/* Indicador de digitação */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-text {
+  font-style: italic;
+}
+
 .message-input {
   padding: 16px 24px;
   border-top: 1px solid #222;
