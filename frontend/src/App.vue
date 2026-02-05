@@ -495,40 +495,44 @@
 
           <!-- Input de mensagem -->
           <div class="message-input">
-            <label class="btn-attach" title="Enviar arquivo">
-              +
+            <div class="input-row">
               <input
-                type="file"
-                class="file-input-hidden"
-                @change="handleFileSelect"
+                v-model="newMessage"
+                type="text"
+                :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
+                @keyup.enter="sendMessage"
+                :disabled="isRecording"
               />
-            </label>
-            <button
-              class="btn-mic"
-              :class="{ recording: isRecording }"
-              @click="toggleRecording"
-              :title="isRecording ? 'Clique para enviar áudio' : 'Gravar áudio'"
-            >
-              {{ isRecording ? '⏹' : '🎤' }}
-            </button>
-            <button
-              class="btn-speech"
-              :class="{ listening: isListening }"
-              @click="toggleSpeechToText"
-              :title="isListening ? 'Clique para parar' : 'Falar para digitar'"
-            >
-              {{ isListening ? '⏹' : '🗣' }}
-            </button>
-            <input
-              v-model="newMessage"
-              type="text"
-              :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
-              @keyup.enter="sendMessage"
-              :disabled="isRecording"
-            />
-            <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording">
-              Enviar
-            </button>
+            </div>
+            <div class="buttons-row">
+              <label class="btn-attach" title="Enviar arquivo">
+                +
+                <input
+                  type="file"
+                  class="file-input-hidden"
+                  @change="handleFileSelect"
+                />
+              </label>
+              <button
+                class="btn-mic"
+                :class="{ recording: isRecording }"
+                @click="toggleRecording"
+                :title="isRecording ? 'Clique para enviar áudio' : 'Gravar áudio'"
+              >
+                {{ isRecording ? '⏹' : '🎤' }}
+              </button>
+              <button
+                class="btn-speech"
+                :class="{ listening: isListening }"
+                @click="toggleSpeechToText"
+                :title="isListening ? 'Clique para parar' : 'Falar para digitar'"
+              >
+                {{ isListening ? '⏹' : '🗣' }}
+              </button>
+              <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording">
+                Enviar
+              </button>
+            </div>
           </div>
         </template>
       </main>
@@ -2587,10 +2591,16 @@ body {
   padding: 16px 24px;
   border-top: 1px solid #222;
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.message-input input {
+.input-row {
+  display: flex;
+  width: 100%;
+}
+
+.input-row input {
   flex: 1;
   padding: 14px 20px;
   background: #1a1a1a;
@@ -2601,8 +2611,18 @@ body {
   outline: none;
 }
 
-.message-input input:focus {
+.input-row input:focus {
   border-color: #6366f1;
+}
+
+.buttons-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.buttons-row .btn-send {
+  margin-left: auto;
 }
 
 .btn-send {
@@ -3110,7 +3130,7 @@ body {
   .messages {
     flex: 1;
     margin-top: 105px;
-    margin-bottom: 80px;
+    margin-bottom: 130px;
     padding: 16px;
     padding-bottom: 20px;
     overflow-x: hidden;
@@ -3124,8 +3144,31 @@ body {
     right: 0;
     z-index: 50;
     background: #0a0a0a;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-top: 1px solid #222;
+    gap: 8px;
+  }
+
+  .input-row input {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+
+  .buttons-row {
+    gap: 8px;
+  }
+
+  .btn-attach,
+  .btn-mic,
+  .btn-speech {
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
+  }
+
+  .btn-send {
+    padding: 10px 16px;
+    font-size: 0.85rem;
   }
 
   .message {
