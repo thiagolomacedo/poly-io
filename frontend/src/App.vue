@@ -4124,5 +4124,14 @@ body {
     background: #0a0a0a;
     z-index: 49;
   }
+
+  /* Menu de mensagem: só editar no mobile (sem excluir) */
+  .message-actions .btn-delete-msg {
+    display: none;
+  }
+
+  .message-actions .btn-edit-msg {
+    width: 100%;
+  }
 }
 </style>
