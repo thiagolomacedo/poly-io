@@ -4088,5 +4088,41 @@ body {
   .message-content {
     word-break: break-word;
   }
+
+  /* Chat header compacto no mobile */
+  .chat-actions {
+    gap: 6px;
+  }
+
+  .idioma-select {
+    max-width: 90px;
+    font-size: 0.65rem;
+    padding: 4px 6px;
+  }
+
+  .translation-arrow {
+    display: none;
+  }
+
+  .translation-badge {
+    display: none;
+  }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  /* Indicador de digitação no mobile */
+  .typing-indicator {
+    position: fixed;
+    bottom: 135px;
+    left: 0;
+    right: 0;
+    padding: 6px 16px;
+    background: #0a0a0a;
+    z-index: 49;
+  }
 }
 </style>
