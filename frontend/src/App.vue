@@ -1596,7 +1596,7 @@ function stopRecording() {
 
 // Contador de tentativas para retry em caso de erro de rede
 let speechRetryCount = 0
-const MAX_SPEECH_RETRIES = 2
+const MAX_SPEECH_RETRIES = 3
 
 function toggleSpeechToText() {
   if (isListening.value) {
@@ -1649,17 +1649,24 @@ function startSpeechToText() {
     console.error('Erro no reconhecimento de voz:', event.error)
 
     if (event.error === 'network') {
-      // Tentar novamente automaticamente
+      // Tentar novamente automaticamente com delay progressivo
       if (speechRetryCount < MAX_SPEECH_RETRIES) {
         speechRetryCount++
-        console.log(`Tentativa ${speechRetryCount} de ${MAX_SPEECH_RETRIES}...`)
+        const delay = speechRetryCount * 1000 // 1s, 2s, 3s
+        console.log(`Tentativa ${speechRetryCount} de ${MAX_SPEECH_RETRIES} em ${delay}ms...`)
         isListening.value = false
         setTimeout(() => {
           startSpeechToText()
-        }, 500)
+        }, delay)
         return
       } else {
-        alert('Erro ao conectar com o serviço de voz. Tente novamente em alguns segundos.')
+        // Desktop Chrome usa servidores do Google - pode haver bloqueio
+        const isDesktop = !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+        if (isDesktop) {
+          alert('Não foi possível conectar ao serviço de voz.\n\nTente:\n1. Desativar extensões de bloqueio (AdBlock, etc)\n2. Verificar se o microfone está permitido (clique no cadeado)\n3. Usar Chrome ou Edge atualizado\n4. Tentar em aba anônima')
+        } else {
+          alert('Erro ao conectar com o serviço de voz. Tente novamente.')
+        }
         speechRetryCount = 0
       }
     } else if (event.error === 'not-allowed') {
