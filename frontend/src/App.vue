@@ -222,8 +222,12 @@
 
           <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
 
-          <!-- Botão Excluir Conta -->
-          <button class="btn-delete-account" @click="deleteAccount">
+          <!-- Botão Excluir Conta (só para o próprio perfil) -->
+          <button
+            v-if="profileUser?.id === currentUser?.id"
+            class="btn-delete-account"
+            @click="deleteAccount"
+          >
             Excluir minha conta
           </button>
         </div>
