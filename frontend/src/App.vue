@@ -631,8 +631,6 @@
                 type="text"
                 :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
                 @keyup.enter="sendMessage"
-                @input="emitTyping"
-                @keyup="emitTyping"
                 @blur="emitStoppedTyping"
                 :disabled="isRecording"
               />
@@ -2287,6 +2285,15 @@ watch(isLoggedIn, async (loggedIn) => {
 })
 
 watch(messages, scrollToBottom, { deep: true })
+
+// Watch para detectar digitação (funciona melhor em mobile)
+watch(newMessage, (newVal, oldVal) => {
+  if (newVal && newVal !== oldVal) {
+    emitTyping()
+  } else if (!newVal && oldVal) {
+    emitStoppedTyping()
+  }
+})
 </script>
 
 <style>
