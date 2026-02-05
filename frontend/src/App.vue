@@ -550,16 +550,31 @@
               @click="msg.euEnviei ? toggleMessageMenu(msg) : null"
             >
               <div class="message-content">
-                <!-- Botão excluir (apenas para mensagens enviadas) -->
-                <button
-                  v-if="msg.euEnviei && msg.showMenu"
-                  class="btn-delete-msg"
-                  @click.stop="deleteMessage(msg)"
-                >
-                  🗑️ Excluir
-                </button>
+                <!-- Menu de ações (apenas para mensagens enviadas) -->
+                <div v-if="msg.euEnviei && msg.showMenu && !msg.isEditing" class="message-actions">
+                  <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
+                    ✏️ Editar
+                  </button>
+                  <button class="btn-delete-msg" @click.stop="deleteMessage(msg)">
+                    🗑️ Excluir
+                  </button>
+                </div>
+                <!-- Modo edição -->
+                <div v-if="msg.isEditing" class="edit-mode" @click.stop>
+                  <input
+                    v-model="msg.editText"
+                    type="text"
+                    class="edit-input"
+                    @keyup.enter="saveEditMessage(msg)"
+                    @keyup.esc="cancelEditMessage(msg)"
+                  />
+                  <div class="edit-buttons">
+                    <button class="btn-save-edit" @click="saveEditMessage(msg)">Salvar</button>
+                    <button class="btn-cancel-edit" @click="cancelEditMessage(msg)">Cancelar</button>
+                  </div>
+                </div>
                 <!-- Mensagem de áudio -->
-                <div v-if="msg.isAudio" class="audio-message">
+                <div v-else-if="msg.isAudio" class="audio-message">
                   <span class="audio-icon">🎤</span>
                   <audio :src="msg.audioData" controls class="audio-player"></audio>
                 </div>
@@ -585,7 +600,10 @@
                     Original: {{ msg.textoOriginal }}
                   </p>
                 </template>
-                <span class="message-time">{{ formatTime(msg.enviadoEm) }}</span>
+                <span class="message-time">
+                  {{ formatTime(msg.enviadoEm) }}
+                  <span v-if="msg.editado" class="edited-badge">(editado)</span>
+                </span>
               </div>
             </div>
 
@@ -1186,6 +1204,7 @@ async function initializeApp() {
   socket.on('audio-recebido', handleAudioReceived)
   socket.on('usuario-digitando', handleUserTyping)
   socket.on('usuario-parou-digitar', handleUserStoppedTyping)
+  socket.on('mensagem-editada', handleMessageEdited)
 
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
@@ -1402,6 +1421,7 @@ async function loadMessages() {
       textoOriginal: m.textoOriginal,
       idiomaOriginal: m.idiomaOriginal,
       enviadoEm: m.enviadoEm,
+      editado: m.editado || false,
       showOriginal: false
     }))
     scrollToBottom()
@@ -1539,6 +1559,69 @@ async function deleteMessage(msg) {
   } catch (error) {
     console.error('Erro ao excluir mensagem:', error)
     alert('Erro ao excluir mensagem')
+  }
+}
+
+// Iniciar edição de mensagem
+function startEditMessage(msg) {
+  // Fechar menus e cancelar outras edições
+  messages.value.forEach(m => {
+    m.showMenu = false
+    m.isEditing = false
+  })
+  msg.isEditing = true
+  msg.editText = msg.textoOriginal || msg.texto
+}
+
+// Cancelar edição
+function cancelEditMessage(msg) {
+  msg.isEditing = false
+  msg.editText = ''
+}
+
+// Salvar edição
+async function saveEditMessage(msg) {
+  if (!msg.editText?.trim()) return
+
+  // Se for mensagem local, não pode editar no servidor
+  if (String(msg.id).startsWith('audio-') || String(msg.id).startsWith('file-')) {
+    msg.texto = msg.editText
+    msg.isEditing = false
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/chat/message/${msg.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ texto: msg.editText })
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      msg.texto = data.texto
+      msg.textoOriginal = data.texto
+      msg.editado = true
+      msg.isEditing = false
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao editar mensagem')
+    }
+  } catch (error) {
+    console.error('Erro ao editar mensagem:', error)
+    alert('Erro ao editar mensagem')
+  }
+}
+
+// Handler para mensagem editada pelo outro usuário
+function handleMessageEdited(data) {
+  if (selectedConnection.value?.connectionId !== data.connectionId) return
+
+  const msg = messages.value.find(m => m.id === data.messageId)
+  if (msg) {
+    msg.texto = data.texto
+    msg.textoOriginal = data.textoOriginal
+    msg.editado = true
   }
 }
 
@@ -3054,6 +3137,89 @@ body {
 
 .btn-delete-msg:hover {
   background: #dc2626;
+}
+
+/* Menu de ações da mensagem */
+.message-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.btn-edit-msg {
+  padding: 6px 10px;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-edit-msg:hover {
+  background: #444;
+}
+
+/* Modo edição */
+.edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-save-edit {
+  padding: 6px 12px;
+  background: #6366f1;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-save-edit:hover {
+  background: #5558e3;
+}
+
+.btn-cancel-edit {
+  padding: 6px 12px;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-cancel-edit:hover {
+  background: #444;
+  color: #fff;
+}
+
+/* Badge editado */
+.edited-badge {
+  color: #666;
+  font-size: 0.65rem;
+  font-style: italic;
+  margin-left: 4px;
 }
 
 /* Expiration Notice */

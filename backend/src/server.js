@@ -693,6 +693,7 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         m.idioma_destino,
         m.enviado_em,
         m.lido,
+        m.editado,
         u.nome as sender_nome
       FROM messages m
       JOIN users u ON m.sender_id = u.id
@@ -724,6 +725,7 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         idiomaOriginal: msg.idioma_original,
         enviadoEm: msg.enviado_em,
         lido: msg.lido,
+        editado: msg.editado || false,
         euEnviei: msg.sender_id === req.userId
       }
     }))
@@ -911,6 +913,69 @@ app.delete('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Chat] Erro ao excluir mensagem:', error.message)
     res.status(500).json({ error: 'Erro ao excluir mensagem' })
+  }
+})
+
+// Editar uma mensagem (apenas o remetente pode editar)
+app.put('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
+  const { texto } = req.body
+
+  if (!texto || !texto.trim()) {
+    return res.status(400).json({ error: 'Texto vazio' })
+  }
+
+  try {
+    // Buscar mensagem original para pegar dados de tradução
+    const msgResult = await pool.query(`
+      SELECT m.*, c.user_a_id, c.user_b_id
+      FROM messages m
+      JOIN connections c ON m.connection_id = c.id
+      WHERE m.id = $1 AND m.sender_id = $2
+    `, [req.params.messageId, req.userId])
+
+    if (msgResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Mensagem não encontrada ou sem permissão' })
+    }
+
+    const msg = msgResult.rows[0]
+    const destinatarioId = msg.user_a_id === req.userId ? msg.user_b_id : msg.user_a_id
+
+    // Buscar idioma do destinatário
+    const userResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [destinatarioId])
+    const idiomaDestino = userResult.rows[0]?.idioma || 'pt'
+
+    // Detectar idioma e traduzir novo texto
+    const idiomaOriginal = detectarIdioma(texto.trim())
+    const textoTraduzido = await traduzirTexto(texto.trim(), idiomaOriginal, idiomaDestino)
+
+    // Atualizar mensagem
+    const result = await pool.query(`
+      UPDATE messages
+      SET texto_original = $1, texto_traduzido = $2, idioma_original = $3, editado = true
+      WHERE id = $4 AND sender_id = $5
+      RETURNING id, texto_original, texto_traduzido, idioma_original, editado
+    `, [texto.trim(), textoTraduzido, idiomaOriginal, req.params.messageId, req.userId])
+
+    // Emitir atualização via Socket para o outro usuário
+    const recipientSocketId = usuariosOnline.get(destinatarioId)
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('mensagem-editada', {
+        messageId: parseInt(req.params.messageId),
+        connectionId: msg.connection_id,
+        texto: textoTraduzido,
+        textoOriginal: texto.trim()
+      })
+    }
+
+    res.json({
+      id: result.rows[0].id,
+      texto: texto.trim(),
+      textoTraduzido,
+      editado: true
+    })
+  } catch (error) {
+    console.error('[Chat] Erro ao editar mensagem:', error.message)
+    res.status(500).json({ error: 'Erro ao editar mensagem' })
   }
 })
 

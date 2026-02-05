@@ -100,6 +100,11 @@ async function initDatabase() {
     `)
     console.log('[DB] Tabela messages OK')
 
+    // Adicionar coluna editado se não existir (migração)
+    await client.query(`
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS editado BOOLEAN DEFAULT FALSE
+    `)
+
     // Índices para melhor performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_connections_users ON connections(user_a_id, user_b_id);
