@@ -34,6 +34,23 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(255)
     `)
+
+    // Adicionar coluna codigo_amigo se não existir (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS codigo_amigo VARCHAR(10) UNIQUE
+    `)
+
+    // Gerar código para usuários existentes que não têm
+    const usersWithoutCode = await client.query(`
+      SELECT id FROM users WHERE codigo_amigo IS NULL
+    `)
+    for (const user of usersWithoutCode.rows) {
+      const codigo = generateFriendCode()
+      await client.query(`
+        UPDATE users SET codigo_amigo = $1 WHERE id = $2
+      `, [codigo, user.id])
+    }
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários
@@ -86,6 +103,16 @@ async function initDatabase() {
   }
 }
 
+// Gerar código de amigo único (6 caracteres)
+function generateFriendCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Sem I, O, 0, 1 para evitar confusão
+  let code = ''
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
 // Função para limpar mensagens expiradas (rodar periodicamente)
 async function limparMensagensExpiradas() {
   try {
@@ -103,5 +130,6 @@ async function limparMensagensExpiradas() {
 module.exports = {
   pool,
   initDatabase,
-  limparMensagensExpiradas
+  limparMensagensExpiradas,
+  generateFriendCode
 }

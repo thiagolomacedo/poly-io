@@ -4,7 +4,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const { pool, initDatabase, limparMensagensExpiradas } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, generateFriendCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
 
@@ -143,16 +143,26 @@ app.post('/api/auth/register', async (req, res) => {
     // Hash da senha
     const senhaHash = await bcrypt.hash(senha, 10)
 
+    // Gerar código de amigo único
+    let codigoAmigo = generateFriendCode()
+    let tentativas = 0
+    while (tentativas < 10) {
+      const exists = await pool.query('SELECT id FROM users WHERE codigo_amigo = $1', [codigoAmigo])
+      if (exists.rows.length === 0) break
+      codigoAmigo = generateFriendCode()
+      tentativas++
+    }
+
     // Criar usuário
     const result = await pool.query(
-      'INSERT INTO users (nome, email, senha_hash, idioma, pais) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, idioma, pais, criado_em',
-      [nome.trim(), email.toLowerCase(), senhaHash, idioma || 'pt', pais || null]
+      'INSERT INTO users (nome, email, senha_hash, idioma, pais, codigo_amigo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, idioma, pais, codigo_amigo, criado_em',
+      [nome.trim(), email.toLowerCase(), senhaHash, idioma || 'pt', pais || null, codigoAmigo]
     )
 
     const user = result.rows[0]
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' })
 
-    console.log(`[Auth] Novo usuário: ${user.nome} (${user.email})`)
+    console.log(`[Auth] Novo usuário: ${user.nome} (${user.email}) - Código: ${user.codigo_amigo}`)
 
     res.json({
       user: {
@@ -160,7 +170,8 @@ app.post('/api/auth/register', async (req, res) => {
         nome: user.nome,
         email: user.email,
         idioma: user.idioma,
-        pais: user.pais
+        pais: user.pais,
+        codigo_amigo: user.codigo_amigo
       },
       token
     })
@@ -205,7 +216,8 @@ app.post('/api/auth/login', async (req, res) => {
         nome: user.nome,
         email: user.email,
         idioma: user.idioma,
-        pais: user.pais
+        pais: user.pais,
+        codigo_amigo: user.codigo_amigo
       },
       token
     })
@@ -219,7 +231,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, linkedin_url, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, linkedin_url, codigo_amigo, criado_em FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -309,6 +321,27 @@ app.post('/api/users/status', authMiddleware, (req, res) => {
 
   console.log(`[Status] Usuário ${req.userId} mudou para ${status}`)
   res.json({ status })
+})
+
+// Buscar usuário por código de amigo
+app.get('/api/users/code/:codigo', authMiddleware, async (req, res) => {
+  try {
+    const codigo = req.params.codigo.toUpperCase().trim()
+
+    const result = await pool.query(
+      'SELECT id, nome, idioma, pais, codigo_amigo FROM users WHERE codigo_amigo = $1 AND id != $2',
+      [codigo, req.userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Código não encontrado' })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('[Users] Erro ao buscar por código:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar usuário' })
+  }
 })
 
 // Buscar usuários (com filtros)

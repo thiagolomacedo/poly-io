@@ -158,6 +158,29 @@
           <h2 class="profile-name">{{ profileUser?.nome }}</h2>
           <p class="profile-info">{{ getIdiomaLabel(profileUser?.idioma) }} · {{ profileUser?.pais || 'Não informado' }}</p>
 
+          <!-- Código de Amigo -->
+          <div v-if="profileUser?.codigo_amigo" class="friend-code-section">
+            <p class="friend-code-label">Código de Amigo</p>
+            <div class="friend-code-box">
+              <span class="friend-code">{{ profileUser.codigo_amigo }}</span>
+              <button
+                v-if="profileUser?.id === currentUser?.id"
+                class="btn-copy"
+                @click="copyFriendCode"
+                :title="codeCopied ? 'Copiado!' : 'Copiar código'"
+              >
+                {{ codeCopied ? '✓' : '📋' }}
+              </button>
+            </div>
+            <button
+              v-if="profileUser?.id === currentUser?.id"
+              class="btn-share-link"
+              @click="copyInviteLink"
+            >
+              {{ linkCopied ? '✓ Link copiado!' : '🔗 Copiar link de convite' }}
+            </button>
+          </div>
+
           <!-- LinkedIn -->
           <div class="profile-social">
             <div v-if="profileUser?.id === currentUser?.id" class="linkedin-edit">
@@ -318,6 +341,40 @@
 
           <!-- Tab: Buscar -->
           <div v-if="currentTab === 'search'" class="tab-content">
+            <!-- Busca por código -->
+            <div class="search-box code-search">
+              <input
+                v-model="codeQuery"
+                type="text"
+                placeholder="Código de amigo (ex: ABC123)"
+                maxlength="6"
+                @input="codeQuery = codeQuery.toUpperCase()"
+                @keyup.enter="searchByCode"
+              />
+              <button class="btn-search-code" @click="searchByCode">Buscar</button>
+            </div>
+
+            <!-- Resultado da busca por código -->
+            <div v-if="codeResult" class="user-item code-result">
+              <div class="user-avatar">
+                {{ codeResult.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="user-info">
+                <span class="name">{{ codeResult.nome }}</span>
+                <span class="lang">{{ getIdiomaLabel(codeResult.idioma) }} · {{ codeResult.pais || '?' }}</span>
+              </div>
+              <button
+                class="btn-connect"
+                @click="sendConnectionRequest(codeResult.id); codeResult = null; codeQuery = ''"
+              >
+                Conectar
+              </button>
+            </div>
+            <p v-if="codeError" class="empty-state small error-text">{{ codeError }}</p>
+
+            <div class="search-divider">ou busque por nome</div>
+
+            <!-- Busca por nome -->
             <div class="search-box">
               <input
                 v-model="searchQuery"
@@ -348,9 +405,6 @@
             </div>
             <p v-if="searchQuery && searchResults.length === 0" class="empty-state">
               Nenhum usuário encontrado.
-            </p>
-            <p v-if="!searchQuery" class="empty-state">
-              Digite um nome para buscar.
             </p>
           </div>
 
@@ -591,6 +645,9 @@ const pendingRequests = ref([])
 const sentRequests = ref([])
 const searchQuery = ref('')
 const searchResults = ref([])
+const codeQuery = ref('')
+const codeResult = ref(null)
+const codeError = ref('')
 const selectedConnection = ref(null)
 const messages = ref([])
 const newMessage = ref('')
@@ -627,6 +684,8 @@ const showProfileModal = ref(false)
 const profileUser = ref(null)
 const editingLinkedIn = ref(false)
 const linkedInInput = ref('')
+const codeCopied = ref(false)
+const linkCopied = ref(false)
 
 // Idiomas
 const idiomas = {
@@ -799,6 +858,23 @@ async function saveLinkedIn() {
   } catch (e) {
     console.error('Erro ao salvar LinkedIn:', e)
   }
+}
+
+// Copiar código de amigo
+function copyFriendCode() {
+  if (!currentUser.value?.codigo_amigo) return
+  navigator.clipboard.writeText(currentUser.value.codigo_amigo)
+  codeCopied.value = true
+  setTimeout(() => codeCopied.value = false, 2000)
+}
+
+// Copiar link de convite
+function copyInviteLink() {
+  if (!currentUser.value?.codigo_amigo) return
+  const link = `${window.location.origin}?invite=${currentUser.value.codigo_amigo}`
+  navigator.clipboard.writeText(link)
+  linkCopied.value = true
+  setTimeout(() => linkCopied.value = false, 2000)
 }
 
 function getStatusLabel(status) {
@@ -1062,6 +1138,32 @@ async function searchUsers() {
     searchResults.value = await res.json()
   } catch (error) {
     console.error('Erro ao buscar usuários:', error)
+  }
+}
+
+async function searchByCode() {
+  codeResult.value = null
+  codeError.value = ''
+
+  if (!codeQuery.value.trim()) {
+    codeError.value = 'Digite um código'
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/users/code/${codeQuery.value.trim()}`, {
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      codeResult.value = await res.json()
+    } else {
+      const data = await res.json()
+      codeError.value = data.error || 'Código não encontrado'
+    }
+  } catch (error) {
+    console.error('Erro ao buscar por código:', error)
+    codeError.value = 'Erro ao buscar'
   }
 }
 
@@ -1802,6 +1904,32 @@ function scrollToBottom() {
 
 onMounted(() => {
   checkAuth()
+
+  // Verificar se há código de convite na URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const inviteCode = urlParams.get('invite')
+  if (inviteCode) {
+    // Salvar para usar após login
+    localStorage.setItem('poly_invite_code', inviteCode)
+    // Limpar URL
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+})
+
+// Processar código de convite após login
+watch(isLoggedIn, async (loggedIn) => {
+  if (loggedIn) {
+    const inviteCode = localStorage.getItem('poly_invite_code')
+    if (inviteCode) {
+      localStorage.removeItem('poly_invite_code')
+      // Aguardar um pouco e ir para busca
+      setTimeout(() => {
+        currentTab.value = 'search'
+        codeQuery.value = inviteCode.toUpperCase()
+        searchByCode()
+      }, 500)
+    }
+  }
 })
 
 watch(messages, scrollToBottom, { deep: true })
@@ -2330,6 +2458,64 @@ body {
 
 .search-box input:focus {
   border-color: #6366f1;
+}
+
+.search-box.code-search {
+  display: flex;
+  gap: 8px;
+}
+
+.search-box.code-search input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+.btn-search-code {
+  padding: 10px 16px;
+  background: #6366f1;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-search-code:hover {
+  background: #5558e3;
+}
+
+.search-divider {
+  text-align: center;
+  color: #666;
+  font-size: 0.75rem;
+  margin: 16px 0;
+  position: relative;
+}
+
+.search-divider::before,
+.search-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: #333;
+}
+
+.search-divider::before {
+  left: 0;
+}
+
+.search-divider::after {
+  right: 0;
+}
+
+.code-result {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid #6366f1;
 }
 
 .user-item {
@@ -3036,6 +3222,69 @@ body {
   color: #888;
   font-size: 0.9rem;
   margin-bottom: 20px;
+}
+
+/* Código de Amigo */
+.friend-code-section {
+  background: #1a1a2e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.friend-code-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.friend-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.friend-code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #6366f1;
+  font-family: monospace;
+}
+
+.btn-copy {
+  width: 36px;
+  height: 36px;
+  background: #2a2a3e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.btn-copy:hover {
+  background: #3a3a4e;
+}
+
+.btn-share-link {
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  color: #6366f1;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-share-link:hover {
+  background: rgba(99, 102, 241, 0.1);
 }
 
 .profile-social {
