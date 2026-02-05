@@ -24,9 +24,15 @@ async function initDatabase() {
         senha_hash VARCHAR(255) NOT NULL,
         idioma VARCHAR(10) NOT NULL DEFAULT 'pt',
         pais VARCHAR(100),
+        linkedin_url VARCHAR(255),
         criado_em TIMESTAMP DEFAULT NOW(),
         ultimo_acesso TIMESTAMP
       )
+    `)
+
+    // Adicionar coluna linkedin_url se não existir (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(255)
     `)
     console.log('[DB] Tabela users OK')
 

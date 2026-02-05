@@ -219,7 +219,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, linkedin_url, criado_em FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -231,6 +231,28 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Auth] Erro ao buscar usuário:', error.message)
     res.status(500).json({ error: 'Erro ao buscar dados' })
+  }
+})
+
+// Atualizar perfil do usuário
+app.put('/api/auth/profile', authMiddleware, async (req, res) => {
+  try {
+    const { linkedin_url } = req.body
+
+    await pool.query(
+      'UPDATE users SET linkedin_url = $1 WHERE id = $2',
+      [linkedin_url || null, req.userId]
+    )
+
+    const result = await pool.query(
+      'SELECT id, nome, email, idioma, pais, linkedin_url FROM users WHERE id = $1',
+      [req.userId]
+    )
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('[Auth] Erro ao atualizar perfil:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar perfil' })
   }
 })
 
@@ -308,7 +330,7 @@ app.get('/api/users', authMiddleware, async (req, res) => {
 app.get('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, idioma, pais, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, linkedin_url, criado_em FROM users WHERE id = $1',
       [req.params.id]
     )
 
