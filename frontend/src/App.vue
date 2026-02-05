@@ -1594,17 +1594,18 @@ function stopRecording() {
 
 // ==================== SPEECH-TO-TEXT ====================
 
+// Contador de tentativas para retry em caso de erro de rede
+let speechRetryCount = 0
+const MAX_SPEECH_RETRIES = 2
+
 function toggleSpeechToText() {
   if (isListening.value) {
     stopSpeechToText()
   } else {
+    speechRetryCount = 0 // Reset apenas quando usuário clica manualmente
     startSpeechToText()
   }
 }
-
-// Contador de tentativas para retry em caso de erro de rede
-let speechRetryCount = 0
-const MAX_SPEECH_RETRIES = 2
 
 function startSpeechToText() {
   // Verificar suporte do navegador
@@ -1631,7 +1632,7 @@ function startSpeechToText() {
   speechRecognition.onstart = () => {
     console.log('Reconhecimento de voz iniciado')
     isListening.value = true
-    speechRetryCount = 0 // Reset retry count on successful start
+    // NÃO resetar speechRetryCount aqui - causa loop infinito
   }
 
   speechRecognition.onresult = (event) => {
