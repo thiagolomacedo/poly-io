@@ -508,14 +508,22 @@
               class="btn-mic"
               :class="{ recording: isRecording }"
               @click="toggleRecording"
-              :title="isRecording ? 'Clique para enviar' : 'Clique para gravar'"
+              :title="isRecording ? 'Clique para enviar áudio' : 'Gravar áudio'"
             >
               {{ isRecording ? '⏹' : '🎤' }}
+            </button>
+            <button
+              class="btn-speech"
+              :class="{ listening: isListening }"
+              @click="toggleSpeechToText"
+              :title="isListening ? 'Clique para parar' : 'Falar para digitar'"
+            >
+              {{ isListening ? '⏹' : '🗣' }}
             </button>
             <input
               v-model="newMessage"
               type="text"
-              :placeholder="isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...'"
+              :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
               @keyup.enter="sendMessage"
               :disabled="isRecording"
             />
@@ -582,6 +590,10 @@ const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections
 const isRecording = ref(false)
 let mediaRecorder = null
 let audioChunks = []
+
+// Speech-to-Text (voz para texto)
+const isListening = ref(false)
+let speechRecognition = null
 
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
@@ -1374,6 +1386,94 @@ function stopRecording() {
     mediaRecorder.stop()
     isRecording.value = false
   }
+}
+
+// ==================== SPEECH-TO-TEXT ====================
+
+function toggleSpeechToText() {
+  if (isListening.value) {
+    stopSpeechToText()
+  } else {
+    startSpeechToText()
+  }
+}
+
+function startSpeechToText() {
+  // Verificar suporte do navegador
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+
+  if (!SpeechRecognition) {
+    alert('Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.')
+    return
+  }
+
+  speechRecognition = new SpeechRecognition()
+
+  // Configurações
+  speechRecognition.lang = currentUser.value?.idioma === 'pt' ? 'pt-BR' :
+                           currentUser.value?.idioma === 'en' ? 'en-US' :
+                           currentUser.value?.idioma === 'es' ? 'es-ES' :
+                           currentUser.value?.idioma === 'fr' ? 'fr-FR' :
+                           currentUser.value?.idioma === 'de' ? 'de-DE' :
+                           currentUser.value?.idioma === 'it' ? 'it-IT' :
+                           currentUser.value?.idioma === 'ja' ? 'ja-JP' :
+                           currentUser.value?.idioma === 'ko' ? 'ko-KR' :
+                           currentUser.value?.idioma === 'zh' ? 'zh-CN' :
+                           currentUser.value?.idioma === 'ru' ? 'ru-RU' :
+                           currentUser.value?.idioma === 'ar' ? 'ar-SA' : 'pt-BR'
+
+  speechRecognition.continuous = true
+  speechRecognition.interimResults = true
+
+  speechRecognition.onstart = () => {
+    isListening.value = true
+  }
+
+  speechRecognition.onresult = (event) => {
+    let finalTranscript = ''
+    let interimTranscript = ''
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript
+      } else {
+        interimTranscript = transcript
+      }
+    }
+
+    // Mostrar resultado final ou parcial
+    if (finalTranscript) {
+      newMessage.value += finalTranscript
+    }
+  }
+
+  speechRecognition.onerror = (event) => {
+    console.error('Erro no reconhecimento de voz:', event.error)
+    if (event.error === 'not-allowed') {
+      alert('Permissão de microfone negada. Permita o acesso ao microfone.')
+    }
+    stopSpeechToText()
+  }
+
+  speechRecognition.onend = () => {
+    isListening.value = false
+  }
+
+  try {
+    speechRecognition.start()
+  } catch (e) {
+    console.error('Erro ao iniciar reconhecimento:', e)
+    isListening.value = false
+  }
+}
+
+function stopSpeechToText() {
+  if (speechRecognition) {
+    speechRecognition.stop()
+    speechRecognition = null
+  }
+  isListening.value = false
 }
 
 function sendAudio(audioData) {
@@ -2620,6 +2720,35 @@ body {
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
+}
+
+/* Botão Speech-to-Text */
+.btn-speech {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-speech:hover {
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.btn-speech.listening {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+  animation: pulse 1s infinite;
 }
 
 /* Mensagem de áudio */
