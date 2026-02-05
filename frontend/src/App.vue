@@ -632,6 +632,8 @@
                 :placeholder="isListening ? 'Ouvindo...' : (isRecording ? 'Gravando...' : 'Escreva em ' + getIdiomaLabel(currentUser?.idioma) + '...')"
                 @keyup.enter="sendMessage"
                 @input="emitTyping"
+                @keyup="emitTyping"
+                @blur="emitStoppedTyping"
                 :disabled="isRecording"
               />
             </div>
@@ -2024,16 +2026,23 @@ function handleUserStoppedTyping(data) {
 // Emitir evento de digitação (com debounce)
 let lastTypingEmit = 0
 function emitTyping() {
+  // Verificar se temos conexão selecionada e socket
   if (!selectedConnection.value || !socket) return
 
+  // Verificar dados necessários
+  const recipientId = selectedConnection.value.id
+  const connectionId = selectedConnection.value.connectionId
+  if (!recipientId || !connectionId) return
+
   const now = Date.now()
-  // Emitir no máximo a cada 1 segundo
+  // Emitir no máximo a cada 1 segundo (debounce)
   if (now - lastTypingEmit > 1000) {
     lastTypingEmit = now
-    socket.emit('digitando', {
-      recipientId: selectedConnection.value.id,
-      connectionId: selectedConnection.value.connectionId
-    })
+    try {
+      socket.emit('digitando', { recipientId, connectionId })
+    } catch (e) {
+      console.error('Erro ao emitir digitando:', e)
+    }
   }
 }
 
