@@ -2218,8 +2218,10 @@ async function startServer() {
     // Inicializar banco de dados
     await initDatabase()
 
-    // Limpar mensagens expiradas a cada hora (chat privado)
-    setInterval(limparMensagensExpiradas, 60 * 60 * 1000)
+    // Limpar mensagens expiradas a cada 30 minutos (chat privado - 24h)
+    setInterval(limparMensagensExpiradas, 30 * 60 * 1000)
+    // Rodar uma vez ao iniciar também
+    limparMensagensExpiradas()
 
     // Limpar mensagens de sala a cada 10 minutos
     setInterval(limparMensagensSala, 10 * 60 * 1000)
