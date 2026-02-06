@@ -2183,6 +2183,95 @@ function handleRoomError(data) {
   alert(data.error || 'Erro na sala')
 }
 
+// ==================== PUSH NOTIFICATIONS ====================
+
+async function setupPushNotifications() {
+  // Verificar se push é suportado
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('[Push] Push notifications não suportadas')
+    return
+  }
+
+  try {
+    // Solicitar permissão
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+      console.log('[Push] Permissão negada')
+      return
+    }
+
+    // Obter service worker registration
+    const registration = await navigator.serviceWorker.ready
+
+    // Buscar chave VAPID do servidor
+    const vapidRes = await fetch(`${API_BASE}/api/push/vapid-key`)
+    const { publicKey } = await vapidRes.json()
+
+    // Converter chave para Uint8Array
+    const applicationServerKey = urlBase64ToUint8Array(publicKey)
+
+    // Verificar se já tem subscription
+    let subscription = await registration.pushManager.getSubscription()
+
+    if (!subscription) {
+      // Criar nova subscription
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey
+      })
+    }
+
+    // Registrar no servidor
+    await fetch(`${API_BASE}/api/push/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({ subscription })
+    })
+
+    console.log('[Push] Notificações configuradas com sucesso!')
+
+    // Escutar mensagens do service worker
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
+
+  } catch (error) {
+    console.error('[Push] Erro ao configurar:', error)
+  }
+}
+
+// Converter base64 para Uint8Array (necessário para VAPID)
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4)
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+
+  const rawData = window.atob(base64)
+  const outputArray = new Uint8Array(rawData.length)
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i)
+  }
+  return outputArray
+}
+
+// Lidar com mensagens do service worker (ex: clique na notificação de chamada)
+function handleServiceWorkerMessage(event) {
+  const { type, action, data } = event.data || {}
+
+  if (type === 'notification-click') {
+    if (data?.type === 'call') {
+      if (action === 'accept') {
+        // Aceitar chamada via push
+        console.log('[Push] Aceitando chamada de', data.callerName)
+        // A lógica de aceitar já acontece quando o app abre
+      }
+    }
+  }
+}
+
 // ==================== INICIALIZAÇÃO ====================
 
 async function initializeApp() {
@@ -2248,6 +2337,9 @@ async function initializeApp() {
     loadPendingRequests()
     loadRooms()
     loadMyRoom()
+
+    // Configurar push notifications (solicita permissão)
+    setupPushNotifications()
   }, 500)
 
   // Atualizar status online periodicamente

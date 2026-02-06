@@ -4,6 +4,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const webpush = require('web-push')
 const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -12,6 +13,20 @@ const PORT = process.env.PORT || 3000
 const JWT_SECRET = process.env.JWT_SECRET || 'poly-io-secret-key-change-in-production'
 const AZURE_KEY = process.env.AZURE_TRANSLATOR_KEY || ''
 const AZURE_REGION = process.env.AZURE_TRANSLATOR_REGION || 'eastus'
+
+// VAPID Keys para Push Notifications (gerar novas em produção)
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'UUxI4O8-FbRouAf7-fGzM5Ao1xbv-QGu4pqL3cwLmQM'
+
+// Configurar web-push
+webpush.setVapidDetails(
+  'mailto:contato@poly.io',
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+)
+
+// Armazenar subscriptions de push (em memória - em produção usar banco)
+const pushSubscriptions = new Map() // odestinandoId -> subscription
 
 // Inicializar Express
 const app = express()
@@ -708,6 +723,58 @@ app.delete('/api/connections/:connectionId', authMiddleware, async (req, res) =>
     res.status(500).json({ error: 'Erro ao remover' })
   }
 })
+
+// ==================== PUSH NOTIFICATIONS ====================
+
+// Retornar chave pública VAPID
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY })
+})
+
+// Registrar subscription de push
+app.post('/api/push/subscribe', authMiddleware, async (req, res) => {
+  const { subscription } = req.body
+
+  if (!subscription) {
+    return res.status(400).json({ error: 'Subscription é obrigatória' })
+  }
+
+  // Salvar subscription
+  pushSubscriptions.set(req.userId, subscription)
+  console.log(`[Push] Subscription registrada para usuário ${req.userId}`)
+
+  res.json({ message: 'Subscription registrada com sucesso' })
+})
+
+// Remover subscription
+app.delete('/api/push/subscribe', authMiddleware, (req, res) => {
+  pushSubscriptions.delete(req.userId)
+  console.log(`[Push] Subscription removida para usuário ${req.userId}`)
+  res.json({ message: 'Subscription removida' })
+})
+
+// Função para enviar push notification
+async function sendPushNotification(userId, payload) {
+  const subscription = pushSubscriptions.get(userId)
+
+  if (!subscription) {
+    console.log(`[Push] Usuário ${userId} não tem subscription`)
+    return false
+  }
+
+  try {
+    await webpush.sendNotification(subscription, JSON.stringify(payload))
+    console.log(`[Push] Notificação enviada para usuário ${userId}`)
+    return true
+  } catch (error) {
+    console.error(`[Push] Erro ao enviar para ${userId}:`, error.message)
+    // Se a subscription expirou, remover
+    if (error.statusCode === 410) {
+      pushSubscriptions.delete(userId)
+    }
+    return false
+  }
+}
 
 // ==================== ROTAS DE CHAT ====================
 
@@ -1631,6 +1698,7 @@ io.on('connection', (socket) => {
     } catch (e) {}
 
     if (recipientSocketId) {
+      // Usuário online via socket
       io.to(recipientSocketId).emit('chamada-recebida', {
         callerId: socket.userId,
         callerName,
@@ -1639,10 +1707,30 @@ io.on('connection', (socket) => {
       })
       console.log(`[Chamada] ${socket.userId} -> ${recipientId} sala: ${roomName}`)
     } else {
-      // Usuário offline
-      socket.emit('chamada-erro', {
-        error: 'Usuário está offline. Não é possível iniciar chamada.'
+      // Usuário offline - tentar enviar push notification
+      const pushSent = await sendPushNotification(recipientId, {
+        title: `${callerName} está ligando...`,
+        body: 'Toque para atender a chamada',
+        icon: '/icon-192.png',
+        tag: 'incoming-call',
+        type: 'call',
+        data: {
+          type: 'call',
+          callerId: socket.userId,
+          callerName,
+          connectionId,
+          roomName
+        }
       })
+
+      if (pushSent) {
+        console.log(`[Chamada] Push enviado para ${recipientId}`)
+        // Aguardar resposta por push (a pessoa pode abrir o app)
+      } else {
+        socket.emit('chamada-erro', {
+          error: 'Usuário está offline e não tem notificações ativadas.'
+        })
+      }
     }
   })
 
