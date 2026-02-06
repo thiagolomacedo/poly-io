@@ -207,7 +207,7 @@
         <td>Sistema de autenticação com email/senha e JWT</td>
       </tr>
       <tr>
-        <td>Lembrar-me <span class="badge badge-new">Novo</span></td>
+        <td>Lembrar-me</td>
         <td>Checkbox para salvar credenciais no navegador</td>
       </tr>
       <tr>
@@ -235,11 +235,11 @@
         <td>Apague mensagens individuais ou limpe toda a conversa</td>
       </tr>
       <tr>
-        <td>Editar Mensagens <span class="badge badge-new">Novo</span></td>
+        <td>Editar Mensagens</td>
         <td>Edite mensagens enviadas (re-traduz automaticamente)</td>
       </tr>
       <tr>
-        <td>Indicador "Digitando" <span class="badge badge-new">Novo</span></td>
+        <td>Indicador "Digitando"</td>
         <td>Mostra quando o outro usuário está digitando (bolinhas animadas)</td>
       </tr>
       <tr>
@@ -255,7 +255,7 @@
         <td>Mensagens traduzidas em tempo real para o idioma do destinatário</td>
       </tr>
       <tr>
-        <td>Seletor de Idioma no Chat <span class="badge badge-new">Novo</span></td>
+        <td>Seletor de Idioma no Chat</td>
         <td>Escolha receber traduções em outro idioma (temporário, por sessão)</td>
       </tr>
       <tr>
@@ -303,7 +303,7 @@
         <td>Foto automática via Gravatar usando email (custo zero)</td>
       </tr>
       <tr>
-        <td>Rede Social no Perfil <span class="badge badge-new">Novo</span></td>
+        <td>Rede Social no Perfil</td>
         <td>Adicione qualquer rede social (LinkedIn, GitHub, Instagram, etc.)</td>
       </tr>
       <tr>
@@ -311,7 +311,7 @@
         <td>Opção de excluir conta permanentemente</td>
       </tr>
       <tr>
-        <td>Editar Nome no Perfil <span class="badge badge-new">Novo</span></td>
+        <td>Editar Nome no Perfil</td>
         <td>Botão de lápis para editar o nome de exibição</td>
       </tr>
       <tr>
@@ -401,6 +401,83 @@
       <tr><td>ru</td><td>Russo</td><td>Русский</td></tr>
       <tr><td>ar</td><td>Árabe</td><td>العربية</td></tr>
     </table>
+  </div>
+
+  <div class="section">
+    <h2>Sistema de Salas Públicas</h2>
+    <p>
+      O sistema de salas permite conversas em grupo com tradução automática em tempo real.
+      Cada usuário pode criar <strong>uma sala</strong> e se tornar o moderador dela.
+      As salas são efêmeras — sem histórico, sem armazenamento — focadas em conversa ao vivo.
+    </p>
+
+    <div class="highlight">
+      <div class="highlight-title">Regras das Salas</div>
+      <ul style="margin-left: 20px; color: #ccc;">
+        <li>Cada usuário pode criar <strong>apenas 1 sala</strong></li>
+        <li>Máximo de <strong>20 usuários</strong> por sala</li>
+        <li>Mensagens expiram em <strong>1 hora</strong> (sem histórico)</li>
+        <li>Tradução automática para o idioma de cada participante</li>
+        <li>Salas públicas aparecem na busca enquanto ativas</li>
+      </ul>
+    </div>
+
+    <h3 style="color: #6366f1; margin: 20px 0 10px;">Ciclo de Vida da Sala</h3>
+    <table>
+      <tr>
+        <th>Tempo Inativo</th>
+        <th>Ação</th>
+      </tr>
+      <tr>
+        <td>7 dias</td>
+        <td>Notificação ao dono (sala ainda ativa)</td>
+      </tr>
+      <tr>
+        <td>15 dias</td>
+        <td>Sala ocultada da busca pública</td>
+      </tr>
+      <tr>
+        <td>30 dias</td>
+        <td>Sala excluída automaticamente</td>
+      </tr>
+    </table>
+
+    <h3 style="color: #6366f1; margin: 20px 0 10px;">Reativação de Salas</h3>
+    <p>Salas ocultas podem ser reativadas de duas formas:</p>
+    <ul style="margin-left: 20px; color: #ccc;">
+      <li><strong>Automática:</strong> quando uma nova mensagem é enviada</li>
+      <li><strong>Manual:</strong> botão "Reativar" visível apenas para o moderador</li>
+    </ul>
+    <p style="color: #888; font-size: 0.9rem; margin-top: 10px;">
+      A reativação não restaura mensagens antigas — apenas reativa o status da sala.
+    </p>
+
+    <h3 style="color: #6366f1; margin: 20px 0 10px;">Moderação</h3>
+    <table>
+      <tr>
+        <th>Ação</th>
+        <th>Descrição</th>
+      </tr>
+      <tr>
+        <td>👢 Expulsar (Kick)</td>
+        <td>Remove o usuário da sala (pode voltar)</td>
+      </tr>
+      <tr>
+        <td>🚫 Banir (Ban)</td>
+        <td>Bloqueia permanentemente o usuário da sala</td>
+      </tr>
+      <tr>
+        <td>🔇 Silenciar (Mute)</td>
+        <td>Usuário pode ler, mas não pode escrever</td>
+      </tr>
+      <tr>
+        <td>🗑️ Encerrar</td>
+        <td>Exclui a sala permanentemente</td>
+      </tr>
+    </table>
+    <p style="color: #888; font-size: 0.9rem; margin-top: 10px;">
+      Apenas o dono (moderador) pode executar essas ações. Bans só podem ser removidos manualmente pelo moderador.
+    </p>
   </div>
 
   <div class="section">
