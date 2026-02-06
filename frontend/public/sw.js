@@ -1,6 +1,6 @@
-// Poly.io Service Worker - Push Notifications
+// Poly.io Service Worker - PWA + Push Notifications
 
-const CACHE_NAME = 'poly-io-v1';
+const CACHE_NAME = 'poly-io-v3.2';
 
 // Arquivos para cache offline
 const urlsToCache = [
@@ -10,11 +10,11 @@ const urlsToCache = [
 
 // Instalar service worker
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando...');
+  console.log('[SW] Instalando versão:', CACHE_NAME);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
-      .then(() => self.skipWaiting())
+    // NÃO chama skipWaiting() aqui - espera o usuário clicar em "Atualizar"
   );
 });
 
@@ -113,6 +113,14 @@ self.addEventListener('notificationclick', (event) => {
 // Notificação fechada
 self.addEventListener('notificationclose', (event) => {
   console.log('[SW] Notificação fechada');
+});
+
+// Mensagem do cliente (para SKIP_WAITING)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Recebido SKIP_WAITING, ativando nova versão...');
+    self.skipWaiting();
+  }
 });
 
 // Fetch com cache fallback

@@ -1065,6 +1065,17 @@
         </template>
       </main>
     </div>
+
+    <!-- Prompt de Atualização PWA -->
+    <div v-if="showUpdatePrompt" class="update-prompt">
+      <div class="update-content">
+        <span>🚀 Nova versão disponível!</span>
+        <div class="update-actions">
+          <button @click="updateApp" class="btn-update">Atualizar</button>
+          <button @click="showUpdatePrompt = false" class="btn-later">Depois</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1078,6 +1089,10 @@ const API_URL = `${API_BASE}/api`
 
 // Socket.io (conecta depois do login)
 let socket = null
+
+// PWA Update
+const showUpdatePrompt = ref(false)
+let swRegistration = null
 
 // Estado de autenticação
 const authMode = ref('login')
@@ -3607,10 +3622,53 @@ function scrollToBottom() {
   })
 }
 
+// ==================== PWA UPDATE ====================
+
+function updateApp() {
+  if (swRegistration && swRegistration.waiting) {
+    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' })
+  }
+  showUpdatePrompt.value = false
+  window.location.reload()
+}
+
 // ==================== LIFECYCLE ====================
 
 onMounted(() => {
   checkAuth()
+
+  // Detectar atualizações do Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then((registration) => {
+      swRegistration = registration
+
+      // Verificar se já há um SW esperando
+      if (registration.waiting) {
+        showUpdatePrompt.value = true
+      }
+
+      // Ouvir mudanças de estado
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdatePrompt.value = true
+            }
+          })
+        }
+      })
+    })
+
+    // Recarregar quando o SW assumir controle
+    let refreshing = false
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true
+        window.location.reload()
+      }
+    })
+  }
 
   // Verificar se há código de convite na URL
   const urlParams = new URLSearchParams(window.location.search)
@@ -6485,6 +6543,99 @@ body {
   .btn-participants {
     font-size: 0.85rem !important;
     padding: 6px 10px !important;
+  }
+}
+
+/* PWA Update Prompt */
+.update-prompt {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+.update-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  font-size: 0.95rem;
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-update {
+  background: #fff;
+  color: #6366f1;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-update:hover {
+  transform: scale(1.05);
+}
+
+.btn-later {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-later:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 480px) {
+  .update-prompt {
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .update-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
   }
 }
 </style>
