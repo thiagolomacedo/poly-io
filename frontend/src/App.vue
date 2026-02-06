@@ -4281,6 +4281,10 @@ body {
   margin-top: 6px;
 }
 
+.message.sent .message-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .btn-original {
   background: transparent;
   border: none;
@@ -5412,7 +5416,7 @@ body {
 
 .room-item.my-room .room-info .desc,
 .room-item.active .room-info .desc {
-  color: #000;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .btn-create-room {
