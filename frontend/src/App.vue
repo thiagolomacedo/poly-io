@@ -5410,6 +5410,11 @@ body {
   color: #888;
 }
 
+.room-item.my-room .room-info .desc,
+.room-item.active .room-info .desc {
+  color: #000;
+}
+
 .btn-create-room {
   width: 100%;
   padding: 12px;
