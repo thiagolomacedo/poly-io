@@ -298,6 +298,34 @@
         </div>
       </div>
 
+      <!-- Modal: Participantes da Sala (mobile fullscreen) -->
+      <div v-if="showParticipantsModal" class="participants-modal-overlay" @click="showParticipantsModal = false">
+        <div class="participants-modal" @click.stop>
+          <div class="participants-modal-header">
+            <h3>👥 Participantes ({{ roomUsers.length }})</h3>
+            <button class="btn-close-participants" @click="showParticipantsModal = false">✕</button>
+          </div>
+          <div class="participants-list">
+            <div
+              v-for="user in roomUsers"
+              :key="user.id"
+              class="participant-item"
+              @click="openProfile(user); showParticipantsModal = false"
+            >
+              <span class="participant-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
+              <div class="participant-info">
+                <span class="participant-name">{{ user.nome }}</span>
+                <span v-if="user.id === selectedRoom?.owner_id" class="participant-owner">⭐ Dono da sala</span>
+                <span v-if="user.id === currentUser?.id" class="participant-you">(você)</span>
+              </div>
+              <div v-if="!isConnectedOrPending(user.id) && user.id !== currentUser?.id" class="participant-add">
+                ➕
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal: Criar Sala -->
       <div v-if="showCreateRoomModal" class="modal-overlay" @click="showCreateRoomModal = false">
         <div class="modal-content" @click.stop>
@@ -709,8 +737,8 @@
               </button>
               <button
                 class="btn-icon btn-participants"
-                @click="showRoomParticipants = !showRoomParticipants"
-                :title="showRoomParticipants ? 'Ocultar participantes' : 'Ver participantes'"
+                @click="toggleParticipants"
+                title="Ver participantes"
               >
                 👥 {{ roomUsers.length }}
               </button>
@@ -1130,7 +1158,8 @@ const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
 const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
 const roomNameColor = ref('#ffffff')    // Cor do nome na sala
-const showRoomParticipants = ref(true)  // Mostrar lista de participantes
+const showRoomParticipants = ref(true)  // Mostrar lista de participantes (desktop)
+const showParticipantsModal = ref(false) // Modal de participantes (mobile)
 const colorPickerMode = ref('message')  // 'message' ou 'name'
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const roomSoundMuted = ref(false)       // Som da sala silenciado
@@ -1742,6 +1771,16 @@ function enterRoom(roomId) {
     messages.value = []
 
     socket.emit('entrar-sala', { roomId })
+  }
+}
+
+// Toggle participantes (mobile = modal, desktop = inline)
+function toggleParticipants() {
+  const isMobile = window.innerWidth <= 768
+  if (isMobile) {
+    showParticipantsModal.value = true
+  } else {
+    showRoomParticipants.value = !showRoomParticipants.value
   }
 }
 
@@ -6221,49 +6260,133 @@ body {
   background: rgba(99, 102, 241, 0.4) !important;
 }
 
+/* Modal de Participantes (mobile fullscreen) */
+.participants-modal-overlay {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .room-users-sidebar {
-    max-height: 100px;
-    padding: 8px 10px;
+  .participants-modal-overlay {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0;
+  }
+
+  .participants-modal {
+    width: 100%;
+    height: 100%;
+    background: #0a0a14;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .participants-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #1a1a2e;
+    border-bottom: 1px solid #333;
+  }
+
+  .participants-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+
+  .btn-close-participants {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  .btn-close-participants:hover {
+    color: #fff;
+  }
+
+  .participants-list {
+    flex: 1;
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    padding: 12px;
   }
 
-  .room-users-sidebar h5 {
-    margin: 0 0 6px 0;
-    font-size: 0.75rem;
+  .participant-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+    background: #1a1a2e;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
   }
 
-  .room-user-item {
-    padding: 6px 4px;
-    min-height: 36px;
+  .participant-item:active {
+    background: #2a2a4a;
   }
 
-  .room-user-item .user-name {
-    font-size: 0.85rem;
-    padding: 6px 10px;
-    background: rgba(99, 102, 241, 0.15);
-    border-radius: 6px;
-    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.3);
+  .participant-letter {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
   }
 
-  .room-user-item .user-name:active {
-    background: rgba(99, 102, 241, 0.4);
+  .participant-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
-  .room-user-item .user-letter {
-    width: 20px;
-    height: 20px;
-    font-size: 0.6rem;
+  .participant-name {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 500;
   }
 
-  .mod-menu {
-    margin-left: 6px;
-  }
-
-  .mod-menu button {
-    padding: 4px 6px;
+  .participant-owner {
     font-size: 0.8rem;
+    color: #f59e0b;
+  }
+
+  .participant-you {
+    font-size: 0.8rem;
+    color: #888;
+  }
+
+  .participant-add {
+    font-size: 1.2rem;
+    padding: 8px;
+    background: rgba(74, 222, 128, 0.2);
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Esconder lista inline no mobile - usa modal */
+  .room-users-sidebar {
+    display: none !important;
   }
 
   .btn-participants {
