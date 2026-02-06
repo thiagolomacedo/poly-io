@@ -724,22 +724,39 @@
             </div>
           </div>
 
-          <!-- Input de mensagem da sala -->
-          <div class="message-input-area">
-            <input
-              v-model="newRoomMessage"
-              type="text"
-              :placeholder="isRoomMuted ? 'Você está silenciado' : 'Digite sua mensagem...'"
-              :disabled="isRoomMuted"
-              @keyup.enter="sendRoomMessage"
-              @input="onRoomTyping"
-            />
+          <!-- Input de mensagem da sala (redesenhado) -->
+          <div class="room-input-container">
+            <!-- Seletor de cor -->
+            <div class="color-picker-wrapper">
+              <input
+                type="color"
+                v-model="roomMessageColor"
+                class="color-picker"
+                title="Cor da mensagem"
+              />
+            </div>
+
+            <!-- Campo de mensagem -->
+            <div class="room-input-field">
+              <input
+                v-model="newRoomMessage"
+                type="text"
+                :placeholder="isRoomMuted ? 'Você está silenciado...' : 'Escreva sua mensagem aqui...'"
+                :disabled="isRoomMuted"
+                :style="{ color: roomMessageColor }"
+                @keyup.enter="sendRoomMessage"
+                @input="onRoomTyping"
+              />
+            </div>
+
+            <!-- Botão enviar -->
             <button
-              class="btn-send"
+              class="room-send-btn"
               @click="sendRoomMessage"
               :disabled="!newRoomMessage.trim() || isRoomMuted"
+              title="Enviar mensagem"
             >
-              ➤
+              <span class="send-icon">➤</span>
             </button>
           </div>
         </template>
@@ -1017,6 +1034,7 @@ const isRoomOwner = ref(false)           // Sou o dono da sala atual?
 const isRoomMuted = ref(false)           // Estou silenciado na sala?
 const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
+const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
 const createRoomForm = reactive({
   name: '',
   description: ''
@@ -5502,6 +5520,106 @@ body {
   color: #888;
   font-size: 0.85rem;
   font-style: italic;
+}
+
+/* ==================== NOVO INPUT DE SALA ==================== */
+
+.room-input-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border-top: 1px solid #2a2a4a;
+}
+
+.color-picker-wrapper {
+  flex-shrink: 0;
+}
+
+.color-picker {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 4px;
+}
+
+.color-picker::-webkit-color-swatch {
+  border-radius: 8px;
+  border: 2px solid #3a3a5a;
+}
+
+.room-input-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-input-field input {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 1rem;
+  background: #16213e;
+  border: 2px solid #2a2a4a;
+  border-radius: 12px;
+  color: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.room-input-field input::placeholder {
+  color: #666;
+}
+
+.room-input-field input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.room-input-field input:disabled {
+  background: #0f0f1a;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.room-send-btn {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.room-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.room-send-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.room-send-btn:disabled {
+  background: #333;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.room-send-btn .send-icon {
+  font-size: 1.3rem;
 }
 
 @media (max-width: 768px) {
