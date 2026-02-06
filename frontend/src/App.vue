@@ -5947,8 +5947,9 @@ body {
   background: #0f0f1a;
   padding: 12px;
   border-bottom: 1px solid #333;
-  max-height: 150px;
+  max-height: 120px;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .room-users-sidebar h5 {
@@ -6222,20 +6223,27 @@ body {
 
 @media (max-width: 768px) {
   .room-users-sidebar {
-    max-height: 200px;
-    padding: 10px;
+    max-height: 100px;
+    padding: 8px 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .room-users-sidebar h5 {
+    margin: 0 0 6px 0;
+    font-size: 0.75rem;
   }
 
   .room-user-item {
-    padding: 8px 4px;
-    min-height: 44px;
+    padding: 6px 4px;
+    min-height: 36px;
   }
 
   .room-user-item .user-name {
-    font-size: 0.95rem;
-    padding: 8px 12px;
+    font-size: 0.85rem;
+    padding: 6px 10px;
     background: rgba(99, 102, 241, 0.15);
-    border-radius: 8px;
+    border-radius: 6px;
     -webkit-tap-highlight-color: rgba(99, 102, 241, 0.3);
   }
 
@@ -6243,18 +6251,24 @@ body {
     background: rgba(99, 102, 241, 0.4);
   }
 
+  .room-user-item .user-letter {
+    width: 20px;
+    height: 20px;
+    font-size: 0.6rem;
+  }
+
   .mod-menu {
-    margin-left: 8px;
+    margin-left: 6px;
   }
 
   .mod-menu button {
-    padding: 6px 10px;
-    font-size: 0.9rem;
+    padding: 4px 6px;
+    font-size: 0.8rem;
   }
 
   .btn-participants {
-    font-size: 0.9rem !important;
-    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+    padding: 6px 10px !important;
   }
 }
 </style>
