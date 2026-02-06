@@ -698,7 +698,7 @@
             >
               <div class="message-header">
                 <span class="sender-name">{{ msg.senderNome }}</span>
-                <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+                <span class="message-time countdown">{{ formatCountdown(msg.timestamp) }}</span>
               </div>
               <div class="message-bubble" :style="{ color: msg.cor }">
                 {{ msg.texto }}
@@ -1035,6 +1035,7 @@ const isRoomMuted = ref(false)           // Estou silenciado na sala?
 const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
 const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
+const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const createRoomForm = reactive({
   name: '',
   description: ''
@@ -3083,6 +3084,23 @@ function formatTime(dateStr) {
          ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatCountdown(timestamp) {
+  const msgTime = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime()
+  const expiresAt = msgTime + (60 * 60 * 1000) // 1 hora em ms
+  const remaining = expiresAt - currentTime.value
+
+  if (remaining <= 0) return 'Expirada'
+
+  const minutes = Math.floor(remaining / 60000)
+  const seconds = Math.floor((remaining % 60000) / 1000)
+
+  if (minutes >= 60) {
+    return '59:59'
+  }
+
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
 function scrollToBottom() {
   nextTick(() => {
     if (messagesContainer.value) {
@@ -3105,6 +3123,19 @@ onMounted(() => {
     // Limpar URL
     window.history.replaceState({}, document.title, window.location.pathname)
   }
+
+  // Timer para atualizar contagem regressiva das mensagens de sala
+  setInterval(() => {
+    currentTime.value = Date.now()
+    // Remover mensagens expiradas (mais de 1 hora)
+    if (roomMessages.value.length > 0) {
+      const oneHourAgo = Date.now() - (60 * 60 * 1000)
+      roomMessages.value = roomMessages.value.filter(msg => {
+        const msgTime = typeof msg.timestamp === 'number' ? msg.timestamp : new Date(msg.timestamp).getTime()
+        return msgTime > oneHourAgo
+      })
+    }
+  }, 1000)
 })
 
 // Processar código de convite após login
@@ -5514,6 +5545,12 @@ body {
 .message-time {
   font-size: 0.7rem;
   color: #666;
+}
+
+.message-time.countdown {
+  color: #f59e0b;
+  font-weight: 500;
+  font-family: monospace;
 }
 
 /* Indicador de digitação na sala */
