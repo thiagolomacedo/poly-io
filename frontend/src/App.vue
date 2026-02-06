@@ -692,6 +692,13 @@
               </button>
               <button
                 class="btn-icon"
+                @click="roomSoundMuted = !roomSoundMuted"
+                :title="roomSoundMuted ? 'Ativar som' : 'Silenciar sala'"
+              >
+                {{ roomSoundMuted ? '🔕' : '🔔' }}
+              </button>
+              <button
+                class="btn-icon"
                 @click="copyRoomInviteLink"
                 title="Copiar link de convite"
               >
@@ -1067,6 +1074,7 @@ const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
 const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
+const roomSoundMuted = ref(false)       // Som da sala silenciado
 const createRoomForm = reactive({
   name: '',
   description: '',
@@ -1889,9 +1897,9 @@ function handleRoomMessage(data) {
     })
   }
 
-  // Som de notificação (se não for minha mensagem)
-  if (data.senderId !== currentUser.value?.id && !notificacaoGlobalMudo.value) {
-    playNotificationSound()
+  // Som de notificação (se não for minha mensagem e som não estiver mudo)
+  if (data.senderId !== currentUser.value?.id && !roomSoundMuted.value) {
+    playRoomTick()
   }
 }
 
@@ -3153,6 +3161,35 @@ function playBubblePop() {
     // Tocar
     osc.start(now)
     osc.stop(now + 0.2)
+  } catch (e) {
+    console.log('Áudio não suportado')
+  }
+}
+
+// Som de tick suave para salas - bem discreto
+function playRoomTick() {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    // Oscilador - frequência alta e curta (tick)
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(1200, now)
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05)
+
+    // Envelope de volume - bem baixo
+    const gainNode = ctx.createGain()
+    gainNode.gain.setValueAtTime(0.15, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
+
+    // Conectar
+    osc.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    // Tocar
+    osc.start(now)
+    osc.stop(now + 0.08)
   } catch (e) {
     console.log('Áudio não suportado')
   }
