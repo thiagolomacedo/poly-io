@@ -136,6 +136,16 @@ function generateFriendCode() {
   return code
 }
 
+// Gerar código de convite de sala (8 caracteres)
+function generateRoomInviteCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
 // ==================== TABELAS DE SALAS ====================
 
 // Criar tabelas de salas
@@ -156,11 +166,31 @@ async function initRoomsTables(client) {
   `)
   console.log('[DB] Tabela rooms OK')
 
+  // Adicionar colunas para sala privada (migração)
+  await client.query(`
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS is_private BOOLEAN DEFAULT FALSE
+  `)
+  await client.query(`
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS invite_code VARCHAR(10) UNIQUE
+  `)
+
+  // Gerar código de convite para salas existentes que não têm
+  const roomsWithoutCode = await client.query(`
+    SELECT id FROM rooms WHERE invite_code IS NULL
+  `)
+  for (const room of roomsWithoutCode.rows) {
+    const codigo = generateRoomInviteCode()
+    await client.query(`
+      UPDATE rooms SET invite_code = $1 WHERE id = $2
+    `, [codigo, room.id])
+  }
+
   // Índice para buscar sala do usuário
   await client.query(`
     CREATE INDEX IF NOT EXISTS idx_rooms_owner ON rooms(owner_id);
     CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
     CREATE INDEX IF NOT EXISTS idx_rooms_activity ON rooms(last_activity_at);
+    CREATE INDEX IF NOT EXISTS idx_rooms_invite_code ON rooms(invite_code);
   `)
 
   // Tabela de bans de sala
@@ -238,5 +268,6 @@ module.exports = {
   initDatabase,
   limparMensagensExpiradas,
   verificarSalasInativas,
-  generateFriendCode
+  generateFriendCode,
+  generateRoomInviteCode
 }

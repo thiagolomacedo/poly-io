@@ -4,7 +4,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
 
@@ -987,7 +987,7 @@ app.put('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
 
 // ==================== ROTAS DE SALAS ====================
 
-// Listar salas ativas (públicas)
+// Listar salas ativas (apenas públicas)
 app.get('/api/rooms', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -999,10 +999,12 @@ app.get('/api/rooms', authMiddleware, async (req, res) => {
         r.created_at,
         r.last_activity_at,
         r.max_users,
+        r.is_private,
+        r.invite_code,
         u.nome as owner_nome
       FROM rooms r
       JOIN users u ON r.owner_id = u.id
-      WHERE r.status = 'active'
+      WHERE r.status = 'active' AND r.is_private = FALSE
       ORDER BY r.last_activity_at DESC
       LIMIT 50
     `)
@@ -1037,6 +1039,42 @@ app.get('/api/rooms/mine', authMiddleware, async (req, res) => {
     res.json(room)
   } catch (error) {
     console.error('[Rooms] Erro ao buscar minha sala:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar sala' })
+  }
+})
+
+// Buscar sala por código de convite (deve vir antes de :id)
+app.get('/api/rooms/invite/:code', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        r.*,
+        u.nome as owner_nome
+      FROM rooms r
+      JOIN users u ON r.owner_id = u.id
+      WHERE r.invite_code = $1 AND r.status != 'deleted'
+    `, [req.params.code.toUpperCase()])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada ou código inválido' })
+    }
+
+    const room = result.rows[0]
+
+    // Verificar se usuário está banido
+    const banCheck = await pool.query(
+      'SELECT 1 FROM room_bans WHERE room_id = $1 AND user_id = $2',
+      [room.id, req.userId]
+    )
+
+    if (banCheck.rows.length > 0) {
+      return res.status(403).json({ error: 'Você está banido desta sala' })
+    }
+
+    room.online_count = salaUsuarios.get(room.id)?.size || 0
+    res.json(room)
+  } catch (error) {
+    console.error('[Rooms] Erro ao buscar sala por convite:', error.message)
     res.status(500).json({ error: 'Erro ao buscar sala' })
   }
 })
@@ -1084,7 +1122,7 @@ app.get('/api/rooms/:id', authMiddleware, async (req, res) => {
 
 // Criar sala
 app.post('/api/rooms', authMiddleware, async (req, res) => {
-  const { name, description } = req.body
+  const { name, description, is_private } = req.body
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Nome da sala é obrigatório' })
@@ -1105,15 +1143,27 @@ app.post('/api/rooms', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Você já possui uma sala. Exclua a atual para criar outra.' })
     }
 
+    // Gerar código de convite único
+    let inviteCode = generateRoomInviteCode()
+    let codeExists = true
+    while (codeExists) {
+      const check = await pool.query('SELECT id FROM rooms WHERE invite_code = $1', [inviteCode])
+      if (check.rows.length === 0) {
+        codeExists = false
+      } else {
+        inviteCode = generateRoomInviteCode()
+      }
+    }
+
     // Criar sala
     const result = await pool.query(`
-      INSERT INTO rooms (owner_id, name, description)
-      VALUES ($1, $2, $3)
+      INSERT INTO rooms (owner_id, name, description, is_private, invite_code)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
-    `, [req.userId, name.trim(), description?.trim() || null])
+    `, [req.userId, name.trim(), description?.trim() || null, is_private || false, inviteCode])
 
     const room = result.rows[0]
-    console.log(`[Rooms] Sala criada: "${room.name}" por usuário ${req.userId}`)
+    console.log(`[Rooms] Sala criada: "${room.name}" (${room.is_private ? 'privada' : 'pública'}) por usuário ${req.userId}`)
 
     res.json(room)
   } catch (error) {
