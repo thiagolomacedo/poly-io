@@ -1871,6 +1871,7 @@ io.on('connection', (socket) => {
 
       // Detectar idioma da mensagem
       const idiomaOriginal = detectarIdioma(texto)
+      console.log(`[Salas] Idioma detectado: ${idiomaOriginal} para texto: "${texto.substring(0, 30)}..."`)
 
       // Criar mensagem em memória
       const mensagem = {
@@ -1893,22 +1894,34 @@ io.on('connection', (socket) => {
       }
       salaMensagens.set(roomId, mensagens)
 
-      // Buscar idiomas dos usuários na sala para traduzir
+      // Buscar TODOS os usuários na sala com seus idiomas de uma vez
       const usersInRoom = salaUsuarios.get(roomId) || new Set()
+      const userIdsArray = Array.from(usersInRoom)
+
+      // Buscar idiomas de todos os usuários
+      const usersDataResult = await pool.query(
+        'SELECT id, idioma FROM users WHERE id = ANY($1)',
+        [userIdsArray]
+      )
+
+      // Criar mapa de userId -> idioma
+      const userIdiomaMap = new Map()
       const idiomasNecessarios = new Set()
 
-      for (const userId of usersInRoom) {
-        const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [userId])
-        if (uResult.rows.length > 0) {
-          idiomasNecessarios.add(uResult.rows[0].idioma)
-        }
+      for (const row of usersDataResult.rows) {
+        userIdiomaMap.set(row.id, row.idioma)
+        idiomasNecessarios.add(row.idioma)
       }
 
-      // Traduzir para cada idioma necessário
+      console.log(`[Salas] Idiomas na sala: ${Array.from(idiomasNecessarios).join(', ')}`)
+
+      // Traduzir para cada idioma necessário (diferente do original)
       const traducoes = { [idiomaOriginal]: texto.trim() }
       for (const idioma of idiomasNecessarios) {
         if (idioma !== idiomaOriginal) {
+          console.log(`[Salas] Traduzindo de ${idiomaOriginal} para ${idioma}`)
           traducoes[idioma] = await traduzirTexto(texto.trim(), idiomaOriginal, idioma)
+          console.log(`[Salas] Tradução: "${traducoes[idioma]}"`)
         }
       }
 
@@ -1916,15 +1929,17 @@ io.on('connection', (socket) => {
       for (const recipientId of usersInRoom) {
         const socketId = usuariosOnline.get(recipientId)
         if (socketId) {
-          const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [recipientId])
-          const userIdioma = uResult.rows[0]?.idioma || 'pt'
+          const userIdioma = userIdiomaMap.get(recipientId) || 'pt'
+          const textoParaEnviar = traducoes[userIdioma] || texto.trim()
+
+          console.log(`[Salas] Enviando para user ${recipientId} (idioma: ${userIdioma}): "${textoParaEnviar.substring(0, 30)}..."`)
 
           io.to(socketId).emit('sala-nova-mensagem', {
             id: mensagem.id,
             roomId,
             senderId: senderId,
             senderNome: sender.nome,
-            texto: traducoes[userIdioma] || texto.trim(),
+            texto: textoParaEnviar,
             textoOriginal: texto.trim(),
             cor: mensagem.cor,
             corNome: mensagem.corNome,
