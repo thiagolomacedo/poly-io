@@ -1762,7 +1762,7 @@ io.on('connection', (socket) => {
   socket.on('sala-mensagem', async (data) => {
     if (!socket.userId) return
 
-    const { roomId, texto } = data
+    const { roomId, texto, cor } = data
     const odestinandoId = socket.userId
 
     if (!texto || !texto.trim()) return
@@ -1801,6 +1801,7 @@ io.on('connection', (socket) => {
         senderId: odestinandoId,
         senderNome: sender.nome,
         texto: texto.trim(),
+        cor: cor || '#ffffff',
         idiomaOriginal,
         timestamp: Date.now(),
         traducoesCache: new Map() // Cache de traduções por idioma
@@ -1847,6 +1848,7 @@ io.on('connection', (socket) => {
             senderNome: sender.nome,
             texto: traducoes[userIdioma] || texto.trim(),
             textoOriginal: texto.trim(),
+            cor: mensagem.cor,
             idiomaOriginal,
             timestamp: mensagem.timestamp,
             euEnviei: odestinandoId === odestinandoId

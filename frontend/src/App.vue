@@ -700,7 +700,7 @@
                 <span class="sender-name">{{ msg.senderNome }}</span>
                 <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
               </div>
-              <div class="message-bubble">
+              <div class="message-bubble" :style="{ color: msg.cor }">
                 {{ msg.texto }}
               </div>
               <button
@@ -1662,7 +1662,8 @@ function sendRoomMessage() {
 
   socket.emit('sala-mensagem', {
     roomId: selectedRoom.value.id,
-    texto: newRoomMessage.value.trim()
+    texto: newRoomMessage.value.trim(),
+    cor: roomMessageColor.value
   })
 
   newRoomMessage.value = ''
@@ -1787,6 +1788,7 @@ function handleRoomMessage(data) {
     textoOriginal: data.textoOriginal,
     idiomaOriginal: data.idiomaOriginal,
     timestamp: data.timestamp,
+    cor: data.cor || '#ffffff',
     showingOriginal: false
   })
 
