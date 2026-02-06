@@ -60,17 +60,59 @@ function authMiddleware(req, res, next) {
 // ==================== SERVIÇO DE TRADUÇÃO ====================
 
 function detectarIdioma(texto) {
-  if (/[áàâãéêíóôõúç]/i.test(texto) && /\b(que|não|com|para|uma|você|está|isso)\b/i.test(texto)) return 'pt'
-  if (/\b(olá|oi|tudo|bem|obrigado|bom|dia|irmão|amigo|como|vai)\b/i.test(texto)) return 'pt'
-  if (/[ñ¿¡]/i.test(texto) && /\b(que|con|para|una|está|pero|muy)\b/i.test(texto)) return 'es'
-  if (/[àâçéèêëîïôùûü]/i.test(texto) && /\b(que|avec|pour|une|est|mais|très|je|vous)\b/i.test(texto)) return 'fr'
-  if (/[äöüß]/i.test(texto) && /\b(und|ist|das|ein|nicht|mit|sie)\b/i.test(texto)) return 'de'
-  if (/\b(che|con|per|una|sono|molto|questo|ciao)\b/i.test(texto)) return 'it'
+  const textoLower = texto.toLowerCase()
+
+  // Caracteres únicos do português (ã, õ, ç) - forte indicador
+  if (/[ãõç]/i.test(texto)) return 'pt'
+
+  // Palavras muito comuns em português (expandido)
+  const palavrasPT = /\b(olá|oi|tudo|bem|obrigado|obrigada|bom|dia|noite|tarde|irmão|amigo|amiga|como|vai|você|vocês|não|sim|isso|esse|essa|aqui|ali|agora|depois|antes|muito|pouco|legal|show|beleza|valeu|tchau|até|logo|então|porque|pra|pro|pela|pelo|meu|minha|seu|sua|nosso|nossa|dele|dela|está|estou|estava|são|foi|ser|ter|fazer|faz|quero|quer|pode|posso|vou|vamos|vem|veio|acho|gosto|gostei|também|ainda|já|mais|menos|sempre|nunca|onde|quando|quem|qual|quanto|coisa|pessoa|gente|cara|mano|parceiro|top|massa|demais|testando|teste|funciona|funcionou|chegou|chegando|mensagem|sala|chat|entendi|entendeu|fala|falou|disse|diz|preciso|precisa|queria|gostaria|poderia|seria|estão|eram|fomos|temos|tinha|tenho|ficou|fica|ficar|olha|olhe|veja|viu|né|pois|aliás|inclusive|enfim|afinal|aliás|realmente|certeza|claro|lógico|verdade|mentira|sério|jura|nossa|caramba|uau|eita|opa|ops|haha|kkk|rsrs|hehe)\b/i
+  if (palavrasPT.test(textoLower)) return 'pt'
+
+  // Acentos típicos do português com palavras
+  if (/[áàâéêíóôú]/i.test(texto) && /\b\w{3,}\b/.test(texto)) return 'pt'
+
+  // Terminações típicas do português
+  if (/\b\w+(ção|ções|ando|endo|indo|ado|ido|oso|osa|eiro|eira|mente)\b/i.test(texto)) return 'pt'
+
+  // Espanhol
+  if (/[ñ¿¡]/i.test(texto)) return 'es'
+  if (/\b(hola|gracias|buenos|buenas|cómo|estás|está|qué|por|favor|mucho|muy|también|pero|porque|cuando|donde|quien|ahora|después|antes|siempre|nunca|todo|nada|algo|alguien|nadie)\b/i.test(textoLower)) return 'es'
+
+  // Francês
+  if (/\b(bonjour|salut|merci|beaucoup|comment|ça|va|oui|non|je|tu|il|elle|nous|vous|ils|elles|suis|est|sont|avec|pour|dans|sur|très|bien|mal|aujourd'hui|demain|hier)\b/i.test(textoLower)) return 'fr'
+
+  // Alemão
+  if (/[äöüß]/i.test(texto)) return 'de'
+  if (/\b(hallo|danke|bitte|guten|tag|morgen|abend|wie|geht|gut|schlecht|ja|nein|ich|du|er|sie|wir|ihr|bin|ist|sind|haben|sein|werden|können|müssen|wollen|sollen)\b/i.test(textoLower)) return 'de'
+
+  // Italiano
+  if (/\b(ciao|grazie|buongiorno|buonasera|come|stai|bene|male|sì|no|io|tu|lui|lei|noi|voi|loro|sono|sei|è|siamo|siete|hanno|essere|avere|fare|dire|andare|venire)\b/i.test(textoLower)) return 'it'
+
+  // Russo (cirílico)
   if (/[а-яА-ЯёЁ]/.test(texto)) return 'ru'
+
+  // Japonês
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(texto)) return 'ja'
+
+  // Coreano
   if (/[\uAC00-\uD7AF]/.test(texto)) return 'ko'
+
+  // Chinês
   if (/[\u4E00-\u9FFF]/.test(texto)) return 'zh-Hans'
+
+  // Árabe
   if (/[\u0600-\u06FF]/.test(texto)) return 'ar'
+
+  // Palavras comuns em inglês (para confirmar que é inglês)
+  if (/\b(the|is|are|was|were|be|been|being|have|has|had|do|does|did|will|would|could|should|can|may|might|must|shall|this|that|these|those|what|which|who|whom|where|when|why|how|hello|hi|hey|thanks|thank|please|sorry|yes|no|yeah|nope|okay|ok|good|bad|great|nice|cool|awesome|amazing|wonderful|terrible|horrible)\b/i.test(textoLower)) return 'en'
+
+  // Fallback: se tem mais de 3 palavras e nenhum acento, provavelmente inglês
+  const palavras = texto.trim().split(/\s+/)
+  if (palavras.length >= 3 && !/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/i.test(texto)) return 'en'
+
+  // Fallback final: inglês (mas log para debug)
+  console.log(`[Idioma] Fallback para 'en': "${texto.substring(0, 50)}"`)
   return 'en'
 }
 
