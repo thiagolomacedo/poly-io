@@ -5707,12 +5707,8 @@ body {
     z-index: 49;
   }
 
-  /* Menu de mensagem: só editar no mobile (sem excluir) */
+  .message-actions .btn-edit-msg,
   .message-actions .btn-delete-msg {
-    display: none;
-  }
-
-  .message-actions .btn-edit-msg {
     width: 100%;
   }
 }
