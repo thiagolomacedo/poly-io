@@ -1840,13 +1840,13 @@ io.on('connection', (socket) => {
     if (!socket.userId) return
 
     const { roomId, texto, cor, corNome } = data
-    const odestinandoId = socket.userId
+    const senderId = socket.userId
 
     if (!texto || !texto.trim()) return
 
     try {
       // Verificar se está na sala
-      if (usuarioSala.get(odestinandoId) !== roomId) {
+      if (usuarioSala.get(senderId) !== roomId) {
         socket.emit('sala-erro', { error: 'Você não está nesta sala' })
         return
       }
@@ -1854,7 +1854,7 @@ io.on('connection', (socket) => {
       // Verificar se está silenciado
       const muteCheck = await pool.query(
         'SELECT 1 FROM room_mutes WHERE room_id = $1 AND user_id = $2',
-        [roomId, odestinandoId]
+        [roomId, senderId]
       )
 
       if (muteCheck.rows.length > 0) {
@@ -1865,7 +1865,7 @@ io.on('connection', (socket) => {
       // Buscar dados do remetente
       const userResult = await pool.query(
         'SELECT nome, idioma FROM users WHERE id = $1',
-        [odestinandoId]
+        [senderId]
       )
       const sender = userResult.rows[0]
 
@@ -1875,7 +1875,7 @@ io.on('connection', (socket) => {
       // Criar mensagem em memória
       const mensagem = {
         id: mensagemIdCounter++,
-        senderId: odestinandoId,
+        senderId: senderId,
         senderNome: sender.nome,
         texto: texto.trim(),
         cor: cor || '#ffffff',
@@ -1897,8 +1897,8 @@ io.on('connection', (socket) => {
       const usersInRoom = salaUsuarios.get(roomId) || new Set()
       const idiomasNecessarios = new Set()
 
-      for (const odestinandoId of usersInRoom) {
-        const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [odestinandoId])
+      for (const userId of usersInRoom) {
+        const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [userId])
         if (uResult.rows.length > 0) {
           idiomasNecessarios.add(uResult.rows[0].idioma)
         }
@@ -1913,16 +1913,16 @@ io.on('connection', (socket) => {
       }
 
       // Enviar para cada usuário na sala com tradução apropriada
-      for (const odestinandoId of usersInRoom) {
-        const socketId = usuariosOnline.get(odestinandoId)
+      for (const recipientId of usersInRoom) {
+        const socketId = usuariosOnline.get(recipientId)
         if (socketId) {
-          const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [odestinandoId])
+          const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [recipientId])
           const userIdioma = uResult.rows[0]?.idioma || 'pt'
 
           io.to(socketId).emit('sala-nova-mensagem', {
             id: mensagem.id,
             roomId,
-            senderId: odestinandoId,
+            senderId: senderId,
             senderNome: sender.nome,
             texto: traducoes[userIdioma] || texto.trim(),
             textoOriginal: texto.trim(),
@@ -1930,7 +1930,7 @@ io.on('connection', (socket) => {
             corNome: mensagem.corNome,
             idiomaOriginal,
             timestamp: mensagem.timestamp,
-            euEnviei: odestinandoId === odestinandoId
+            euEnviei: recipientId === senderId
           })
         }
       }
@@ -1941,7 +1941,7 @@ io.on('connection', (socket) => {
         [roomId]
       )
 
-      console.log(`[Salas] Mensagem na sala ${roomId} por ${odestinandoId}`)
+      console.log(`[Salas] Mensagem na sala ${roomId} por ${senderId}`)
     } catch (error) {
       console.error('[Salas] Erro ao enviar mensagem:', error.message)
     }
