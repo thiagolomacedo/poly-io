@@ -724,6 +724,16 @@
               </span>
               <span v-if="user.id === selectedRoom.owner_id" class="owner-star">⭐</span>
 
+              <!-- Botão de adicionar amigo (se não for eu e não tiver conexão) -->
+              <button
+                v-if="user.id !== currentUser?.id && !isConnectedOrPending(user.id)"
+                class="btn-add-friend"
+                @click.stop="sendRoomConnectionRequest(user.id)"
+                title="Enviar solicitação de amizade"
+              >
+                ➕
+              </button>
+
               <!-- Menu de ações do moderador -->
               <div
                 v-if="isRoomOwner && user.id !== currentUser?.id && userMenuOpen === user.id"
@@ -1860,6 +1870,45 @@ async function toggleMuteUser(userId) {
     }
   } catch (error) {
     console.error('Erro ao alterar mute:', error)
+  }
+}
+
+// Verificar se já tem conexão ou solicitação pendente com usuário
+function isConnectedOrPending(userId) {
+  // Já é amigo?
+  const isConnected = connections.value.some(c => c.user_id === userId)
+  if (isConnected) return true
+
+  // Solicitação pendente recebida?
+  const hasPendingReceived = pendingRequests.value.some(r => r.user_id === userId)
+  if (hasPendingReceived) return true
+
+  // Solicitação pendente enviada?
+  const hasPendingSent = sentRequests.value.some(r => r.user_id === userId)
+  if (hasPendingSent) return true
+
+  return false
+}
+
+// Enviar solicitação de conexão da sala
+async function sendRoomConnectionRequest(userId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/connections/request/${userId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+
+    if (res.ok) {
+      // Recarregar solicitações enviadas
+      loadPendingRequests()
+      alert('Solicitação enviada!')
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao enviar solicitação')
+    }
+  } catch (error) {
+    console.error('Erro ao enviar solicitação:', error)
+    alert('Erro ao enviar solicitação')
   }
 }
 
@@ -5862,6 +5911,23 @@ body {
 
 .owner-star {
   color: #f59e0b;
+}
+
+.btn-add-friend {
+  background: transparent;
+  border: 1px solid #4ade80;
+  color: #4ade80;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+  margin-left: 4px;
+}
+
+.btn-add-friend:hover {
+  background: #4ade80;
+  color: #000;
 }
 
 .mod-menu {
