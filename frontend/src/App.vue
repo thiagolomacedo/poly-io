@@ -3215,22 +3215,28 @@ function playBubblePop() {
   }
 }
 
-// Som de tick suave para salas - bem discreto
+// Som de tick suave para salas
 function playRoomTick() {
   try {
     const ctx = getAudioContext()
+
+    // Resumir contexto se estiver suspenso (política do navegador)
+    if (ctx.state === 'suspended') {
+      ctx.resume()
+    }
+
     const now = ctx.currentTime
 
-    // Oscilador - frequência alta e curta (tick)
+    // Oscilador - frequência que cai (tick suave)
     const osc = ctx.createOscillator()
     osc.type = 'sine'
-    osc.frequency.setValueAtTime(1200, now)
-    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05)
+    osc.frequency.setValueAtTime(800, now)
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.1)
 
-    // Envelope de volume - bem baixo
+    // Envelope de volume - audível mas suave
     const gainNode = ctx.createGain()
-    gainNode.gain.setValueAtTime(0.15, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
+    gainNode.gain.setValueAtTime(0.3, now)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
 
     // Conectar
     osc.connect(gainNode)
@@ -3238,9 +3244,9 @@ function playRoomTick() {
 
     // Tocar
     osc.start(now)
-    osc.stop(now + 0.08)
+    osc.stop(now + 0.15)
   } catch (e) {
-    console.log('Áudio não suportado')
+    console.log('Áudio não suportado:', e)
   }
 }
 
