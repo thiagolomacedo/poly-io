@@ -698,7 +698,7 @@
             >
               <div class="message-header">
                 <span class="sender-name">{{ msg.senderNome }}</span>
-                <span class="message-time countdown">{{ formatCountdown(msg.timestamp) }}</span>
+                <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
               </div>
               <div class="message-bubble" :style="{ color: msg.cor }">
                 {{ msg.texto }}
@@ -3124,10 +3124,8 @@ onMounted(() => {
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
-  // Timer para atualizar contagem regressiva das mensagens de sala
+  // Timer para remover mensagens expiradas das salas (1 hora)
   setInterval(() => {
-    currentTime.value = Date.now()
-    // Remover mensagens expiradas (mais de 1 hora)
     if (roomMessages.value.length > 0) {
       const oneHourAgo = Date.now() - (60 * 60 * 1000)
       roomMessages.value = roomMessages.value.filter(msg => {
@@ -3135,7 +3133,7 @@ onMounted(() => {
         return msgTime > oneHourAgo
       })
     }
-  }, 1000)
+  }, 60000) // Verifica a cada minuto
 })
 
 // Processar código de convite após login
