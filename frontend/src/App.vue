@@ -740,7 +740,7 @@
               :class="{ mine: msg.senderId === currentUser?.id }"
             >
               <div class="message-header">
-                <span class="sender-name">{{ msg.senderNome }}</span>
+                <span class="sender-name" :style="{ color: msg.corNome }">{{ msg.senderNome }}</span>
                 <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
               </div>
               <div class="message-bubble" :style="{ color: msg.cor }">
@@ -769,14 +769,27 @@
 
           <!-- Input de mensagem da sala (redesenhado) -->
           <div class="room-input-container">
-            <!-- Seletor de cor -->
-            <div class="color-picker-wrapper">
+            <!-- Seletor de cor com toggle -->
+            <div class="color-picker-wrapper" @click.stop>
               <input
                 type="color"
-                v-model="roomMessageColor"
+                :value="colorPickerMode === 'message' ? roomMessageColor : roomNameColor"
+                @input="e => colorPickerMode === 'message' ? roomMessageColor = e.target.value : roomNameColor = e.target.value"
                 class="color-picker"
-                title="Cor da mensagem"
+                :title="colorPickerMode === 'message' ? 'Cor da mensagem' : 'Cor do nome'"
               />
+              <div class="color-mode-toggle">
+                <button
+                  :class="{ active: colorPickerMode === 'message' }"
+                  @click="colorPickerMode = 'message'"
+                  title="Cor da mensagem"
+                >Aa</button>
+                <button
+                  :class="{ active: colorPickerMode === 'name' }"
+                  @click="colorPickerMode = 'name'"
+                  title="Cor do nome"
+                >@</button>
+              </div>
             </div>
 
             <!-- Campo de mensagem -->
@@ -1079,6 +1092,8 @@ const isRoomMuted = ref(false)           // Estou silenciado na sala?
 const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
 const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
+const roomNameColor = ref('#ffffff')    // Cor do nome na sala
+const colorPickerMode = ref('message')  // 'message' ou 'name'
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const roomSoundMuted = ref(false)       // Som da sala silenciado
 const createRoomForm = reactive({
@@ -1758,7 +1773,8 @@ function sendRoomMessage() {
   socket.emit('sala-mensagem', {
     roomId: selectedRoom.value.id,
     texto: newRoomMessage.value.trim(),
-    cor: roomMessageColor.value
+    cor: roomMessageColor.value,
+    corNome: roomNameColor.value
   })
 
   newRoomMessage.value = ''
@@ -1914,6 +1930,7 @@ function handleRoomMessage(data) {
       idiomaOriginal: data.idiomaOriginal,
       timestamp: data.timestamp,
       cor: data.cor || '#ffffff',
+      corNome: data.corNome || '#ffffff',
       showingOriginal: false
     })
 
@@ -5896,6 +5913,34 @@ body {
 .color-picker::-webkit-color-swatch {
   border-radius: 8px;
   border: 2px solid #3a3a5a;
+}
+
+.color-mode-toggle {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.color-mode-toggle button {
+  flex: 1;
+  padding: 2px 4px;
+  font-size: 0.65rem;
+  background: #222;
+  color: #666;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-mode-toggle button:hover {
+  background: #333;
+}
+
+.color-mode-toggle button.active {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
 }
 
 .room-input-field {
