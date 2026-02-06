@@ -711,21 +711,33 @@
           </div>
 
           <!-- Lista de usuários da sala (sidebar interna) -->
-          <div class="room-users-sidebar" v-if="roomUsers.length > 0">
+          <div class="room-users-sidebar" v-if="roomUsers.length > 0" @click="userMenuOpen = null">
             <h5>Na sala ({{ roomUsers.length }})</h5>
             <div v-for="user in roomUsers" :key="user.id" class="room-user-item">
               <span class="user-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
-              <span class="user-name">{{ user.nome }}</span>
+              <span
+                class="user-name"
+                :class="{ clickable: isRoomOwner && user.id !== currentUser?.id }"
+                @click.stop="isRoomOwner && user.id !== currentUser?.id ? toggleUserMenu(user.id) : null"
+              >
+                {{ user.nome }}
+              </span>
               <span v-if="user.id === selectedRoom.owner_id" class="owner-star">⭐</span>
-              <!-- Ações do moderador -->
-              <div v-if="isRoomOwner && user.id !== currentUser?.id" class="mod-actions">
-                <button @click="kickUser(user.id)" title="Expulsar">👢</button>
-                <button @click="banUser(user.id)" title="Banir">🚫</button>
-                <button
-                  @click="toggleMuteUser(user.id)"
-                  :title="roomMutedUsers.has(user.id) ? 'Dessilenciar' : 'Silenciar'"
-                >
-                  {{ roomMutedUsers.has(user.id) ? '🔊' : '🔇' }}
+
+              <!-- Menu de ações do moderador -->
+              <div
+                v-if="isRoomOwner && user.id !== currentUser?.id && userMenuOpen === user.id"
+                class="mod-menu"
+                @click.stop
+              >
+                <button @click="kickUser(user.id); userMenuOpen = null">
+                  👢 Expulsar
+                </button>
+                <button @click="banUser(user.id); userMenuOpen = null">
+                  🚫 Banir
+                </button>
+                <button @click="toggleMuteUser(user.id); userMenuOpen = null">
+                  {{ roomMutedUsers.has(user.id) ? '🔊 Dessilenciar' : '🔇 Silenciar' }}
                 </button>
               </div>
             </div>
@@ -1085,6 +1097,7 @@ const myRoom = ref(null)                 // Minha sala (se existir)
 const selectedRoom = ref(null)           // Sala atualmente selecionada
 const roomUsers = ref([])                // Usuários na sala atual
 const roomMutedUsers = ref(new Set())    // IDs de usuários silenciados na sala
+const userMenuOpen = ref(null)           // ID do usuário com menu aberto
 const roomMessages = ref([])             // Mensagens da sala atual
 const newRoomMessage = ref('')           // Input de nova mensagem na sala
 const isRoomOwner = ref(false)           // Sou o dono da sala atual?
@@ -1791,6 +1804,15 @@ function onRoomTyping() {
   roomTypingTimer = setTimeout(() => {
     socket.emit('sala-parou-digitar', { roomId: selectedRoom.value.id })
   }, 1500)
+}
+
+// Toggle menu de ações do usuário
+function toggleUserMenu(userId) {
+  if (userMenuOpen.value === userId) {
+    userMenuOpen.value = null
+  } else {
+    userMenuOpen.value = userId
+  }
 }
 
 // Ações de moderação
@@ -5805,6 +5827,7 @@ body {
   gap: 8px;
   padding: 4px 0;
   font-size: 0.85rem;
+  position: relative;
 }
 
 .room-user-item .user-letter {
@@ -5824,26 +5847,50 @@ body {
   color: #ccc;
 }
 
+.room-user-item .user-name.clickable {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.room-user-item .user-name.clickable:hover {
+  color: #6366f1;
+}
+
 .owner-star {
   color: #f59e0b;
 }
 
-.mod-actions {
-  display: flex;
-  gap: 4px;
+.mod-menu {
+  position: absolute;
+  top: 100%;
+  left: 32px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.mod-actions button {
+.mod-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
   background: none;
   border: none;
-  font-size: 0.8rem;
+  color: #ccc;
+  font-size: 0.85rem;
   cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
-.mod-actions button:hover {
-  opacity: 1;
+.mod-menu button:hover {
+  background: #2a2a4a;
+  color: #fff;
 }
 
 /* Mensagens da sala */
@@ -6018,10 +6065,6 @@ body {
 @media (max-width: 768px) {
   .room-users-sidebar {
     max-height: 100px;
-  }
-
-  .mod-actions {
-    display: none;
   }
 }
 </style>
