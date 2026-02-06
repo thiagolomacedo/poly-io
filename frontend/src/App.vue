@@ -759,7 +759,7 @@
                 {{ msg.texto }}
               </div>
               <button
-                v-if="msg.textoOriginal && msg.texto !== msg.textoOriginal"
+                v-if="!msg.euEnviei && msg.textoOriginal && msg.texto !== msg.textoOriginal"
                 class="btn-show-original"
                 @click="msg.showingOriginal = !msg.showingOriginal"
               >
@@ -1941,18 +1941,23 @@ function handleRoomMessage(data) {
   // Salvar mensagem mesmo se não estiver na sala (para persistência)
   const roomId = data.roomId
 
+  // Determinar se eu enviei a mensagem
+  const euEnviei = data.euEnviei || data.senderId === currentUser.value?.id
+
   // Se estiver vendo esta sala, adiciona na tela
   if (selectedRoom.value?.id === roomId) {
     roomMessages.value.push({
       id: data.id,
       senderId: data.senderId,
       senderNome: data.senderNome,
-      texto: data.texto,
+      // Se eu enviei, sempre mostrar meu texto original
+      texto: euEnviei ? data.textoOriginal : data.texto,
       textoOriginal: data.textoOriginal,
       idiomaOriginal: data.idiomaOriginal,
       timestamp: data.timestamp,
       cor: data.cor || '#ffffff',
       corNome: data.corNome || '#ffffff',
+      euEnviei: euEnviei,
       showingOriginal: false
     })
 
