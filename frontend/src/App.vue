@@ -1753,9 +1753,11 @@ function handleRoomEntered(data) {
   roomUsers.value = data.users || []
   isRoomOwner.value = data.isOwner
   isRoomMuted.value = data.isMuted
-  roomMessages.value = []
   roomTypingUsers.value = new Set()
   sidebarOpen.value = false
+
+  // Carregar mensagens salvas do localStorage
+  roomMessages.value = loadRoomMessages(data.room.id)
 }
 
 function handleUserJoinedRoom(data) {
@@ -1779,27 +1781,34 @@ function handleUserLeftRoom(data) {
 }
 
 function handleRoomMessage(data) {
-  if (selectedRoom.value?.id !== data.roomId) return
+  // Salvar mensagem mesmo se não estiver na sala (para persistência)
+  const roomId = data.roomId
 
-  roomMessages.value.push({
-    id: data.id,
-    senderId: data.senderId,
-    senderNome: data.senderNome,
-    texto: data.texto,
-    textoOriginal: data.textoOriginal,
-    idiomaOriginal: data.idiomaOriginal,
-    timestamp: data.timestamp,
-    cor: data.cor || '#ffffff',
-    showingOriginal: false
-  })
+  // Se estiver vendo esta sala, adiciona na tela
+  if (selectedRoom.value?.id === roomId) {
+    roomMessages.value.push({
+      id: data.id,
+      senderId: data.senderId,
+      senderNome: data.senderNome,
+      texto: data.texto,
+      textoOriginal: data.textoOriginal,
+      idiomaOriginal: data.idiomaOriginal,
+      timestamp: data.timestamp,
+      cor: data.cor || '#ffffff',
+      showingOriginal: false
+    })
 
-  // Auto scroll
-  nextTick(() => {
-    const container = document.querySelector('.messages-area')
-    if (container) {
-      container.scrollTop = container.scrollHeight
-    }
-  })
+    // Salvar no localStorage
+    saveRoomMessages(roomId, roomMessages.value)
+
+    // Auto scroll
+    nextTick(() => {
+      const container = document.querySelector('.messages-area')
+      if (container) {
+        container.scrollTop = container.scrollHeight
+      }
+    })
+  }
 
   // Som de notificação (se não for minha mensagem)
   if (data.senderId !== currentUser.value?.id && !notificacaoGlobalMudo.value) {
@@ -3101,6 +3110,63 @@ function formatCountdown(timestamp) {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+// ==================== STORAGE DE MENSAGENS DE SALA ====================
+
+function saveRoomMessages(roomId, messages) {
+  try {
+    const key = `poly_room_messages_${roomId}`
+    localStorage.setItem(key, JSON.stringify(messages))
+  } catch (e) {
+    console.warn('Erro ao salvar mensagens no localStorage:', e)
+  }
+}
+
+function loadRoomMessages(roomId) {
+  try {
+    const key = `poly_room_messages_${roomId}`
+    const saved = localStorage.getItem(key)
+    if (!saved) return []
+
+    const messages = JSON.parse(saved)
+    const oneHourAgo = Date.now() - (60 * 60 * 1000)
+
+    // Filtrar mensagens expiradas
+    return messages.filter(msg => {
+      const msgTime = typeof msg.timestamp === 'number' ? msg.timestamp : new Date(msg.timestamp).getTime()
+      return msgTime > oneHourAgo
+    })
+  } catch (e) {
+    console.warn('Erro ao carregar mensagens do localStorage:', e)
+    return []
+  }
+}
+
+function cleanExpiredRoomMessages() {
+  try {
+    const oneHourAgo = Date.now() - (60 * 60 * 1000)
+
+    // Limpar todas as salas salvas
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('poly_room_messages_')) {
+        const messages = JSON.parse(localStorage.getItem(key) || '[]')
+        const valid = messages.filter(msg => {
+          const msgTime = typeof msg.timestamp === 'number' ? msg.timestamp : new Date(msg.timestamp).getTime()
+          return msgTime > oneHourAgo
+        })
+
+        if (valid.length === 0) {
+          localStorage.removeItem(key)
+        } else if (valid.length !== messages.length) {
+          localStorage.setItem(key, JSON.stringify(valid))
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Erro ao limpar mensagens expiradas:', e)
+  }
+}
+
 function scrollToBottom() {
   nextTick(() => {
     if (messagesContainer.value) {
@@ -3126,13 +3192,24 @@ onMounted(() => {
 
   // Timer para remover mensagens expiradas das salas (1 hora)
   setInterval(() => {
+    const oneHourAgo = Date.now() - (60 * 60 * 1000)
+
+    // Limpar mensagens expiradas da tela
     if (roomMessages.value.length > 0) {
-      const oneHourAgo = Date.now() - (60 * 60 * 1000)
+      const before = roomMessages.value.length
       roomMessages.value = roomMessages.value.filter(msg => {
         const msgTime = typeof msg.timestamp === 'number' ? msg.timestamp : new Date(msg.timestamp).getTime()
         return msgTime > oneHourAgo
       })
+
+      // Se removeu alguma, atualizar localStorage
+      if (roomMessages.value.length !== before && selectedRoom.value) {
+        saveRoomMessages(selectedRoom.value.id, roomMessages.value)
+      }
     }
+
+    // Limpar mensagens expiradas do localStorage
+    cleanExpiredRoomMessages()
   }, 60000) // Verifica a cada minuto
 })
 
