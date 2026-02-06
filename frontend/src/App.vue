@@ -160,7 +160,28 @@
             <span class="profile-letter">{{ profileUser?.nome?.charAt(0).toUpperCase() }}</span>
           </div>
 
-          <h2 class="profile-name">{{ profileUser?.nome }}</h2>
+          <div class="profile-name-row">
+            <h2 v-if="!editingName" class="profile-name">{{ profileUser?.nome }}</h2>
+            <input
+              v-else
+              v-model="nameInput"
+              type="text"
+              class="profile-name-input"
+              @keyup.enter="saveName"
+              @keyup.esc="editingName = false"
+              ref="nameInputRef"
+            />
+            <button
+              v-if="profileUser?.id === currentUser?.id && !editingName"
+              class="btn-edit-name"
+              @click="startEditName"
+              title="Editar nome"
+            >✏️</button>
+            <div v-if="editingName" class="name-edit-buttons">
+              <button class="btn-save-name" @click="saveName">✓</button>
+              <button class="btn-cancel-name" @click="editingName = false">✕</button>
+            </div>
+          </div>
           <p class="profile-info">{{ getIdiomaLabel(profileUser?.idioma) }} · {{ profileUser?.pais || 'Não informado' }}</p>
 
           <!-- Código de Amigo -->
@@ -812,6 +833,9 @@ const socialTipoInput = ref('')
 const socialUrlInput = ref('')
 const codeCopied = ref(false)
 const linkCopied = ref(false)
+const editingName = ref(false)
+const nameInput = ref('')
+const nameInputRef = ref(null)
 
 // Tipos de redes sociais disponíveis
 const redesSociais = {
@@ -1016,7 +1040,40 @@ async function openProfile(user) {
   socialTipoInput.value = profileUser.value.social_tipo || ''
   socialUrlInput.value = profileUser.value.social_url || ''
   editingSocial.value = false
+  editingName.value = false
   showProfileModal.value = true
+}
+
+// Editar nome
+function startEditName() {
+  nameInput.value = profileUser.value?.nome || ''
+  editingName.value = true
+  nextTick(() => {
+    nameInputRef.value?.focus()
+  })
+}
+
+async function saveName() {
+  if (!nameInput.value.trim()) {
+    alert('Nome não pode ficar vazio')
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/users/${currentUser.value.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ nome: nameInput.value.trim() })
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      currentUser.value.nome = updated.nome
+      profileUser.value.nome = updated.nome
+      editingName.value = false
+    }
+  } catch (e) {
+    console.error('Erro ao salvar nome:', e)
+  }
 }
 
 // Salvar rede social
@@ -3949,7 +4006,78 @@ body {
 .profile-name {
   font-size: 1.5rem;
   font-weight: 600;
+  margin: 0;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-bottom: 8px;
+}
+
+.btn-edit-name {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+
+.btn-edit-name:hover {
+  opacity: 1;
+}
+
+.profile-name-input {
+  background: #222;
+  border: 1px solid #6366f1;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: center;
+  width: 200px;
+}
+
+.profile-name-input:focus {
+  outline: none;
+  border-color: #818cf8;
+}
+
+.name-edit-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-save-name,
+.btn-cancel-name {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-save-name {
+  color: #22c55e;
+}
+
+.btn-save-name:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.btn-cancel-name {
+  color: #ef4444;
+}
+
+.btn-cancel-name:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .profile-info {
