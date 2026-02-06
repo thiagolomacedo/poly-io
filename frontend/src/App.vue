@@ -281,6 +281,38 @@
         </div>
       </div>
 
+      <!-- Modal: Criar Sala -->
+      <div v-if="showCreateRoomModal" class="modal-overlay" @click="showCreateRoomModal = false">
+        <div class="modal-content" @click.stop>
+          <h3>Criar Sala</h3>
+          <form @submit.prevent="createRoom" class="room-form">
+            <div class="form-group">
+              <label>Nome da Sala *</label>
+              <input
+                v-model="createRoomForm.name"
+                type="text"
+                placeholder="Ex: Tech Talk Brasil"
+                maxlength="50"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Descrição (opcional)</label>
+              <input
+                v-model="createRoomForm.description"
+                type="text"
+                placeholder="Sobre o que é a sala?"
+                maxlength="200"
+              />
+            </div>
+            <div class="modal-buttons">
+              <button type="submit" class="btn-primary">Criar</button>
+              <button type="button" class="btn-secondary" @click="showCreateRoomModal = false">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Modal: Chamada Recebida -->
       <div v-if="incomingCall" class="call-modal-overlay">
         <div class="call-modal">
@@ -373,6 +405,14 @@
             <span class="nav-icon">👥</span>
             Conexões
             <span v-if="connections.length" class="badge">{{ connections.length }}</span>
+          </button>
+          <button
+            :class="{ active: currentTab === 'rooms' }"
+            @click="currentTab = 'rooms'; loadRooms()"
+          >
+            <span class="nav-icon">🏠</span>
+            Salas
+            <span v-if="rooms.length" class="badge">{{ rooms.length }}</span>
           </button>
           <button
             :class="{ active: currentTab === 'search' }"
@@ -535,6 +575,56 @@
               Nenhuma solicitação enviada.
             </p>
           </div>
+
+          <!-- Tab: Salas -->
+          <div v-if="currentTab === 'rooms'" class="tab-content">
+            <!-- Minha Sala -->
+            <div v-if="myRoom" class="my-room-section">
+              <h4 class="section-title">Minha Sala</h4>
+              <div
+                class="room-item my-room"
+                :class="{ active: selectedRoom?.id === myRoom.id }"
+                @click="enterRoom(myRoom.id)"
+              >
+                <div class="room-icon">🏠</div>
+                <div class="room-info">
+                  <span class="name">{{ myRoom.name }}</span>
+                  <span class="desc">{{ myRoom.online_count || 0 }} online</span>
+                </div>
+                <button class="btn-delete-room" @click.stop="deleteMyRoom" title="Excluir sala">🗑️</button>
+              </div>
+            </div>
+
+            <!-- Criar Sala -->
+            <button
+              v-if="!myRoom"
+              class="btn-create-room"
+              @click="showCreateRoomModal = true"
+            >
+              + Criar Minha Sala
+            </button>
+
+            <!-- Lista de Salas Públicas -->
+            <h4 class="section-title">Salas Públicas</h4>
+            <div
+              v-for="room in rooms.filter(r => r.id !== myRoom?.id)"
+              :key="room.id"
+              class="room-item"
+              :class="{ active: selectedRoom?.id === room.id }"
+              @click="enterRoom(room.id)"
+            >
+              <div class="room-icon">💬</div>
+              <div class="room-info">
+                <span class="name">{{ room.name }}</span>
+                <span class="desc">
+                  {{ room.online_count || 0 }}/{{ room.max_users }} · {{ room.owner_nome }}
+                </span>
+              </div>
+            </div>
+            <p v-if="rooms.filter(r => r.id !== myRoom?.id).length === 0" class="empty-state small">
+              Nenhuma sala pública disponível.
+            </p>
+          </div>
         </div>
 
         <button class="btn-logout" @click="logout">Sair</button>
@@ -542,14 +632,117 @@
 
       <!-- Área Principal -->
       <main class="main-area">
-        <!-- Nenhuma conversa selecionada -->
-        <div v-if="!selectedConnection" class="no-chat">
+        <!-- Nenhuma conversa ou sala selecionada -->
+        <div v-if="!selectedConnection && !selectedRoom" class="no-chat">
           <div class="logo-big">
             <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
           </div>
           <p>Selecione uma conexão para conversar</p>
-          <p class="hint">Ou busque novos usuários para se conectar</p>
+          <p class="hint">Ou entre em uma sala para conversar com várias pessoas</p>
         </div>
+
+        <!-- Sala ativa -->
+        <template v-else-if="selectedRoom">
+          <!-- Header da sala -->
+          <div class="chat-header room-header">
+            <div class="room-header-info">
+              <div class="room-icon-large">🏠</div>
+              <div>
+                <span class="name">{{ selectedRoom.name }}</span>
+                <span class="room-meta">
+                  {{ roomUsers.length }}/{{ selectedRoom.max_users }} online
+                  <span v-if="isRoomOwner" class="owner-badge">ADM</span>
+                  <span v-if="isRoomMuted" class="muted-badge">Silenciado</span>
+                  <span v-if="selectedRoom.status === 'hidden'" class="hidden-badge">Oculta</span>
+                </span>
+              </div>
+            </div>
+            <div class="chat-actions">
+              <button
+                v-if="isRoomOwner && selectedRoom.status === 'hidden'"
+                class="btn-reactivate"
+                @click="reactivateRoom"
+                title="Reativar sala"
+              >
+                🔄 Reativar
+              </button>
+              <button class="btn-icon" @click="leaveRoom" title="Sair da sala">
+                🚪
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista de usuários da sala (sidebar interna) -->
+          <div class="room-users-sidebar" v-if="roomUsers.length > 0">
+            <h5>Na sala ({{ roomUsers.length }})</h5>
+            <div v-for="user in roomUsers" :key="user.id" class="room-user-item">
+              <span class="user-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
+              <span class="user-name">{{ user.nome }}</span>
+              <span v-if="user.id === selectedRoom.owner_id" class="owner-star">⭐</span>
+              <!-- Ações do moderador -->
+              <div v-if="isRoomOwner && user.id !== currentUser?.id" class="mod-actions">
+                <button @click="kickUser(user.id)" title="Expulsar">👢</button>
+                <button @click="banUser(user.id)" title="Banir">🚫</button>
+                <button @click="muteUser(user.id)" title="Silenciar">🔇</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mensagens da sala -->
+          <div class="messages-area" ref="roomMessagesContainer">
+            <div
+              v-for="msg in roomMessages"
+              :key="msg.id"
+              class="message"
+              :class="{ mine: msg.senderId === currentUser?.id }"
+            >
+              <div class="message-header">
+                <span class="sender-name">{{ msg.senderNome }}</span>
+                <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+              </div>
+              <div class="message-bubble">
+                {{ msg.texto }}
+              </div>
+              <button
+                v-if="msg.textoOriginal && msg.texto !== msg.textoOriginal"
+                class="btn-show-original"
+                @click="msg.showingOriginal = !msg.showingOriginal"
+              >
+                {{ msg.showingOriginal ? 'Ocultar original' : 'Ver original' }}
+              </button>
+              <div v-if="msg.showingOriginal" class="original-text">
+                Original: {{ msg.textoOriginal }}
+              </div>
+            </div>
+
+            <!-- Indicador de digitação -->
+            <div v-if="roomTypingUsers.size > 0" class="typing-indicator">
+              <span class="typing-dots">
+                <span></span><span></span><span></span>
+              </span>
+              {{ Array.from(roomTypingUsers).join(', ') }} digitando...
+            </div>
+          </div>
+
+          <!-- Input de mensagem da sala -->
+          <div class="message-input-area">
+            <input
+              v-model="newRoomMessage"
+              type="text"
+              :placeholder="isRoomMuted ? 'Você está silenciado' : 'Digite sua mensagem...'"
+              :disabled="isRoomMuted"
+              @keyup.enter="sendRoomMessage"
+              @input="onRoomTyping"
+            />
+            <button
+              class="btn-send"
+              @click="sendRoomMessage"
+              :disabled="!newRoomMessage.trim() || isRoomMuted"
+            >
+              ➤
+            </button>
+          </div>
+        </template>
 
         <!-- Chat ativo -->
         <template v-else>
@@ -739,7 +932,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { io } from 'socket.io-client'
 
 // Configuração da API
@@ -811,6 +1004,22 @@ const jitsiUrl = computed(() => {
   const room = activeCall.value.roomName
   const displayName = encodeURIComponent(currentUser.value?.nome || 'Usuário')
   return `https://meet.jit.si/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
+})
+
+// ==================== SALAS ====================
+const rooms = ref([])                    // Lista de salas públicas
+const myRoom = ref(null)                 // Minha sala (se existir)
+const selectedRoom = ref(null)           // Sala atualmente selecionada
+const roomUsers = ref([])                // Usuários na sala atual
+const roomMessages = ref([])             // Mensagens da sala atual
+const newRoomMessage = ref('')           // Input de nova mensagem na sala
+const isRoomOwner = ref(false)           // Sou o dono da sala atual?
+const isRoomMuted = ref(false)           // Estou silenciado na sala?
+const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
+const showCreateRoomModal = ref(false)   // Modal de criar sala
+const createRoomForm = reactive({
+  name: '',
+  description: ''
 })
 
 // Computed
@@ -1270,6 +1479,14 @@ function logout() {
   sentRequests.value = []
   selectedConnection.value = null
   messages.value = []
+  // Limpar dados de salas
+  rooms.value = []
+  myRoom.value = null
+  selectedRoom.value = null
+  roomUsers.value = []
+  roomMessages.value = []
+  isRoomOwner.value = false
+  isRoomMuted.value = false
 }
 
 async function deleteAccount() {
@@ -1301,6 +1518,340 @@ async function deleteAccount() {
   } catch (error) {
     alert('Erro ao excluir conta. Tente novamente.')
   }
+}
+
+// ==================== SALAS ====================
+
+// Carregar lista de salas públicas
+async function loadRooms() {
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms`, {
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+    if (res.ok) {
+      rooms.value = await res.json()
+    }
+  } catch (error) {
+    console.error('Erro ao carregar salas:', error)
+  }
+}
+
+// Carregar minha sala
+async function loadMyRoom() {
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms/mine`, {
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+    if (res.ok) {
+      myRoom.value = await res.json()
+    }
+  } catch (error) {
+    console.error('Erro ao carregar minha sala:', error)
+  }
+}
+
+// Criar sala
+async function createRoom() {
+  if (!createRoomForm.name.trim()) return
+
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({
+        name: createRoomForm.name.trim(),
+        description: createRoomForm.description.trim() || null
+      })
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao criar sala')
+      return
+    }
+
+    myRoom.value = data
+    showCreateRoomModal.value = false
+    createRoomForm.name = ''
+    createRoomForm.description = ''
+
+    // Entrar na sala recém-criada
+    enterRoom(data.id)
+    loadRooms()
+  } catch (error) {
+    alert('Erro ao criar sala')
+  }
+}
+
+// Excluir minha sala
+async function deleteMyRoom() {
+  if (!myRoom.value) return
+
+  const confirmed = confirm('Tem certeza que deseja excluir sua sala?\nTodos os usuários serão removidos.')
+  if (!confirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms/${myRoom.value.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+
+    if (res.ok) {
+      if (selectedRoom.value?.id === myRoom.value.id) {
+        selectedRoom.value = null
+        roomMessages.value = []
+        roomUsers.value = []
+      }
+      myRoom.value = null
+      loadRooms()
+    }
+  } catch (error) {
+    alert('Erro ao excluir sala')
+  }
+}
+
+// Entrar em uma sala
+function enterRoom(roomId) {
+  if (socket) {
+    // Limpar conversa privada se estiver ativa
+    selectedConnection.value = null
+    messages.value = []
+
+    socket.emit('entrar-sala', { roomId })
+  }
+}
+
+// Sair da sala
+function leaveRoom() {
+  if (socket && selectedRoom.value) {
+    socket.emit('sair-sala')
+    selectedRoom.value = null
+    roomMessages.value = []
+    roomUsers.value = []
+    isRoomOwner.value = false
+    isRoomMuted.value = false
+    roomTypingUsers.value = new Set()
+  }
+}
+
+// Enviar mensagem na sala
+function sendRoomMessage() {
+  if (!newRoomMessage.value.trim() || !selectedRoom.value || isRoomMuted.value) return
+
+  socket.emit('sala-mensagem', {
+    roomId: selectedRoom.value.id,
+    texto: newRoomMessage.value.trim()
+  })
+
+  newRoomMessage.value = ''
+}
+
+// Digitando na sala
+let roomTypingTimer = null
+function onRoomTyping() {
+  if (!selectedRoom.value || isRoomMuted.value) return
+
+  socket.emit('sala-digitando', { roomId: selectedRoom.value.id })
+
+  clearTimeout(roomTypingTimer)
+  roomTypingTimer = setTimeout(() => {
+    socket.emit('sala-parou-digitar', { roomId: selectedRoom.value.id })
+  }, 1500)
+}
+
+// Ações de moderação
+async function kickUser(userId) {
+  if (!selectedRoom.value || !isRoomOwner.value) return
+
+  socket.emit('sala-kick', {
+    roomId: selectedRoom.value.id,
+    targetUserId: userId
+  })
+}
+
+async function banUser(userId) {
+  if (!selectedRoom.value || !isRoomOwner.value) return
+
+  const confirmed = confirm('Banir este usuário? Ele não poderá mais entrar na sala.')
+  if (!confirmed) return
+
+  try {
+    await fetch(`${API_BASE}/api/rooms/${selectedRoom.value.id}/ban/${userId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+  } catch (error) {
+    console.error('Erro ao banir:', error)
+  }
+}
+
+async function muteUser(userId) {
+  if (!selectedRoom.value || !isRoomOwner.value) return
+
+  try {
+    await fetch(`${API_BASE}/api/rooms/${selectedRoom.value.id}/mute/${userId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+  } catch (error) {
+    console.error('Erro ao silenciar:', error)
+  }
+}
+
+// Reativar sala (apenas dono)
+async function reactivateRoom() {
+  if (!selectedRoom.value || !isRoomOwner.value) return
+
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms/${selectedRoom.value.id}/reactivate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+
+    if (res.ok) {
+      selectedRoom.value.status = 'active'
+      if (myRoom.value?.id === selectedRoom.value.id) {
+        myRoom.value.status = 'active'
+      }
+      loadRooms()
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao reativar sala')
+    }
+  } catch (error) {
+    console.error('Erro ao reativar sala:', error)
+  }
+}
+
+// Formatar timestamp
+function formatTime(timestamp) {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+// Handlers de socket para salas
+function handleRoomEntered(data) {
+  selectedRoom.value = data.room
+  roomUsers.value = data.users || []
+  isRoomOwner.value = data.isOwner
+  isRoomMuted.value = data.isMuted
+  roomMessages.value = []
+  roomTypingUsers.value = new Set()
+  sidebarOpen.value = false
+}
+
+function handleUserJoinedRoom(data) {
+  if (!selectedRoom.value) return
+
+  const exists = roomUsers.value.find(u => u.id === data.odestinandoId)
+  if (!exists) {
+    roomUsers.value.push({
+      id: data.odestinandoId,
+      nome: data.nome,
+      idioma: data.idioma
+    })
+  }
+}
+
+function handleUserLeftRoom(data) {
+  if (!selectedRoom.value) return
+
+  roomUsers.value = roomUsers.value.filter(u => u.id !== data.odestinandoId)
+  roomTypingUsers.value.delete(data.odestinandoId)
+}
+
+function handleRoomMessage(data) {
+  if (selectedRoom.value?.id !== data.roomId) return
+
+  roomMessages.value.push({
+    id: data.id,
+    senderId: data.senderId,
+    senderNome: data.senderNome,
+    texto: data.texto,
+    textoOriginal: data.textoOriginal,
+    idiomaOriginal: data.idiomaOriginal,
+    timestamp: data.timestamp,
+    showingOriginal: false
+  })
+
+  // Auto scroll
+  nextTick(() => {
+    const container = document.querySelector('.messages-area')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  })
+
+  // Som de notificação (se não for minha mensagem)
+  if (data.senderId !== currentUser.value?.id && !notificacaoGlobalMudo.value) {
+    playNotificationSound()
+  }
+}
+
+function handleRoomTyping(data) {
+  if (selectedRoom.value?.id !== data.roomId) return
+  if (data.odestinandoId === currentUser.value?.id) return
+
+  // Encontrar nome do usuário
+  const user = roomUsers.value.find(u => u.id === data.odestinandoId)
+  if (user) {
+    roomTypingUsers.value.add(user.nome)
+  }
+}
+
+function handleRoomStoppedTyping(data) {
+  if (selectedRoom.value?.id !== data.roomId) return
+
+  const user = roomUsers.value.find(u => u.id === data.odestinandoId)
+  if (user) {
+    roomTypingUsers.value.delete(user.nome)
+  }
+}
+
+function handleKickedFromRoom(data) {
+  if (selectedRoom.value?.id === data.roomId) {
+    alert('Você foi expulso da sala.')
+    leaveRoom()
+  }
+}
+
+function handleBannedFromRoom(data) {
+  if (selectedRoom.value?.id === data.roomId) {
+    alert('Você foi banido desta sala.')
+    leaveRoom()
+  }
+}
+
+function handleMutedInRoom(data) {
+  if (selectedRoom.value?.id === data.roomId) {
+    isRoomMuted.value = true
+    alert('Você foi silenciado pelo moderador.')
+  }
+}
+
+function handleUnmutedInRoom(data) {
+  if (selectedRoom.value?.id === data.roomId) {
+    isRoomMuted.value = false
+  }
+}
+
+function handleRoomClosed(data) {
+  if (selectedRoom.value?.id === data.roomId) {
+    alert('A sala foi encerrada pelo dono.')
+    leaveRoom()
+  }
+}
+
+function handleRoomFull(data) {
+  alert(data.message || 'Esta sala está cheia. Tente criar uma nova sala.')
+}
+
+function handleRoomError(data) {
+  alert(data.error || 'Erro na sala')
 }
 
 // ==================== INICIALIZAÇÃO ====================
@@ -1347,10 +1898,27 @@ async function initializeApp() {
   socket.on('chamada-encerrada', handleCallEnded)
   socket.on('chamada-erro', handleCallError)
 
+  // Eventos de salas
+  socket.on('sala-entrou', handleRoomEntered)
+  socket.on('usuario-entrou-sala', handleUserJoinedRoom)
+  socket.on('usuario-saiu-sala', handleUserLeftRoom)
+  socket.on('sala-nova-mensagem', handleRoomMessage)
+  socket.on('sala-usuario-digitando', handleRoomTyping)
+  socket.on('sala-usuario-parou-digitar', handleRoomStoppedTyping)
+  socket.on('expulso-da-sala', handleKickedFromRoom)
+  socket.on('banido-da-sala', handleBannedFromRoom)
+  socket.on('silenciado-na-sala', handleMutedInRoom)
+  socket.on('dessilenciado-na-sala', handleUnmutedInRoom)
+  socket.on('sala-encerrada', handleRoomClosed)
+  socket.on('sala-cheia', handleRoomFull)
+  socket.on('sala-erro', handleRoomError)
+
   // Carregar dados após pequeno delay para socket conectar
   setTimeout(() => {
     loadConnections()
     loadPendingRequests()
+    loadRooms()
+    loadMyRoom()
   }, 500)
 
   // Atualizar status online periodicamente
@@ -1522,6 +2090,11 @@ async function rejectRequest(connectionId) {
 // ==================== CHAT ====================
 
 async function selectConnection(conn) {
+  // Limpar sala se estiver em uma
+  if (selectedRoom.value) {
+    leaveRoom()
+  }
+
   selectedConnection.value = conn
   idiomaRecepcao.value = null // Reset para idioma padrão ao mudar de conversa
   isOtherTyping.value = false // Reset indicador de digitação
@@ -4640,6 +5213,310 @@ body {
 
   .video-call-header {
     padding: 10px 16px;
+  }
+}
+
+/* ==================== SALAS ==================== */
+
+.my-room-section {
+  margin-bottom: 16px;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #1a1a2e;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.room-item:hover {
+  background: #252540;
+}
+
+.room-item.active {
+  background: #6366f1;
+}
+
+.room-item.my-room {
+  border: 1px solid #6366f1;
+}
+
+.room-icon {
+  font-size: 1.5rem;
+}
+
+.room-icon-large {
+  font-size: 2rem;
+  margin-right: 8px;
+}
+
+.room-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-info .name {
+  display: block;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-info .desc {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.btn-create-room {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: transform 0.2s;
+}
+
+.btn-create-room:hover {
+  transform: scale(1.02);
+}
+
+.btn-delete-room {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-delete-room:hover {
+  opacity: 1;
+}
+
+/* Modal criar sala */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #16213e;
+  padding: 24px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-content h3 {
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.room-form .form-group {
+  margin-bottom: 16px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Header da sala */
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.room-header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-meta {
+  font-size: 0.8rem;
+  color: #888;
+  display: block;
+}
+
+.owner-badge {
+  background: #f59e0b;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.muted-badge {
+  background: #ef4444;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+}
+
+.hidden-badge {
+  background: #6b7280;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  margin-left: 8px;
+}
+
+.btn-reactivate {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: transform 0.2s;
+}
+
+.btn-reactivate:hover {
+  transform: scale(1.05);
+}
+
+/* Sidebar de usuários da sala */
+.room-users-sidebar {
+  background: #0f0f1a;
+  padding: 12px;
+  border-bottom: 1px solid #333;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.room-users-sidebar h5 {
+  margin: 0 0 8px 0;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.room-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+
+.room-user-item .user-letter {
+  width: 24px;
+  height: 24px;
+  background: #6366f1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.room-user-item .user-name {
+  flex: 1;
+  color: #ccc;
+}
+
+.owner-star {
+  color: #f59e0b;
+}
+
+.mod-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.mod-actions button {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.mod-actions button:hover {
+  opacity: 1;
+}
+
+/* Mensagens da sala */
+.message-header {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.message-header .sender-name {
+  font-weight: 600;
+  color: #6366f1;
+  font-size: 0.85rem;
+}
+
+.message .message-header .sender-name {
+  color: #6366f1;
+}
+
+.message.mine .message-header .sender-name {
+  color: #10b981;
+}
+
+.message-time {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+/* Indicador de digitação na sala */
+.room-typing-indicator {
+  padding: 8px 16px;
+  color: #888;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .room-users-sidebar {
+    max-height: 100px;
+  }
+
+  .mod-actions {
+    display: none;
   }
 }
 </style>

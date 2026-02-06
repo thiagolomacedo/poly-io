@@ -113,6 +113,9 @@ async function initDatabase() {
     `)
     console.log('[DB] Índices criados')
 
+    // Inicializar tabelas de salas
+    await initRoomsTables(client)
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -133,6 +136,89 @@ function generateFriendCode() {
   return code
 }
 
+// ==================== TABELAS DE SALAS ====================
+
+// Criar tabelas de salas
+async function initRoomsTables(client) {
+  // Tabela de salas
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id SERIAL PRIMARY KEY,
+      owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(50) NOT NULL,
+      description VARCHAR(200),
+      created_at TIMESTAMP DEFAULT NOW(),
+      last_activity_at TIMESTAMP DEFAULT NOW(),
+      status VARCHAR(20) DEFAULT 'active',
+      max_users INTEGER DEFAULT 20,
+      message_expiry_minutes INTEGER DEFAULT 60
+    )
+  `)
+  console.log('[DB] Tabela rooms OK')
+
+  // Índice para buscar sala do usuário
+  await client.query(`
+    CREATE INDEX IF NOT EXISTS idx_rooms_owner ON rooms(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
+    CREATE INDEX IF NOT EXISTS idx_rooms_activity ON rooms(last_activity_at);
+  `)
+
+  // Tabela de bans de sala
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS room_bans (
+      room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      banned_at TIMESTAMP DEFAULT NOW(),
+      banned_by INTEGER REFERENCES users(id),
+      PRIMARY KEY (room_id, user_id)
+    )
+  `)
+  console.log('[DB] Tabela room_bans OK')
+
+  // Tabela de usuários silenciados em sala
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS room_mutes (
+      room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      muted_at TIMESTAMP DEFAULT NOW(),
+      muted_by INTEGER REFERENCES users(id),
+      PRIMARY KEY (room_id, user_id)
+    )
+  `)
+  console.log('[DB] Tabela room_mutes OK')
+}
+
+// Verificar salas inativas e atualizar status
+async function verificarSalasInativas() {
+  try {
+    const now = new Date()
+
+    // Salas com 7+ dias sem atividade: ainda ativas mas notificar
+    // (notificação será implementada no frontend)
+
+    // Salas com 15+ dias: mudar para hidden
+    await pool.query(`
+      UPDATE rooms
+      SET status = 'hidden'
+      WHERE status = 'active'
+        AND last_activity_at < NOW() - INTERVAL '15 days'
+    `)
+
+    // Salas com 30+ dias: deletar
+    const deleted = await pool.query(`
+      DELETE FROM rooms
+      WHERE last_activity_at < NOW() - INTERVAL '30 days'
+      RETURNING id, name
+    `)
+
+    if (deleted.rowCount > 0) {
+      console.log(`[Rooms] ${deleted.rowCount} salas inativas excluídas`)
+    }
+  } catch (error) {
+    console.error('[Rooms] Erro ao verificar salas inativas:', error.message)
+  }
+}
+
 // Função para limpar mensagens expiradas (rodar periodicamente)
 async function limparMensagensExpiradas() {
   try {
@@ -151,5 +237,6 @@ module.exports = {
   pool,
   initDatabase,
   limparMensagensExpiradas,
+  verificarSalasInativas,
   generateFriendCode
 }

@@ -4,7 +4,7 @@ const http = require('http')
 const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const { pool, initDatabase, limparMensagensExpiradas, generateFriendCode } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
 
@@ -32,6 +32,12 @@ app.use(express.json())
 // Mapa de usuários online (socket) e seus status
 const usuariosOnline = new Map() // userId -> socketId
 const usuariosStatus = new Map() // userId -> 'online' | 'ausente' | 'ocupado' | 'invisivel'
+
+// ==================== SALAS - ARMAZENAMENTO EM MEMÓRIA ====================
+const salaUsuarios = new Map()    // roomId -> Set<userId> - usuários ativos na sala
+const salaMensagens = new Map()   // roomId -> [{id, senderId, senderNome, texto, textoOriginal, idiomaOriginal, timestamp, traducoesCache}]
+const usuarioSala = new Map()     // odestinandoId -> roomId (qual sala o usuário está atualmente)
+let mensagemIdCounter = 1         // contador para IDs de mensagens em memória
 
 // ==================== MIDDLEWARE DE AUTENTICAÇÃO ====================
 
@@ -979,6 +985,447 @@ app.put('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
   }
 })
 
+// ==================== ROTAS DE SALAS ====================
+
+// Listar salas ativas (públicas)
+app.get('/api/rooms', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        r.id,
+        r.name,
+        r.description,
+        r.owner_id,
+        r.created_at,
+        r.last_activity_at,
+        r.max_users,
+        u.nome as owner_nome
+      FROM rooms r
+      JOIN users u ON r.owner_id = u.id
+      WHERE r.status = 'active'
+      ORDER BY r.last_activity_at DESC
+      LIMIT 50
+    `)
+
+    // Adicionar contagem de usuários online em cada sala
+    const rooms = result.rows.map(room => ({
+      ...room,
+      online_count: salaUsuarios.get(room.id)?.size || 0
+    }))
+
+    res.json(rooms)
+  } catch (error) {
+    console.error('[Rooms] Erro ao listar:', error.message)
+    res.status(500).json({ error: 'Erro ao listar salas' })
+  }
+})
+
+// Buscar minha sala (se existir)
+app.get('/api/rooms/mine', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM rooms WHERE owner_id = $1 AND status != 'deleted'
+    `, [req.userId])
+
+    if (result.rows.length === 0) {
+      return res.json(null)
+    }
+
+    const room = result.rows[0]
+    room.online_count = salaUsuarios.get(room.id)?.size || 0
+
+    res.json(room)
+  } catch (error) {
+    console.error('[Rooms] Erro ao buscar minha sala:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar sala' })
+  }
+})
+
+// Detalhes de uma sala
+app.get('/api/rooms/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        r.*,
+        u.nome as owner_nome,
+        u.idioma as owner_idioma
+      FROM rooms r
+      JOIN users u ON r.owner_id = u.id
+      WHERE r.id = $1 AND r.status != 'deleted'
+    `, [req.params.id])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' })
+    }
+
+    const room = result.rows[0]
+    room.online_count = salaUsuarios.get(room.id)?.size || 0
+
+    // Verificar se usuário está banido
+    const banCheck = await pool.query(
+      'SELECT 1 FROM room_bans WHERE room_id = $1 AND user_id = $2',
+      [req.params.id, req.userId]
+    )
+    room.is_banned = banCheck.rows.length > 0
+
+    // Verificar se usuário está silenciado
+    const muteCheck = await pool.query(
+      'SELECT 1 FROM room_mutes WHERE room_id = $1 AND user_id = $2',
+      [req.params.id, req.userId]
+    )
+    room.is_muted = muteCheck.rows.length > 0
+
+    res.json(room)
+  } catch (error) {
+    console.error('[Rooms] Erro ao buscar sala:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar sala' })
+  }
+})
+
+// Criar sala
+app.post('/api/rooms', authMiddleware, async (req, res) => {
+  const { name, description } = req.body
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Nome da sala é obrigatório' })
+  }
+
+  if (name.trim().length > 50) {
+    return res.status(400).json({ error: 'Nome deve ter no máximo 50 caracteres' })
+  }
+
+  try {
+    // Verificar se usuário já tem uma sala ativa
+    const existing = await pool.query(
+      'SELECT id FROM rooms WHERE owner_id = $1 AND status != \'deleted\'',
+      [req.userId]
+    )
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Você já possui uma sala. Exclua a atual para criar outra.' })
+    }
+
+    // Criar sala
+    const result = await pool.query(`
+      INSERT INTO rooms (owner_id, name, description)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [req.userId, name.trim(), description?.trim() || null])
+
+    const room = result.rows[0]
+    console.log(`[Rooms] Sala criada: "${room.name}" por usuário ${req.userId}`)
+
+    res.json(room)
+  } catch (error) {
+    console.error('[Rooms] Erro ao criar sala:', error.message)
+    res.status(500).json({ error: 'Erro ao criar sala' })
+  }
+})
+
+// Atualizar sala (apenas dono)
+app.put('/api/rooms/:id', authMiddleware, async (req, res) => {
+  const { name, description } = req.body
+
+  try {
+    const result = await pool.query(`
+      UPDATE rooms
+      SET name = COALESCE($1, name), description = COALESCE($2, description)
+      WHERE id = $3 AND owner_id = $4 AND status != 'deleted'
+      RETURNING *
+    `, [name?.trim(), description?.trim(), req.params.id, req.userId])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada ou sem permissão' })
+    }
+
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('[Rooms] Erro ao atualizar sala:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar sala' })
+  }
+})
+
+// Excluir sala (apenas dono)
+app.delete('/api/rooms/:id', authMiddleware, async (req, res) => {
+  try {
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT id, owner_id FROM rooms WHERE id = $1',
+      [req.params.id]
+    )
+
+    if (room.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' })
+    }
+
+    if (room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Apenas o dono pode excluir a sala' })
+    }
+
+    // Notificar todos os usuários na sala
+    const roomId = parseInt(req.params.id)
+    const usersInRoom = salaUsuarios.get(roomId)
+    if (usersInRoom) {
+      for (const odestinandoId of usersInRoom) {
+        const socketId = usuariosOnline.get(odestinandoId)
+        if (socketId) {
+          io.to(socketId).emit('sala-encerrada', { roomId })
+        }
+      }
+    }
+
+    // Limpar dados em memória
+    salaUsuarios.delete(roomId)
+    salaMensagens.delete(roomId)
+
+    // Marcar como deleted no banco
+    await pool.query(
+      'UPDATE rooms SET status = \'deleted\' WHERE id = $1',
+      [req.params.id]
+    )
+
+    console.log(`[Rooms] Sala ${roomId} excluída pelo dono`)
+    res.json({ message: 'Sala excluída' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao excluir sala:', error.message)
+    res.status(500).json({ error: 'Erro ao excluir sala' })
+  }
+})
+
+// Banir usuário da sala (apenas dono)
+app.post('/api/rooms/:id/ban/:odestinandoId', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+    const targetUserId = parseInt(req.params.odestinandoId)
+
+    // Verificar se é o dono da sala
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1 AND status != \'deleted\'',
+      [roomId]
+    )
+
+    if (room.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' })
+    }
+
+    if (room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Apenas o dono pode banir usuários' })
+    }
+
+    if (targetUserId === req.userId) {
+      return res.status(400).json({ error: 'Não pode banir a si mesmo' })
+    }
+
+    // Adicionar ban
+    await pool.query(`
+      INSERT INTO room_bans (room_id, user_id, banned_by)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (room_id, user_id) DO NOTHING
+    `, [roomId, targetUserId, req.userId])
+
+    // Remover usuário da sala (se estiver)
+    const usersInRoom = salaUsuarios.get(roomId)
+    if (usersInRoom) {
+      usersInRoom.delete(targetUserId)
+    }
+    if (usuarioSala.get(targetUserId) === roomId) {
+      usuarioSala.delete(targetUserId)
+    }
+
+    // Notificar usuário banido
+    const targetSocketId = usuariosOnline.get(targetUserId)
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('banido-da-sala', { roomId })
+    }
+
+    // Notificar outros na sala
+    io.to(`room-${roomId}`).emit('usuario-saiu-sala', {
+      odestinandoId: targetUserId,
+      motivo: 'banido'
+    })
+
+    console.log(`[Rooms] Usuário ${targetUserId} banido da sala ${roomId}`)
+    res.json({ message: 'Usuário banido' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao banir:', error.message)
+    res.status(500).json({ error: 'Erro ao banir usuário' })
+  }
+})
+
+// Remover ban (apenas dono)
+app.delete('/api/rooms/:id/ban/:odestinandoId', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+    const targetUserId = parseInt(req.params.odestinandoId)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1',
+      [roomId]
+    )
+
+    if (room.rows.length === 0 || room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    await pool.query(
+      'DELETE FROM room_bans WHERE room_id = $1 AND user_id = $2',
+      [roomId, targetUserId]
+    )
+
+    res.json({ message: 'Ban removido' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao remover ban:', error.message)
+    res.status(500).json({ error: 'Erro ao remover ban' })
+  }
+})
+
+// Silenciar usuário na sala (apenas dono)
+app.post('/api/rooms/:id/mute/:odestinandoId', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+    const targetUserId = parseInt(req.params.odestinandoId)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1 AND status != \'deleted\'',
+      [roomId]
+    )
+
+    if (room.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' })
+    }
+
+    if (room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Apenas o dono pode silenciar usuários' })
+    }
+
+    // Adicionar mute
+    await pool.query(`
+      INSERT INTO room_mutes (room_id, user_id, muted_by)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (room_id, user_id) DO NOTHING
+    `, [roomId, targetUserId, req.userId])
+
+    // Notificar usuário silenciado
+    const targetSocketId = usuariosOnline.get(targetUserId)
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('silenciado-na-sala', { roomId })
+    }
+
+    console.log(`[Rooms] Usuário ${targetUserId} silenciado na sala ${roomId}`)
+    res.json({ message: 'Usuário silenciado' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao silenciar:', error.message)
+    res.status(500).json({ error: 'Erro ao silenciar usuário' })
+  }
+})
+
+// Remover silenciamento (apenas dono)
+app.delete('/api/rooms/:id/mute/:odestinandoId', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+    const targetUserId = parseInt(req.params.odestinandoId)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1',
+      [roomId]
+    )
+
+    if (room.rows.length === 0 || room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    await pool.query(
+      'DELETE FROM room_mutes WHERE room_id = $1 AND user_id = $2',
+      [roomId, targetUserId]
+    )
+
+    // Notificar usuário
+    const targetSocketId = usuariosOnline.get(targetUserId)
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('dessilenciado-na-sala', { roomId })
+    }
+
+    res.json({ message: 'Silenciamento removido' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao remover mute:', error.message)
+    res.status(500).json({ error: 'Erro ao remover silenciamento' })
+  }
+})
+
+// Reativar sala (apenas dono)
+app.post('/api/rooms/:id/reactivate', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id, status FROM rooms WHERE id = $1',
+      [roomId]
+    )
+
+    if (room.rows.length === 0) {
+      return res.status(404).json({ error: 'Sala não encontrada' })
+    }
+
+    if (room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Apenas o dono pode reativar a sala' })
+    }
+
+    if (room.rows[0].status === 'deleted') {
+      return res.status(400).json({ error: 'Sala excluída não pode ser reativada' })
+    }
+
+    if (room.rows[0].status === 'active') {
+      return res.status(400).json({ error: 'Sala já está ativa' })
+    }
+
+    // Reativar: mudar status para active e resetar last_activity_at
+    await pool.query(`
+      UPDATE rooms
+      SET status = 'active', last_activity_at = NOW()
+      WHERE id = $1
+    `, [roomId])
+
+    console.log(`[Rooms] Sala ${roomId} reativada pelo dono`)
+    res.json({ message: 'Sala reativada com sucesso' })
+  } catch (error) {
+    console.error('[Rooms] Erro ao reativar sala:', error.message)
+    res.status(500).json({ error: 'Erro ao reativar sala' })
+  }
+})
+
+// Listar usuários banidos (apenas dono)
+app.get('/api/rooms/:id/bans', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1',
+      [roomId]
+    )
+
+    if (room.rows.length === 0 || room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    const result = await pool.query(`
+      SELECT rb.*, u.nome, u.email
+      FROM room_bans rb
+      JOIN users u ON rb.user_id = u.id
+      WHERE rb.room_id = $1
+    `, [roomId])
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error('[Rooms] Erro ao listar bans:', error.message)
+    res.status(500).json({ error: 'Erro ao listar banidos' })
+  }
+})
+
 // ==================== ROTAS PÚBLICAS ====================
 
 app.get('/', (req, res) => {
@@ -1176,25 +1623,382 @@ io.on('connection', (socket) => {
     }
   })
 
+  // ==================== SALAS - SOCKET EVENTS ====================
+
+  // Entrar em uma sala
+  socket.on('entrar-sala', async (data) => {
+    if (!socket.userId) return
+
+    const { roomId } = data
+    const odestinandoId = socket.userId
+
+    try {
+      // Verificar se sala existe e está ativa
+      const roomResult = await pool.query(
+        'SELECT * FROM rooms WHERE id = $1 AND status = \'active\'',
+        [roomId]
+      )
+
+      if (roomResult.rows.length === 0) {
+        socket.emit('sala-erro', { error: 'Sala não encontrada ou inativa' })
+        return
+      }
+
+      const room = roomResult.rows[0]
+
+      // Verificar se usuário está banido
+      const banCheck = await pool.query(
+        'SELECT 1 FROM room_bans WHERE room_id = $1 AND user_id = $2',
+        [roomId, odestinandoId]
+      )
+
+      if (banCheck.rows.length > 0) {
+        socket.emit('sala-erro', { error: 'Você está banido desta sala' })
+        return
+      }
+
+      // Verificar limite de usuários
+      const usersInRoom = salaUsuarios.get(roomId) || new Set()
+      if (usersInRoom.size >= room.max_users && !usersInRoom.has(odestinandoId)) {
+        socket.emit('sala-cheia', {
+          roomId,
+          message: 'Esta sala está cheia no momento. Você pode criar outra sala com a mesma temática.'
+        })
+        return
+      }
+
+      // Sair da sala anterior se estiver em uma
+      const salaAnterior = usuarioSala.get(odestinandoId)
+      if (salaAnterior && salaAnterior !== roomId) {
+        socket.leave(`room-${salaAnterior}`)
+        const usersAnterior = salaUsuarios.get(salaAnterior)
+        if (usersAnterior) {
+          usersAnterior.delete(odestinandoId)
+        }
+        io.to(`room-${salaAnterior}`).emit('usuario-saiu-sala', { odestinandoId })
+      }
+
+      // Entrar na nova sala
+      socket.join(`room-${roomId}`)
+      usersInRoom.add(odestinandoId)
+      salaUsuarios.set(roomId, usersInRoom)
+      usuarioSala.set(odestinandoId, roomId)
+
+      // Buscar dados do usuário
+      const userResult = await pool.query(
+        'SELECT nome, idioma FROM users WHERE id = $1',
+        [odestinandoId]
+      )
+      const user = userResult.rows[0]
+
+      // Verificar se está silenciado
+      const muteCheck = await pool.query(
+        'SELECT 1 FROM room_mutes WHERE room_id = $1 AND user_id = $2',
+        [roomId, odestinandoId]
+      )
+      const isMuted = muteCheck.rows.length > 0
+
+      // Notificar todos na sala
+      io.to(`room-${roomId}`).emit('usuario-entrou-sala', {
+        odestinandoId,
+        nome: user.nome,
+        idioma: user.idioma
+      })
+
+      // Enviar lista de usuários atualmente na sala
+      const usersData = []
+      for (const odestinandoId of usersInRoom) {
+        const uResult = await pool.query(
+          'SELECT id, nome, idioma FROM users WHERE id = $1',
+          [odestinandoId]
+        )
+        if (uResult.rows.length > 0) {
+          usersData.push(uResult.rows[0])
+        }
+      }
+
+      socket.emit('sala-entrou', {
+        roomId,
+        room,
+        users: usersData,
+        isMuted,
+        isOwner: room.owner_id === odestinandoId
+      })
+
+      // Atualizar última atividade da sala
+      await pool.query(
+        'UPDATE rooms SET last_activity_at = NOW(), status = CASE WHEN status = \'hidden\' THEN \'active\' ELSE status END WHERE id = $1',
+        [roomId]
+      )
+
+      console.log(`[Salas] Usuário ${odestinandoId} entrou na sala ${roomId}`)
+    } catch (error) {
+      console.error('[Salas] Erro ao entrar:', error.message)
+      socket.emit('sala-erro', { error: 'Erro ao entrar na sala' })
+    }
+  })
+
+  // Sair de uma sala
+  socket.on('sair-sala', () => {
+    if (!socket.userId) return
+
+    const odestinandoId = socket.userId
+    const roomId = usuarioSala.get(odestinandoId)
+
+    if (roomId) {
+      socket.leave(`room-${roomId}`)
+      const usersInRoom = salaUsuarios.get(roomId)
+      if (usersInRoom) {
+        usersInRoom.delete(odestinandoId)
+      }
+      usuarioSala.delete(odestinandoId)
+
+      io.to(`room-${roomId}`).emit('usuario-saiu-sala', { odestinandoId })
+      console.log(`[Salas] Usuário ${odestinandoId} saiu da sala ${roomId}`)
+    }
+  })
+
+  // Enviar mensagem na sala
+  socket.on('sala-mensagem', async (data) => {
+    if (!socket.userId) return
+
+    const { roomId, texto } = data
+    const odestinandoId = socket.userId
+
+    if (!texto || !texto.trim()) return
+
+    try {
+      // Verificar se está na sala
+      if (usuarioSala.get(odestinandoId) !== roomId) {
+        socket.emit('sala-erro', { error: 'Você não está nesta sala' })
+        return
+      }
+
+      // Verificar se está silenciado
+      const muteCheck = await pool.query(
+        'SELECT 1 FROM room_mutes WHERE room_id = $1 AND user_id = $2',
+        [roomId, odestinandoId]
+      )
+
+      if (muteCheck.rows.length > 0) {
+        socket.emit('sala-erro', { error: 'Você está silenciado nesta sala' })
+        return
+      }
+
+      // Buscar dados do remetente
+      const userResult = await pool.query(
+        'SELECT nome, idioma FROM users WHERE id = $1',
+        [odestinandoId]
+      )
+      const sender = userResult.rows[0]
+
+      // Detectar idioma da mensagem
+      const idiomaOriginal = detectarIdioma(texto)
+
+      // Criar mensagem em memória
+      const mensagem = {
+        id: mensagemIdCounter++,
+        senderId: odestinandoId,
+        senderNome: sender.nome,
+        texto: texto.trim(),
+        idiomaOriginal,
+        timestamp: Date.now(),
+        traducoesCache: new Map() // Cache de traduções por idioma
+      }
+
+      // Guardar mensagem (com limite de 100 por sala)
+      let mensagens = salaMensagens.get(roomId) || []
+      mensagens.push(mensagem)
+      if (mensagens.length > 100) {
+        mensagens = mensagens.slice(-100)
+      }
+      salaMensagens.set(roomId, mensagens)
+
+      // Buscar idiomas dos usuários na sala para traduzir
+      const usersInRoom = salaUsuarios.get(roomId) || new Set()
+      const idiomasNecessarios = new Set()
+
+      for (const odestinandoId of usersInRoom) {
+        const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [odestinandoId])
+        if (uResult.rows.length > 0) {
+          idiomasNecessarios.add(uResult.rows[0].idioma)
+        }
+      }
+
+      // Traduzir para cada idioma necessário
+      const traducoes = { [idiomaOriginal]: texto.trim() }
+      for (const idioma of idiomasNecessarios) {
+        if (idioma !== idiomaOriginal) {
+          traducoes[idioma] = await traduzirTexto(texto.trim(), idiomaOriginal, idioma)
+        }
+      }
+
+      // Enviar para cada usuário na sala com tradução apropriada
+      for (const odestinandoId of usersInRoom) {
+        const socketId = usuariosOnline.get(odestinandoId)
+        if (socketId) {
+          const uResult = await pool.query('SELECT idioma FROM users WHERE id = $1', [odestinandoId])
+          const userIdioma = uResult.rows[0]?.idioma || 'pt'
+
+          io.to(socketId).emit('sala-nova-mensagem', {
+            id: mensagem.id,
+            roomId,
+            senderId: odestinandoId,
+            senderNome: sender.nome,
+            texto: traducoes[userIdioma] || texto.trim(),
+            textoOriginal: texto.trim(),
+            idiomaOriginal,
+            timestamp: mensagem.timestamp,
+            euEnviei: odestinandoId === odestinandoId
+          })
+        }
+      }
+
+      // Atualizar última atividade
+      await pool.query(
+        'UPDATE rooms SET last_activity_at = NOW(), status = CASE WHEN status = \'hidden\' THEN \'active\' ELSE status END WHERE id = $1',
+        [roomId]
+      )
+
+      console.log(`[Salas] Mensagem na sala ${roomId} por ${odestinandoId}`)
+    } catch (error) {
+      console.error('[Salas] Erro ao enviar mensagem:', error.message)
+    }
+  })
+
+  // Digitando na sala
+  socket.on('sala-digitando', (data) => {
+    if (!socket.userId) return
+
+    const { roomId } = data
+    const odestinandoId = socket.userId
+
+    if (usuarioSala.get(odestinandoId) === roomId) {
+      socket.to(`room-${roomId}`).emit('sala-usuario-digitando', {
+        odestinandoId,
+        roomId
+      })
+    }
+  })
+
+  // Parou de digitar na sala
+  socket.on('sala-parou-digitar', (data) => {
+    if (!socket.userId) return
+
+    const { roomId } = data
+    const odestinandoId = socket.userId
+
+    if (usuarioSala.get(odestinandoId) === roomId) {
+      socket.to(`room-${roomId}`).emit('sala-usuario-parou-digitar', {
+        odestinandoId,
+        roomId
+      })
+    }
+  })
+
+  // Kick usuário (apenas dono - via socket para ação rápida)
+  socket.on('sala-kick', async (data) => {
+    if (!socket.userId) return
+
+    const { roomId, targetUserId } = data
+
+    try {
+      // Verificar se é o dono
+      const roomResult = await pool.query(
+        'SELECT owner_id FROM rooms WHERE id = $1',
+        [roomId]
+      )
+
+      if (roomResult.rows.length === 0 || roomResult.rows[0].owner_id !== socket.userId) {
+        socket.emit('sala-erro', { error: 'Sem permissão' })
+        return
+      }
+
+      // Remover usuário da sala
+      const usersInRoom = salaUsuarios.get(roomId)
+      if (usersInRoom) {
+        usersInRoom.delete(targetUserId)
+      }
+      if (usuarioSala.get(targetUserId) === roomId) {
+        usuarioSala.delete(targetUserId)
+      }
+
+      // Notificar usuário removido
+      const targetSocketId = usuariosOnline.get(targetUserId)
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('expulso-da-sala', { roomId })
+        const targetSocket = io.sockets.sockets.get(targetSocketId)
+        if (targetSocket) {
+          targetSocket.leave(`room-${roomId}`)
+        }
+      }
+
+      // Notificar sala
+      io.to(`room-${roomId}`).emit('usuario-saiu-sala', {
+        odestinandoId: targetUserId,
+        motivo: 'expulso'
+      })
+
+      console.log(`[Salas] Usuário ${targetUserId} expulso da sala ${roomId}`)
+    } catch (error) {
+      console.error('[Salas] Erro ao expulsar:', error.message)
+    }
+  })
+
   socket.on('disconnect', () => {
     if (socket.userId) {
-      usuariosOnline.delete(socket.userId)
-      usuariosStatus.delete(socket.userId)
-      console.log(`[Socket] Usuário ${socket.userId} offline`)
-      io.emit('usuario-offline', socket.userId)
+      const odestinandoId = socket.userId
+
+      // Remover de sala se estiver em uma
+      const roomId = usuarioSala.get(odestinandoId)
+      if (roomId) {
+        const usersInRoom = salaUsuarios.get(roomId)
+        if (usersInRoom) {
+          usersInRoom.delete(odestinandoId)
+        }
+        usuarioSala.delete(odestinandoId)
+        io.to(`room-${roomId}`).emit('usuario-saiu-sala', { odestinandoId })
+      }
+
+      usuariosOnline.delete(odestinandoId)
+      usuariosStatus.delete(odestinandoId)
+      console.log(`[Socket] Usuário ${odestinandoId} offline`)
+      io.emit('usuario-offline', odestinandoId)
     }
   })
 })
 
 // ==================== INICIAR SERVIDOR ====================
 
+// Limpar mensagens de sala expiradas (em memória)
+function limparMensagensSala() {
+  const agora = Date.now()
+  const expiracaoMs = 60 * 60 * 1000 // 1 hora
+
+  for (const [roomId, mensagens] of salaMensagens.entries()) {
+    const mensagensValidas = mensagens.filter(m => (agora - m.timestamp) < expiracaoMs)
+    if (mensagensValidas.length !== mensagens.length) {
+      salaMensagens.set(roomId, mensagensValidas)
+      console.log(`[Salas] Limpeza: ${mensagens.length - mensagensValidas.length} mensagens expiradas na sala ${roomId}`)
+    }
+  }
+}
+
 async function startServer() {
   try {
     // Inicializar banco de dados
     await initDatabase()
 
-    // Limpar mensagens expiradas a cada hora
+    // Limpar mensagens expiradas a cada hora (chat privado)
     setInterval(limparMensagensExpiradas, 60 * 60 * 1000)
+
+    // Limpar mensagens de sala a cada 10 minutos
+    setInterval(limparMensagensSala, 10 * 60 * 1000)
+
+    // Verificar salas inativas uma vez por dia
+    setInterval(verificarSalasInativas, 24 * 60 * 60 * 1000)
+    // Rodar uma vez ao iniciar também
+    verificarSalasInativas()
 
     // Iniciar servidor
     server.listen(PORT, () => {
