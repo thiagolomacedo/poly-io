@@ -5848,7 +5848,6 @@ body {
 }
 
 .room-user-item .user-name {
-  flex: 1;
   color: #ccc;
 }
 
@@ -5866,36 +5865,31 @@ body {
 }
 
 .mod-menu {
-  position: absolute;
-  top: 100%;
-  left: 32px;
-  background: #1a1a2e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 4px;
-  z-index: 100;
-  min-width: 140px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 12px;
+  vertical-align: middle;
 }
 
 .mod-menu button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  background: none;
-  border: none;
+  justify-content: center;
+  padding: 4px 8px;
+  background: #2a2a4a;
+  border: 1px solid #444;
   color: #ccc;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   cursor: pointer;
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .mod-menu button:hover {
-  background: #2a2a4a;
+  background: #3a3a5a;
   color: #fff;
+  border-color: #666;
 }
 
 /* Mensagens da sala */
