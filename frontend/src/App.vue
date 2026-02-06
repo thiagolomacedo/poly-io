@@ -1727,12 +1727,6 @@ async function reactivateRoom() {
   }
 }
 
-// Formatar timestamp
-function formatTime(timestamp) {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
 // Handlers de socket para salas
 function handleRoomEntered(data) {
   selectedRoom.value = data.room
