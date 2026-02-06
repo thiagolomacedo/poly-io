@@ -270,6 +270,23 @@
 
           <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
 
+          <!-- Botão Adicionar Amigo (só para outros usuários sem conexão) -->
+          <button
+            v-if="profileUser?.id !== currentUser?.id && !isConnectedOrPending(profileUser?.id)"
+            class="btn-add-friend-profile"
+            @click="sendProfileConnectionRequest"
+          >
+            ➕ Adicionar amigo
+          </button>
+
+          <!-- Status de conexão (se já conectado ou pendente) -->
+          <div
+            v-if="profileUser?.id !== currentUser?.id && isConnectedOrPending(profileUser?.id)"
+            class="connection-status"
+          >
+            {{ getConnectionStatus(profileUser?.id) }}
+          </div>
+
           <!-- Botão Excluir Conta (só para o próprio perfil) -->
           <button
             v-if="profileUser?.id === currentUser?.id"
@@ -716,38 +733,28 @@
             <div v-for="user in roomUsers" :key="user.id" class="room-user-item">
               <span class="user-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
               <span
-                class="user-name"
-                :class="{ clickable: isRoomOwner && user.id !== currentUser?.id }"
-                @click.stop="isRoomOwner && user.id !== currentUser?.id ? toggleUserMenu(user.id) : null"
+                class="user-name clickable"
+                @click.stop="openProfile(user)"
+                title="Ver perfil"
               >
                 {{ user.nome }}
               </span>
               <span v-if="user.id === selectedRoom.owner_id" class="owner-star">⭐</span>
 
-              <!-- Botão de adicionar amigo (se não for eu e não tiver conexão) -->
-              <button
-                v-if="user.id !== currentUser?.id && !isConnectedOrPending(user.id)"
-                class="btn-add-friend"
-                @click.stop="sendRoomConnectionRequest(user.id)"
-                title="Enviar solicitação de amizade"
-              >
-                ➕
-              </button>
-
-              <!-- Menu de ações do moderador -->
+              <!-- Menu de ações do moderador (inline) -->
               <div
-                v-if="isRoomOwner && user.id !== currentUser?.id && userMenuOpen === user.id"
+                v-if="isRoomOwner && user.id !== currentUser?.id"
                 class="mod-menu"
                 @click.stop
               >
-                <button @click="kickUser(user.id); userMenuOpen = null">
-                  👢 Expulsar
+                <button @click="kickUser(user.id)" title="Expulsar">
+                  👢
                 </button>
-                <button @click="banUser(user.id); userMenuOpen = null">
-                  🚫 Banir
+                <button @click="banUser(user.id)" title="Banir">
+                  🚫
                 </button>
-                <button @click="toggleMuteUser(user.id); userMenuOpen = null">
-                  {{ roomMutedUsers.has(user.id) ? '🔊 Dessilenciar' : '🔇 Silenciar' }}
+                <button @click="toggleMuteUser(user.id)" :title="roomMutedUsers.has(user.id) ? 'Dessilenciar' : 'Silenciar'">
+                  {{ roomMutedUsers.has(user.id) ? '🔊' : '🔇' }}
                 </button>
               </div>
             </div>
@@ -1910,6 +1917,44 @@ async function sendRoomConnectionRequest(userId) {
     console.error('Erro ao enviar solicitação:', error)
     alert('Erro ao enviar solicitação')
   }
+}
+
+// Enviar solicitação de conexão do modal de perfil
+async function sendProfileConnectionRequest() {
+  if (!profileUser.value?.id) return
+
+  try {
+    const res = await fetch(`${API_BASE}/api/connections/request/${profileUser.value.id}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+
+    if (res.ok) {
+      loadPendingRequests()
+      alert('Solicitação enviada!')
+      showProfileModal.value = false
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao enviar solicitação')
+    }
+  } catch (error) {
+    console.error('Erro ao enviar solicitação:', error)
+    alert('Erro ao enviar solicitação')
+  }
+}
+
+// Obter status da conexão com usuário
+function getConnectionStatus(userId) {
+  const isConnected = connections.value.some(c => c.user_id === userId)
+  if (isConnected) return '✓ Já são amigos'
+
+  const hasPendingReceived = pendingRequests.value.some(r => r.user_id === userId)
+  if (hasPendingReceived) return '⏳ Solicitação recebida'
+
+  const hasPendingSent = sentRequests.value.some(r => r.user_id === userId)
+  if (hasPendingSent) return '⏳ Solicitação enviada'
+
+  return ''
 }
 
 // Reativar sala (apenas dono)
@@ -5254,6 +5299,35 @@ body {
   font-size: 0.7rem;
   color: #555;
   margin-top: 20px;
+}
+
+.btn-add-friend-profile {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #4ade80, #22c55e);
+  border: none;
+  color: #000;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-add-friend-profile:hover {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  transform: translateY(-1px);
+}
+
+.connection-status {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #2a2a4a;
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .btn-delete-account {
