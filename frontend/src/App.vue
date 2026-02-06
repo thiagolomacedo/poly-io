@@ -708,6 +708,13 @@
                 🔄 Reativar
               </button>
               <button
+                class="btn-icon btn-participants"
+                @click="showRoomParticipants = !showRoomParticipants"
+                :title="showRoomParticipants ? 'Ocultar participantes' : 'Ver participantes'"
+              >
+                👥 {{ roomUsers.length }}
+              </button>
+              <button
                 class="btn-icon"
                 @click="roomSoundMuted = !roomSoundMuted"
                 :title="roomSoundMuted ? 'Ativar som' : 'Silenciar sala'"
@@ -727,8 +734,8 @@
             </div>
           </div>
 
-          <!-- Lista de usuários da sala (sidebar interna) -->
-          <div class="room-users-sidebar" v-if="roomUsers.length > 0" @click="userMenuOpen = null">
+          <!-- Lista de usuários da sala (toggle) -->
+          <div class="room-users-sidebar" v-if="roomUsers.length > 0 && showRoomParticipants" @click="userMenuOpen = null">
             <h5>Na sala ({{ roomUsers.length }})</h5>
             <div v-for="user in roomUsers" :key="user.id" class="room-user-item">
               <span class="user-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
@@ -1123,6 +1130,7 @@ const roomTypingUsers = ref(new Set())   // Usuários digitando na sala
 const showCreateRoomModal = ref(false)   // Modal de criar sala
 const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
 const roomNameColor = ref('#ffffff')    // Cor do nome na sala
+const showRoomParticipants = ref(true)  // Mostrar lista de participantes
 const colorPickerMode = ref('message')  // 'message' ou 'name'
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const roomSoundMuted = ref(false)       // Som da sala silenciado
@@ -6201,27 +6209,38 @@ body {
   font-size: 1.3rem;
 }
 
+.btn-participants {
+  background: rgba(99, 102, 241, 0.2) !important;
+  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+  font-size: 0.85rem !important;
+  padding: 6px 10px !important;
+}
+
+.btn-participants:hover {
+  background: rgba(99, 102, 241, 0.4) !important;
+}
+
 @media (max-width: 768px) {
   .room-users-sidebar {
-    max-height: 120px;
+    max-height: 200px;
     padding: 10px;
   }
 
   .room-user-item {
     padding: 8px 4px;
-    min-height: 40px;
+    min-height: 44px;
   }
 
   .room-user-item .user-name {
-    font-size: 0.9rem;
-    padding: 6px 8px;
-    background: rgba(99, 102, 241, 0.1);
-    border-radius: 6px;
+    font-size: 0.95rem;
+    padding: 8px 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 8px;
     -webkit-tap-highlight-color: rgba(99, 102, 241, 0.3);
   }
 
   .room-user-item .user-name:active {
-    background: rgba(99, 102, 241, 0.3);
+    background: rgba(99, 102, 241, 0.4);
   }
 
   .mod-menu {
@@ -6231,6 +6250,11 @@ body {
   .mod-menu button {
     padding: 6px 10px;
     font-size: 0.9rem;
+  }
+
+  .btn-participants {
+    font-size: 0.9rem !important;
+    padding: 8px 12px !important;
   }
 }
 </style>
