@@ -1405,6 +1405,33 @@ app.delete('/api/rooms/:id/mute/:odestinandoId', authMiddleware, async (req, res
   }
 })
 
+// Listar usuários silenciados (apenas dono)
+app.get('/api/rooms/:id/mutes', authMiddleware, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id)
+
+    // Verificar se é o dono
+    const room = await pool.query(
+      'SELECT owner_id FROM rooms WHERE id = $1',
+      [roomId]
+    )
+
+    if (room.rows.length === 0 || room.rows[0].owner_id !== req.userId) {
+      return res.status(403).json({ error: 'Sem permissão' })
+    }
+
+    const result = await pool.query(
+      'SELECT user_id FROM room_mutes WHERE room_id = $1',
+      [roomId]
+    )
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error('[Rooms] Erro ao listar mutes:', error.message)
+    res.status(500).json({ error: 'Erro ao listar silenciados' })
+  }
+})
+
 // Reativar sala (apenas dono)
 app.post('/api/rooms/:id/reactivate', authMiddleware, async (req, res) => {
   try {

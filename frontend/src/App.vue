@@ -721,7 +721,12 @@
               <div v-if="isRoomOwner && user.id !== currentUser?.id" class="mod-actions">
                 <button @click="kickUser(user.id)" title="Expulsar">👢</button>
                 <button @click="banUser(user.id)" title="Banir">🚫</button>
-                <button @click="muteUser(user.id)" title="Silenciar">🔇</button>
+                <button
+                  @click="toggleMuteUser(user.id)"
+                  :title="roomMutedUsers.has(user.id) ? 'Dessilenciar' : 'Silenciar'"
+                >
+                  {{ roomMutedUsers.has(user.id) ? '🔊' : '🔇' }}
+                </button>
               </div>
             </div>
           </div>
@@ -1066,6 +1071,7 @@ const rooms = ref([])                    // Lista de salas públicas
 const myRoom = ref(null)                 // Minha sala (se existir)
 const selectedRoom = ref(null)           // Sala atualmente selecionada
 const roomUsers = ref([])                // Usuários na sala atual
+const roomMutedUsers = ref(new Set())    // IDs de usuários silenciados na sala
 const roomMessages = ref([])             // Mensagens da sala atual
 const newRoomMessage = ref('')           // Input de nova mensagem na sala
 const isRoomOwner = ref(false)           // Sou o dono da sala atual?
@@ -1696,6 +1702,7 @@ function leaveRoom() {
     isRoomOwner.value = false
     isRoomMuted.value = false
     roomTypingUsers.value = new Set()
+    roomMutedUsers.value = new Set()
   }
 }
 
@@ -1796,16 +1803,25 @@ async function banUser(userId) {
   }
 }
 
-async function muteUser(userId) {
+async function toggleMuteUser(userId) {
   if (!selectedRoom.value || !isRoomOwner.value) return
+
+  const isMuted = roomMutedUsers.value.has(userId)
 
   try {
     await fetch(`${API_BASE}/api/rooms/${selectedRoom.value.id}/mute/${userId}`, {
-      method: 'POST',
+      method: isMuted ? 'DELETE' : 'POST',
       headers: { 'Authorization': `Bearer ${token.value}` }
     })
+
+    // Atualizar estado local
+    if (isMuted) {
+      roomMutedUsers.value.delete(userId)
+    } else {
+      roomMutedUsers.value.add(userId)
+    }
   } catch (error) {
-    console.error('Erro ao silenciar:', error)
+    console.error('Erro ao alterar mute:', error)
   }
 }
 
@@ -1835,16 +1851,32 @@ async function reactivateRoom() {
 }
 
 // Handlers de socket para salas
-function handleRoomEntered(data) {
+async function handleRoomEntered(data) {
   selectedRoom.value = data.room
   roomUsers.value = data.users || []
   isRoomOwner.value = data.isOwner
   isRoomMuted.value = data.isMuted
   roomTypingUsers.value = new Set()
+  roomMutedUsers.value = new Set()
   sidebarOpen.value = false
 
   // Carregar mensagens salvas do localStorage
   roomMessages.value = loadRoomMessages(data.room.id)
+
+  // Se for dono, carregar lista de usuários silenciados
+  if (data.isOwner) {
+    try {
+      const res = await fetch(`${API_BASE}/api/rooms/${data.room.id}/mutes`, {
+        headers: { 'Authorization': `Bearer ${token.value}` }
+      })
+      if (res.ok) {
+        const mutes = await res.json()
+        roomMutedUsers.value = new Set(mutes.map(m => m.user_id))
+      }
+    } catch (e) {
+      console.error('Erro ao carregar mutes:', e)
+    }
+  }
 }
 
 function handleUserJoinedRoom(data) {
