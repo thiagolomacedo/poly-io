@@ -1826,15 +1826,18 @@ io.on('connection', (socket) => {
 
       // Enviar lista de usuários atualmente na sala
       const usersData = []
-      for (const odestinandoId of usersInRoom) {
+      const userIdsInRoom = Array.from(usersInRoom)
+      for (const odestinandoUid of userIdsInRoom) {
         const uResult = await pool.query(
           'SELECT id, nome, idioma FROM users WHERE id = $1',
-          [odestinandoId]
+          [odestinandoUid]
         )
         if (uResult.rows.length > 0) {
           usersData.push(uResult.rows[0])
         }
       }
+
+      console.log(`[Salas] Usuários na sala ${roomId}:`, usersData.map(u => u.nome).join(', '))
 
       socket.emit('sala-entrou', {
         roomId,
