@@ -1140,7 +1140,8 @@ const jitsiUrl = computed(() => {
   if (!activeCall.value) return ''
   const room = activeCall.value.roomName
   const displayName = encodeURIComponent(currentUser.value?.nome || 'Usuário')
-  return `https://meet.jit.si/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
+  // Usando meet.ffmuc.net - instância pública gratuita sem limite de tempo
+  return `https://meet.ffmuc.net/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
 })
 
 // ==================== SALAS ====================
