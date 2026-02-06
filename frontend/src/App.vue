@@ -5024,6 +5024,7 @@ body {
     left: 0;
     top: 0;
     bottom: 0;
+    width: 100%;
     z-index: 100;
     transform: translateX(-100%);
     transition: transform 0.3s;
