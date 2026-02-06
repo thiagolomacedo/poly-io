@@ -1945,8 +1945,8 @@ async function toggleMuteUser(userId) {
 
 // Verificar se já tem conexão ou solicitação pendente com usuário
 function isConnectedOrPending(userId) {
-  // Já é amigo?
-  const isConnected = connections.value.some(c => c.user_id === userId)
+  // Já é amigo? (conexões têm campo "id", não "user_id")
+  const isConnected = connections.value.some(c => c.id === userId)
   if (isConnected) return true
 
   // Solicitação pendente recebida?
@@ -2008,7 +2008,8 @@ async function sendProfileConnectionRequest() {
 
 // Obter status da conexão com usuário
 function getConnectionStatus(userId) {
-  const isConnected = connections.value.some(c => c.user_id === userId)
+  // conexões têm campo "id", não "user_id"
+  const isConnected = connections.value.some(c => c.id === userId)
   if (isConnected) return '✓ Já são amigos'
 
   const hasPendingReceived = pendingRequests.value.some(r => r.user_id === userId)
