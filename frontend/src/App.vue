@@ -46,6 +46,11 @@
             />
           </div>
 
+          <label class="remember-me">
+            <input type="checkbox" v-model="rememberMe" />
+            <span>Lembrar-me</span>
+          </label>
+
           <button type="submit" class="btn-primary" :disabled="loading">
             {{ loading ? 'Entrando...' : 'Entrar' }}
           </button>
@@ -731,9 +736,10 @@ const token = ref(localStorage.getItem('poly_token') || '')
 const currentUser = ref(null)
 
 const loginForm = ref({
-  email: '',
-  senha: ''
+  email: localStorage.getItem('poly_saved_email') || '',
+  senha: localStorage.getItem('poly_saved_senha') || ''
 })
+const rememberMe = ref(!!localStorage.getItem('poly_saved_email'))
 
 const registerForm = ref({
   nome: '',
@@ -1128,6 +1134,15 @@ async function login() {
     token.value = data.token
     currentUser.value = data.user
     localStorage.setItem('poly_token', data.token)
+
+    // Salvar ou limpar credenciais baseado no checkbox
+    if (rememberMe.value) {
+      localStorage.setItem('poly_saved_email', loginForm.value.email)
+      localStorage.setItem('poly_saved_senha', loginForm.value.senha)
+    } else {
+      localStorage.removeItem('poly_saved_email')
+      localStorage.removeItem('poly_saved_senha')
+    }
 
     initializeApp()
   } catch (error) {
@@ -2592,6 +2607,27 @@ body {
 
 .form-row .form-group {
   flex: 1;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #888;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.remember-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+
+.remember-me span {
+  user-select: none;
 }
 
 .btn-primary {
