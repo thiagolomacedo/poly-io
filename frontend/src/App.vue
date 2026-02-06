@@ -305,6 +305,30 @@
                 maxlength="200"
               />
             </div>
+            <div class="form-group room-visibility">
+              <label>Visibilidade</label>
+              <div class="visibility-options">
+                <button
+                  type="button"
+                  class="visibility-btn"
+                  :class="{ active: !createRoomForm.is_private }"
+                  @click="createRoomForm.is_private = false"
+                >
+                  🌐 Pública
+                </button>
+                <button
+                  type="button"
+                  class="visibility-btn"
+                  :class="{ active: createRoomForm.is_private }"
+                  @click="createRoomForm.is_private = true"
+                >
+                  🔒 Privada
+                </button>
+              </div>
+              <small v-if="createRoomForm.is_private" class="visibility-hint">
+                Só entra quem tiver o link de convite
+              </small>
+            </div>
             <div class="modal-buttons">
               <button type="submit" class="btn-primary">Criar</button>
               <button type="button" class="btn-secondary" @click="showCreateRoomModal = false">Cancelar</button>
@@ -665,6 +689,13 @@
                 title="Reativar sala"
               >
                 🔄 Reativar
+              </button>
+              <button
+                class="btn-icon"
+                @click="copyRoomInviteLink"
+                title="Copiar link de convite"
+              >
+                🔗
               </button>
               <button class="btn-icon" @click="leaveRoom" title="Sair da sala">
                 🚪
@@ -1038,7 +1069,8 @@ const roomMessageColor = ref('#ffffff') // Cor da mensagem na sala
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const createRoomForm = reactive({
   name: '',
-  description: ''
+  description: '',
+  is_private: false
 })
 
 // Computed
@@ -1582,7 +1614,8 @@ async function createRoom() {
       },
       body: JSON.stringify({
         name: createRoomForm.name.trim(),
-        description: createRoomForm.description.trim() || null
+        description: createRoomForm.description.trim() || null,
+        is_private: createRoomForm.is_private
       })
     })
 
@@ -1597,6 +1630,7 @@ async function createRoom() {
     showCreateRoomModal.value = false
     createRoomForm.name = ''
     createRoomForm.description = ''
+    createRoomForm.is_private = false
 
     // Entrar na sala recém-criada
     enterRoom(data.id)
@@ -1654,6 +1688,51 @@ function leaveRoom() {
     isRoomOwner.value = false
     isRoomMuted.value = false
     roomTypingUsers.value = new Set()
+  }
+}
+
+// Copiar link de convite da sala
+function copyRoomInviteLink() {
+  if (!selectedRoom.value?.invite_code) {
+    alert('Código de convite não disponível')
+    return
+  }
+
+  const inviteUrl = `${window.location.origin}?sala=${selectedRoom.value.invite_code}`
+
+  navigator.clipboard.writeText(inviteUrl).then(() => {
+    alert('Link de convite copiado!')
+  }).catch(() => {
+    // Fallback para navegadores mais antigos
+    prompt('Copie o link:', inviteUrl)
+  })
+}
+
+// Entrar em sala via código de convite
+async function joinRoomByInvite(code) {
+  try {
+    const res = await fetch(`${API_BASE}/api/rooms/invite/${code}`, {
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+
+    if (!res.ok) {
+      const data = await res.json()
+      alert(data.error || 'Sala não encontrada')
+      return
+    }
+
+    const room = await res.json()
+
+    // Ir para aba de salas e entrar na sala
+    currentTab.value = 'rooms'
+    await loadRooms()
+
+    setTimeout(() => {
+      enterRoom(room.id)
+    }, 300)
+  } catch (error) {
+    console.error('Erro ao entrar na sala via convite:', error)
+    alert('Erro ao processar convite')
   }
 }
 
@@ -3190,6 +3269,13 @@ onMounted(() => {
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
+  // Verificar se há código de convite de SALA na URL
+  const roomInviteCode = urlParams.get('sala')
+  if (roomInviteCode) {
+    localStorage.setItem('poly_room_invite', roomInviteCode.toUpperCase())
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+
   // Timer para remover mensagens expiradas das salas (1 hora)
   setInterval(() => {
     const oneHourAgo = Date.now() - (60 * 60 * 1000)
@@ -3216,14 +3302,24 @@ onMounted(() => {
 // Processar código de convite após login
 watch(isLoggedIn, async (loggedIn) => {
   if (loggedIn) {
+    // Verificar convite de usuário
     const inviteCode = localStorage.getItem('poly_invite_code')
     if (inviteCode) {
       localStorage.removeItem('poly_invite_code')
-      // Aguardar um pouco e ir para busca
       setTimeout(() => {
         currentTab.value = 'search'
         codeQuery.value = inviteCode.toUpperCase()
         searchByCode()
+      }, 500)
+      return
+    }
+
+    // Verificar convite de sala
+    const roomInviteCode = localStorage.getItem('poly_room_invite')
+    if (roomInviteCode) {
+      localStorage.removeItem('poly_room_invite')
+      setTimeout(() => {
+        joinRoomByInvite(roomInviteCode)
       }, 500)
     }
   }
@@ -5492,6 +5588,45 @@ body {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+/* Visibilidade da sala */
+.room-visibility {
+  margin-top: 8px;
+}
+
+.visibility-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.visibility-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: #222;
+  color: #888;
+  border: 1px solid #333;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.visibility-btn:hover {
+  background: #2a2a2a;
+}
+
+.visibility-btn.active {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+.visibility-hint {
+  display: block;
+  margin-top: 8px;
+  color: #888;
+  font-size: 0.8rem;
 }
 
 /* Header da sala */
