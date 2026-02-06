@@ -4291,6 +4291,20 @@ body {
   text-decoration: underline;
 }
 
+.btn-show-original {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.btn-show-original:hover {
+  opacity: 1;
+}
+
 .original-text {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.6);
