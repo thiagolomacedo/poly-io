@@ -6203,7 +6203,34 @@ body {
 
 @media (max-width: 768px) {
   .room-users-sidebar {
-    max-height: 100px;
+    max-height: 120px;
+    padding: 10px;
+  }
+
+  .room-user-item {
+    padding: 8px 4px;
+    min-height: 40px;
+  }
+
+  .room-user-item .user-name {
+    font-size: 0.9rem;
+    padding: 6px 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 6px;
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.3);
+  }
+
+  .room-user-item .user-name:active {
+    background: rgba(99, 102, 241, 0.3);
+  }
+
+  .mod-menu {
+    margin-left: 8px;
+  }
+
+  .mod-menu button {
+    padding: 6px 10px;
+    font-size: 0.9rem;
   }
 }
 </style>
