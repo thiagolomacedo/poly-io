@@ -708,7 +708,7 @@
                 class="btn-show-original"
                 @click="msg.showingOriginal = !msg.showingOriginal"
               >
-                {{ msg.showingOriginal ? 'Ocultar original' : 'Ver original' }}
+                {{ msg.showingOriginal ? '🔄' : '🌐' }}
               </button>
               <div v-if="msg.showingOriginal" class="original-text">
                 Original: {{ msg.textoOriginal }}
@@ -871,7 +871,7 @@
                     class="btn-original"
                     @click.stop="msg.showOriginal = !msg.showOriginal"
                   >
-                    {{ msg.showOriginal ? 'Ver tradução' : 'Ver original' }}
+                    {{ msg.showOriginal ? '🔄' : '🌐' }}
                   </button>
                   <p v-if="msg.showOriginal" class="original-text">
                     Original: {{ msg.textoOriginal }}
