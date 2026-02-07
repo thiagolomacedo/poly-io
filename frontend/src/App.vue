@@ -3085,6 +3085,14 @@ async function handleNewMessage(msg) {
     bubbleColor: euEnviei ? messageBubbleColor.value : null
   })
   scrollToBottom()
+
+  // Se recebi uma mensagem (não fui eu que enviei), marcar como lida
+  if (!euEnviei && socket && selectedConnection.value) {
+    socket.emit('marcar-lidas', {
+      connectionId: selectedConnection.value.connectionId,
+      senderId: msg.senderId
+    })
+  }
 }
 
 async function exportChat() {
