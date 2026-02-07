@@ -1012,10 +1012,14 @@
               v-for="msg in messages"
               :key="msg.id"
               class="message"
-              :class="{ 'sent': msg.euEnviei, 'received': !msg.euEnviei }"
+              :class="{
+                'sent': msg.euEnviei,
+                'received': !msg.euEnviei,
+                'emoji-only': isOnlyEmoji(msg.texto)
+              }"
               @click="toggleMessageMenu(msg)"
             >
-              <div class="message-content">
+              <div class="message-content" :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto) }">
                 <!-- Menu de ações para mensagens enviadas -->
                 <div v-if="msg.euEnviei && msg.showMenu && !msg.isEditing" class="message-actions">
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
@@ -1058,7 +1062,7 @@
                 </div>
                 <!-- Mensagem de texto -->
                 <template v-else>
-                  <p class="message-text">{{ msg.texto }}</p>
+                  <p class="message-text" :class="{ 'emoji-large': isOnlyEmoji(msg.texto) }">{{ msg.texto }}</p>
                   <button
                     v-if="!msg.euEnviei && msg.textoOriginal !== msg.texto"
                     class="btn-original"
@@ -1344,6 +1348,20 @@ const filteredEmojis = computed(() => {
 function getCurrentCategoryLabel() {
   const cat = emojiCategories.find(c => c.name === currentEmojiCategory.value)
   return cat ? cat.label : 'Emojis'
+}
+
+// Detecta se a mensagem é apenas emoji(s) - máximo 3 emojis, sem texto
+function isOnlyEmoji(text) {
+  if (!text) return false
+  // Remove espaços
+  const clean = text.trim()
+  if (!clean) return false
+  // Regex para detectar emojis (inclui variações e modificadores)
+  const emojiRegex = /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\s]+$/u
+  if (!emojiRegex.test(clean)) return false
+  // Conta quantos emojis tem (aproximado)
+  const emojiCount = [...clean].filter(char => /[\u{1F300}-\u{1FAFF}]/u.test(char)).length
+  return emojiCount > 0 && emojiCount <= 3
 }
 
 function addToRecentEmojis(emoji) {
@@ -5360,6 +5378,28 @@ body {
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
+}
+
+/* Mensagem só de emoji - grande e sem fundo */
+.message.emoji-only .message-content {
+  background: transparent !important;
+  padding: 4px 0;
+}
+
+.message.emoji-only .message-content.emoji-only-content {
+  background: transparent !important;
+}
+
+.message-text.emoji-large {
+  font-size: 4rem;
+  line-height: 1.2;
+}
+
+.message.emoji-only .message-time {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-block;
 }
 
 .message-time {
