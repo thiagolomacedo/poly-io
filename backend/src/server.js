@@ -145,6 +145,13 @@ async function chamarGroqIA(mensagem, connectionId) {
 
     const data = await response.json()
 
+    console.log('[io IA] Resposta Groq:', JSON.stringify(data).substring(0, 500))
+
+    if (data.error) {
+      console.error('[io IA] Erro da API:', data.error)
+      return 'Ops, tive um probleminha técnico. Tenta de novo? 😅'
+    }
+
     if (data.choices && data.choices[0]?.message?.content) {
       const resposta = data.choices[0].message.content
 
@@ -155,9 +162,10 @@ async function chamarGroqIA(mensagem, connectionId) {
       return resposta
     }
 
+    console.error('[io IA] Resposta inesperada:', JSON.stringify(data))
     return 'Hmm, não consegui processar isso. Pode reformular? 🤔'
   } catch (error) {
-    console.error('[io IA] Erro:', error.message)
+    console.error('[io IA] Erro catch:', error.message)
     return 'Ops, tive um probleminha técnico. Tenta de novo? 😅'
   }
 }
@@ -2935,7 +2943,10 @@ async function startServer() {
 
     // Criar/buscar usuário IA "io"
     if (GROQ_API_KEY) {
+      console.log('[io IA] GROQ_API_KEY configurada:', GROQ_API_KEY.substring(0, 10) + '...')
       await getOrCreateIoUser()
+    } else {
+      console.log('[io IA] GROQ_API_KEY não configurada - IA desabilitada')
     }
 
     // Limpar mensagens expiradas a cada 30 minutos (chat privado - 24h)
