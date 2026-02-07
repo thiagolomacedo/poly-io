@@ -1113,6 +1113,13 @@
                 />
               </label>
               <button
+                class="btn-emoji"
+                @click="openEmojiPickerForInput"
+                title="Inserir emoji"
+              >
+                😊
+              </button>
+              <button
                 class="btn-mic"
                 :class="{ recording: isRecording }"
                 @click="toggleRecording"
@@ -2801,11 +2808,23 @@ function openEmojiPicker(msg) {
   msg.showMenu = false
 }
 
+function openEmojiPickerForInput() {
+  reactingToMessage.value = null // null = inserir no input, não reagir
+  emojiSearch.value = ''
+  currentEmojiCategory.value = 'frequentes'
+  showEmojiPicker.value = true
+}
+
 async function addReaction(emoji) {
-  if (!reactingToMessage.value) return
+  showEmojiPicker.value = false
+
+  // Se não tem mensagem selecionada, inserir no input
+  if (!reactingToMessage.value) {
+    newMessage.value += emoji
+    return
+  }
 
   const msg = reactingToMessage.value
-  showEmojiPicker.value = false
 
   try {
     const res = await fetch(`${API_URL}/chat/message/${msg.id}/reaction`, {
@@ -5463,6 +5482,27 @@ body {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+/* Botão emoji no input */
+.btn-emoji {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-emoji:hover {
+  border-color: #6366f1;
+  background: #2a2a3a;
 }
 
 /* Mensagem de arquivo */
