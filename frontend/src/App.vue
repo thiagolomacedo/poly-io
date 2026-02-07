@@ -847,6 +847,10 @@
           </div>
           <p>Selecione uma conexão para conversar</p>
           <p class="hint">Ou entre em uma sala para conversar com várias pessoas</p>
+          <p class="powered-by">
+            Powered by <a href="https://ousianic.com/#" target="_blank" rel="noopener">Ousianic</a>
+            <span class="powered-subtitle">Plataforma de tecnologia e inovação</span>
+          </p>
         </div>
 
         <!-- Sala ativa -->
@@ -5228,6 +5232,31 @@ body {
 .no-chat .hint {
   font-size: 0.875rem;
   margin-top: 8px;
+}
+
+.powered-by {
+  margin-top: 32px;
+  font-size: 0.8rem;
+  color: rgba(99, 102, 241, 0.65);
+  text-align: center;
+}
+
+.powered-by a {
+  color: rgba(99, 102, 241, 0.65);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.powered-by a:hover {
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+.powered-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  opacity: 0.8;
 }
 
 /* Chat Header */
