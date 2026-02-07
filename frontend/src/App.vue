@@ -2810,6 +2810,16 @@ async function loadConnections() {
       online: c.user_id in onlineUsers,
       status: onlineUsers[c.user_id] || 'offline'
     }))
+
+    // Verificar se há chat para abrir (vindo de push notification)
+    const openChatId = localStorage.getItem('poly_open_chat')
+    if (openChatId) {
+      localStorage.removeItem('poly_open_chat')
+      const conn = connections.value.find(c => c.connectionId === parseInt(openChatId))
+      if (conn) {
+        selectConnection(conn)
+      }
+    }
   } catch (error) {
     console.error('Erro ao carregar conexões:', error)
   }
@@ -4283,6 +4293,13 @@ onMounted(() => {
   const roomInviteCode = urlParams.get('sala')
   if (roomInviteCode) {
     localStorage.setItem('poly_room_invite', roomInviteCode.toUpperCase())
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+
+  // Verificar se há chat para abrir (vindo de push notification)
+  const openChatId = urlParams.get('openChat')
+  if (openChatId) {
+    localStorage.setItem('poly_open_chat', openChatId)
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 

@@ -1,6 +1,6 @@
 // Poly.io Service Worker - PWA + Push Notifications
 
-const CACHE_NAME = 'poly-io-v3.2';
+const CACHE_NAME = 'poly-io-v3.7';
 
 // Arquivos para cache offline
 const urlsToCache = [
@@ -103,6 +103,8 @@ self.addEventListener('notificationclick', (event) => {
           let url = '/';
           if (data.type === 'call' && event.action === 'accept') {
             url = `/?acceptCall=${data.callerId}`;
+          } else if (data.type === 'message' && data.connectionId) {
+            url = `/?openChat=${data.connectionId}`;
           }
           return clients.openWindow(url);
         }

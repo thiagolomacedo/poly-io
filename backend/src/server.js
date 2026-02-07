@@ -1506,7 +1506,8 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         CASE WHEN c.user_a_id = $2 THEN u2.id ELSE u1.id END as destinatario_id,
         CASE WHEN c.user_a_id = $2 THEN u2.idioma ELSE u1.idioma END as destinatario_idioma,
         CASE WHEN c.user_a_id = $2 THEN u2.nome ELSE u1.nome END as destinatario_nome,
-        CASE WHEN c.user_a_id = $2 THEN u1.idioma ELSE u2.idioma END as remetente_idioma
+        CASE WHEN c.user_a_id = $2 THEN u1.idioma ELSE u2.idioma END as remetente_idioma,
+        CASE WHEN c.user_a_id = $2 THEN u1.nome ELSE u2.nome END as remetente_nome
       FROM connections c
       JOIN users u1 ON c.user_a_id = u1.id
       JOIN users u2 ON c.user_b_id = u2.id
@@ -1549,6 +1550,29 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     })
 
     res.json(message)
+
+    // Se destinatário está offline, enviar push notification
+    const destinatarioOnline = usuariosOnline.has(conn.destinatario_id)
+    if (!destinatarioOnline && conn.destinatario_id !== IO_USER_ID) {
+      // Truncar mensagem se muito longa
+      const mensagemPreview = textoTraduzido.length > 100
+        ? textoTraduzido.substring(0, 100) + '...'
+        : textoTraduzido
+
+      sendPushNotification(conn.destinatario_id, {
+        title: conn.remetente_nome,
+        body: mensagemPreview,
+        icon: '/icon-192.png',
+        tag: `msg-${req.params.connectionId}`,
+        type: 'message',
+        data: {
+          type: 'message',
+          connectionId: parseInt(req.params.connectionId),
+          senderId: req.userId,
+          senderName: conn.remetente_nome
+        }
+      })
+    }
 
     // Se o destinatário é a IA "io", gerar resposta automática
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
