@@ -1554,11 +1554,30 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       console.log('[io IA] Mensagem recebida:', textoTraduzido)
 
+      // Emitir "está digitando..." para simular resposta humana
+      io.emit('digitando', {
+        odestinandoId: req.userId,
+        odequemId: IO_USER_ID,
+        connectionId: parseInt(req.params.connectionId),
+        digitando: true
+      })
+
+      // Aguardar 2-3 segundos simulando digitação
+      await new Promise(resolve => setTimeout(resolve, 2500))
+
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
       const respostaIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId))
 
       console.log('[io IA] Resposta:', respostaIA)
+
+      // Parar indicador de digitação
+      io.emit('digitando', {
+        odestinandoId: req.userId,
+        odequemId: IO_USER_ID,
+        connectionId: parseInt(req.params.connectionId),
+        digitando: false
+      })
 
       // Traduzir resposta da IA para o idioma do usuário
       const respostaTraduzida = await traduzirTexto(respostaIA, 'pt', conn.remetente_idioma)
