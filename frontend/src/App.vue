@@ -1166,6 +1166,14 @@
               >
                 {{ isListening ? '⏹' : '🗣' }}
               </button>
+              <button
+                class="btn-call"
+                @click="startVideoCall"
+                :disabled="selectedConnection?.status === 'offline'"
+                :title="selectedConnection?.status === 'offline' ? 'Usuário offline' : 'Iniciar chamada'"
+              >
+                📞
+              </button>
               <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording">
                 Enviar
               </button>
@@ -5759,6 +5767,33 @@ body {
   animation: pulse 1s infinite;
 }
 
+/* Botão de chamada */
+.btn-call {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-call:hover:not(:disabled) {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.btn-call:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Mensagem de áudio */
 .audio-message {
   display: flex;
@@ -6340,7 +6375,8 @@ body {
 
   .btn-attach,
   .btn-mic,
-  .btn-speech {
+  .btn-speech,
+  .btn-call {
     width: 42px;
     height: 42px;
     font-size: 1.1rem;
