@@ -415,42 +415,57 @@
         ></iframe>
       </div>
 
-      <!-- Modal: Emoji Picker para Reações -->
-      <div v-if="showEmojiPicker" class="emoji-picker-overlay" @click="showEmojiPicker = false">
-        <div class="emoji-picker-modal" @click.stop>
-          <div class="emoji-picker-header">
-            <span>Reagir à mensagem</span>
-            <button class="btn-close-emoji" @click="showEmojiPicker = false">✕</button>
+      <!-- Emoji Picker estilo WhatsApp -->
+      <div v-if="showEmojiPicker" class="emoji-picker-backdrop" @click="showEmojiPicker = false"></div>
+      <div v-if="showEmojiPicker" class="emoji-picker-popup" :class="{ 'for-reaction': reactingToMessage }">
+        <div class="emoji-picker-tabs">
+          <button
+            v-for="cat in emojiCategories"
+            :key="cat.name"
+            class="emoji-tab"
+            :class="{ active: currentEmojiCategory === cat.name }"
+            @click="currentEmojiCategory = cat.name"
+            :title="cat.label"
+          >
+            {{ cat.icon }}
+          </button>
+        </div>
+        <div class="emoji-picker-search">
+          <input
+            v-model="emojiSearch"
+            type="text"
+            placeholder="Pesquisar emoji"
+            class="emoji-search-input"
+          />
+        </div>
+        <div class="emoji-picker-content">
+          <!-- Recentes -->
+          <div v-if="currentEmojiCategory === 'recentes' || (!emojiSearch && recentEmojis.length > 0 && currentEmojiCategory === 'recentes')" class="emoji-section">
+            <div class="emoji-section-title">Recentes</div>
+            <div class="emoji-grid">
+              <button
+                v-for="emoji in recentEmojis"
+                :key="'recent-' + emoji"
+                class="emoji-btn"
+                @click="selectEmoji(emoji)"
+              >
+                {{ emoji }}
+              </button>
+            </div>
           </div>
-          <div class="emoji-picker-search">
-            <input
-              v-model="emojiSearch"
-              type="text"
-              placeholder="Buscar emoji..."
-              class="emoji-search-input"
-            />
-          </div>
-          <div class="emoji-picker-grid">
-            <button
-              v-for="emoji in filteredEmojis"
-              :key="emoji"
-              class="emoji-btn"
-              @click="addReaction(emoji)"
-            >
-              {{ emoji }}
-            </button>
-          </div>
-          <div class="emoji-picker-categories">
-            <button
-              v-for="cat in emojiCategories"
-              :key="cat.name"
-              class="emoji-cat-btn"
-              :class="{ active: currentEmojiCategory === cat.name }"
-              @click="currentEmojiCategory = cat.name"
-              :title="cat.label"
-            >
-              {{ cat.icon }}
-            </button>
+          <!-- Categoria atual -->
+          <div class="emoji-section">
+            <div class="emoji-section-title">{{ getCurrentCategoryLabel() }}</div>
+            <div class="emoji-grid">
+              <button
+                v-for="emoji in filteredEmojis"
+                :key="emoji"
+                class="emoji-btn"
+                @click="selectEmoji(emoji)"
+              >
+                {{ emoji }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1233,23 +1248,48 @@ const activeCall = ref(null)    // { roomName, remoteName, remoteId }
 // Emoji Picker para reações
 const showEmojiPicker = ref(false)
 const emojiSearch = ref('')
-const currentEmojiCategory = ref('frequentes')
+const currentEmojiCategory = ref('smileys')
 const reactingToMessage = ref(null)
+const recentEmojis = ref(JSON.parse(localStorage.getItem('poly_recent_emojis') || '[]'))
 
 const emojiCategories = [
-  { name: 'frequentes', label: 'Frequentes', icon: '⭐' },
-  { name: 'smileys', label: 'Smileys', icon: '😀' },
+  { name: 'recentes', label: 'Recentes', icon: '🕐' },
+  { name: 'smileys', label: 'Smileys e pessoas', icon: '😊' },
   { name: 'gestos', label: 'Gestos', icon: '👋' },
-  { name: 'coracoes', label: 'Corações', icon: '❤️' },
-  { name: 'objetos', label: 'Objetos', icon: '🎉' }
+  { name: 'animais', label: 'Animais e natureza', icon: '🐶' },
+  { name: 'comida', label: 'Comida e bebida', icon: '🍔' },
+  { name: 'atividades', label: 'Atividades', icon: '⚽' },
+  { name: 'viagem', label: 'Viagem e lugares', icon: '🚗' },
+  { name: 'objetos', label: 'Objetos', icon: '💡' },
+  { name: 'simbolos', label: 'Símbolos', icon: '❤️' }
 ]
 
 const emojiData = {
-  frequentes: ['👍','👎','❤️','😂','😮','😢','😡','🔥','👏','🎉','💯','✅'],
-  smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐'],
-  gestos: ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏'],
-  coracoes: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'],
-  objetos: ['🎉','🎊','🎈','🎁','🏆','🥇','🔥','⭐','💫','✨','💥','💯','✅','❌','❓','❗','💬','💭','🔔','🎵','🎶','💡','📌','📍']
+  recentes: [],
+  smileys: [
+    '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊'
+  ],
+  gestos: [
+    '👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷','👮','🕵️','💂','🥷','👷','🤴','👸','👳','👲','🧕','🤵','👰','🤰','🤱','👼','🎅','🤶','🦸','🦹','🧙','🧚','🧛','🧜','🧝','🧞','🧟','💆','💇','🚶','🧍','🧎','🏃','💃','🕺','👯','🧖','🧗','🤺','🏇','⛷️','🏂','🏋️','🤸','⛹️','🤾','🏌️','🏄','🚣','🏊','🤽','🚴','🚵','🤼'
+  ],
+  animais: [
+    '🐶','🐕','🦮','🐩','🐺','🦊','🦝','🐱','🐈','🦁','🐯','🐅','🐆','🐴','🐎','🦄','🦓','🦌','🦬','🐮','🐂','🐃','🐄','🐷','🐖','🐗','🐽','🐏','🐑','🐐','🐪','🐫','🦙','🦒','🐘','🦣','🦏','🦛','🐭','🐁','🐀','🐹','🐰','🐇','🐿️','🦫','🦔','🦇','🐻','🐻‍❄️','🐨','🐼','🦥','🦦','🦨','🦘','🦡','🐾','🦃','🐔','🐓','🐣','🐤','🐥','🐦','🐧','🕊️','🦅','🦆','🦢','🦉','🦤','🪶','🦩','🦚','🦜','🐸','🐊','🐢','🦎','🐍','🐲','🐉','🦕','🦖','🐳','🐋','🐬','🦭','🐟','🐠','🐡','🦈','🐙','🐚','🐌','🦋','🐛','🐜','🐝','🪲','🐞','🦗','🕷️','🦂','🦟','🪳','🌸','💐','🌹','🥀','🌺','🌻','🌼','🌷','🌱','🪴','🌲','🌳','🌴','🌵','🌾','🌿','☘️','🍀','🍁','🍂','🍃'
+  ],
+  comida: [
+    '🍇','🍈','🍉','🍊','🍋','🍌','🍍','🥭','🍎','🍏','🍐','🍑','🍒','🍓','🫐','🥝','🍅','🫒','🥥','🥑','🍆','🥔','🥕','🌽','🌶️','🫑','🥒','🥬','🥦','🧄','🧅','🍄','🥜','🌰','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🥙','🧆','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🥃','🥤','🧋','🧃','🧉','🧊'
+  ],
+  atividades: [
+    '⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','🎯','🪂','🏋️','🤼','🤸','⛹️','🤾','🏌️','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️','🎰'
+  ],
+  viagem: [
+    '🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛴','🚲','🛵','🏍️','🛺','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🛩️','💺','🛰️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','⚓','🪝','⛽','🚧','🚦','🚥','🚏','🗺️','🗿','🗽','🗼','🏰','🏯','🏟️','🎡','🎢','🎠','⛲','🏖️','🏝️','🏜️','🌋','⛰️','🏔️','🗻','🏕️','⛺','🏠','🏡','🏘️','🏚️','🏗️','🏭','🏢','🏬','🏣','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛️','⛪','🕌','🕍','🛕','🕋','⛩️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁'
+  ],
+  objetos: [
+    '⌚','📱','📲','💻','⌨️','🖥️','🖨️','🖱️','🖲️','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯️','🪔','🧯','💸','💵','💴','💶','💷','🪙','💰','💳','💎','⚖️','🪜','🧰','🪛','🔧','🔨','⚒️','🛠️','⛏️','🪚','🔩','⚙️','🔫','💣','🪓','🔪','🗡️','⚔️','🛡️','🔮','📿','🧿','💈','⚗️','🔭','🔬','🩹','🩺','💊','💉','🧬','🧪','🌡️','🧹','🧺','🧻','🚽','🚰','🚿','🛁','🧼','🪥','🪒','🧽','🛎️','🔑','🗝️','🚪','🪑','🛋️','🛏️','🧸','🖼️','🛍️','🛒','🎁','🎈','🎏','🎀','🎊','🎉','🎎','🏮','🎐','✉️','📩','📨','📧','💌','📥','📤','📦','📪','📫','📬','📭','📮','📝','💼','📁','📂','📅','📆','📇','📈','📉','📊','📋','📌','📍','📎','🖇️','📏','📐','✂️','🗃️','🗄️','🗑️','🔒','🔓','🔏','🔐','🔑','🗝️'
+  ],
+  simbolos: [
+    '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','⚧️','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸️','⏯️','⏹️','⏺️','⏭️','⏮️','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾️','💲','💱','™️','©️','®️','〰️','➰','➿','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯️','♠️','♣️','♥️','♦️','🃏','🎴','🀄'
+  ]
 }
 const jitsiUrl = computed(() => {
   if (!activeCall.value) return ''
@@ -1291,13 +1331,32 @@ const isOwnProfile = computed(() => profileUser.value?.id === currentUser.value?
 
 // Emojis filtrados para o picker
 const filteredEmojis = computed(() => {
-  const categoryEmojis = emojiData[currentEmojiCategory.value] || emojiData.frequentes
+  if (currentEmojiCategory.value === 'recentes') {
+    return recentEmojis.value
+  }
+  const categoryEmojis = emojiData[currentEmojiCategory.value] || emojiData.smileys
   if (!emojiSearch.value) return categoryEmojis
-  // Busca simples - mostrar todos se tiver busca
-  const search = emojiSearch.value.toLowerCase()
+  // Busca - mostrar de todas categorias
   const allEmojis = Object.values(emojiData).flat()
-  return allEmojis.filter((_, i) => i < 50) // Mostrar primeiros 50 na busca
+  return [...new Set(allEmojis)].slice(0, 100)
 })
+
+function getCurrentCategoryLabel() {
+  const cat = emojiCategories.find(c => c.name === currentEmojiCategory.value)
+  return cat ? cat.label : 'Emojis'
+}
+
+function addToRecentEmojis(emoji) {
+  const recents = recentEmojis.value.filter(e => e !== emoji)
+  recents.unshift(emoji)
+  recentEmojis.value = recents.slice(0, 24) // Máximo 24 recentes
+  localStorage.setItem('poly_recent_emojis', JSON.stringify(recentEmojis.value))
+}
+
+function selectEmoji(emoji) {
+  addToRecentEmojis(emoji)
+  addReaction(emoji)
+}
 
 // Status options
 const statusOptions = [
@@ -5030,64 +5089,80 @@ body {
   border-color: #4f46e5;
 }
 
-/* Emoji Picker Modal */
-.emoji-picker-overlay {
+/* Emoji Picker estilo WhatsApp */
+.emoji-picker-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
+  z-index: 1999;
 }
 
-.emoji-picker-modal {
+.emoji-picker-popup {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  max-width: calc(100vw - 20px);
   background: #1e1e2e;
-  border-radius: 16px;
-  width: 320px;
-  max-height: 400px;
+  border-radius: 12px;
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
+  z-index: 2000;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
 }
 
-.emoji-picker-header {
+.emoji-picker-popup.for-reaction {
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.emoji-picker-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
+  background: #151520;
+  padding: 4px 8px;
+  gap: 2px;
   border-bottom: 1px solid #2a2a3a;
-  font-weight: 600;
+  overflow-x: auto;
 }
 
-.btn-close-emoji {
+.emoji-tab {
+  font-size: 18px;
+  padding: 8px 10px;
   background: none;
   border: none;
-  color: #888;
-  font-size: 18px;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  opacity: 0.5;
+  transition: all 0.15s;
+  flex-shrink: 0;
 }
 
-.btn-close-emoji:hover {
+.emoji-tab:hover {
+  opacity: 0.8;
   background: #2a2a3a;
-  color: #fff;
+}
+
+.emoji-tab.active {
+  opacity: 1;
+  background: #3730a3;
 }
 
 .emoji-picker-search {
   padding: 8px 12px;
+  background: #1a1a28;
 }
 
 .emoji-search-input {
   width: 100%;
-  padding: 8px 12px;
-  background: #2a2a3a;
+  padding: 10px 14px;
+  background: #252535;
   border: 1px solid #3a3a4a;
-  border-radius: 8px;
+  border-radius: 20px;
   color: #fff;
   font-size: 14px;
   outline: none;
@@ -5097,56 +5172,49 @@ body {
   border-color: #4f46e5;
 }
 
-.emoji-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
-  padding: 8px 12px;
+.emoji-search-input::placeholder {
+  color: #666;
+}
+
+.emoji-picker-content {
   overflow-y: auto;
-  flex: 1;
-  max-height: 220px;
+  max-height: 280px;
+  padding: 8px;
+}
+
+.emoji-section {
+  margin-bottom: 12px;
+}
+
+.emoji-section-title {
+  font-size: 12px;
+  color: #888;
+  padding: 4px 8px;
+  font-weight: 500;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
 }
 
 .emoji-btn {
   font-size: 24px;
-  padding: 8px;
+  padding: 6px;
   background: none;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .emoji-btn:hover {
   background: #2a2a3a;
-}
-
-.emoji-picker-categories {
-  display: flex;
-  justify-content: space-around;
-  padding: 8px;
-  border-top: 1px solid #2a2a3a;
-}
-
-.emoji-cat-btn {
-  font-size: 18px;
-  padding: 6px 10px;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  opacity: 0.5;
-  transition: all 0.15s;
-}
-
-.emoji-cat-btn:hover {
-  opacity: 1;
-  background: #2a2a3a;
-}
-
-.emoji-cat-btn.active {
-  opacity: 1;
-  background: #3730a3;
+  transform: scale(1.15);
 }
 
 /* Modo edição */
