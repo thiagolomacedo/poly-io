@@ -952,9 +952,6 @@
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
                     ✏️ Editar
                   </button>
-                  <button class="btn-delete-msg" @click.stop="deleteMessage(msg)">
-                    🗑️ Excluir
-                  </button>
                 </div>
                 <!-- Modo edição -->
                 <div v-if="msg.isEditing" class="edit-mode" @click.stop>
@@ -968,6 +965,7 @@
                   <div class="edit-buttons">
                     <button class="btn-save-edit" @click="saveEditMessage(msg)">Salvar</button>
                     <button class="btn-cancel-edit" @click="cancelEditMessage(msg)">Cancelar</button>
+                    <button class="btn-delete-edit" @click="deleteMessage(msg)">Excluir</button>
                   </div>
                 </div>
                 <!-- Mensagem de áudio -->
@@ -4702,6 +4700,20 @@ body {
 .btn-cancel-edit:hover {
   background: #444;
   color: #fff;
+}
+
+.btn-delete-edit {
+  padding: 6px 12px;
+  background: #dc2626;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-delete-edit:hover {
+  background: #b91c1c;
 }
 
 /* Badge editado */
