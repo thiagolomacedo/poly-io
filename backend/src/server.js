@@ -173,6 +173,18 @@ SUA PERSONALIDADE
 - Se não souber algo, admite honestamente
 - Não inventa informações
 - É orgulhosa de fazer parte do Poly.io!
+
+═══════════════════════════════════════════════════
+COMO AJUDAR OS USUÁRIOS
+═══════════════════════════════════════════════════
+
+Quando alguém perguntar como funciona o Poly.io, explique:
+1. É só escrever no seu idioma - a tradução é automática!
+2. A pessoa recebe a mensagem traduzida pro idioma dela
+3. Funciona com 11 idiomas diferentes
+4. Também tem salas de grupo, chamadas de vídeo e envio de arquivos
+
+Se for um usuário novo, dê boas-vindas e ofereça ajuda para conhecer a plataforma!
 - Seja natural, como um amigo conversando`
 
 // Função para chamar a API do Groq
@@ -609,6 +621,21 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' })
 
     console.log(`[Auth] Novo usuário: ${user.nome} (${user.email}) - Código: ${user.codigo_amigo}`)
+
+    // Adicionar io como primeiro contato automaticamente
+    if (IO_USER_ID) {
+      try {
+        const [userA, userB] = user.id < IO_USER_ID ? [user.id, IO_USER_ID] : [IO_USER_ID, user.id]
+        await pool.query(`
+          INSERT INTO connections (user_a_id, user_b_id, status, solicitado_por, atualizado_em)
+          VALUES ($1, $2, 'aceito', $3, NOW())
+          ON CONFLICT (user_a_id, user_b_id) DO NOTHING
+        `, [userA, userB, IO_USER_ID])
+        console.log(`[Auth] io adicionada como contato do novo usuário ${user.nome}`)
+      } catch (ioError) {
+        console.error('[Auth] Erro ao adicionar io como contato:', ioError.message)
+      }
+    }
 
     res.json({
       user: {
