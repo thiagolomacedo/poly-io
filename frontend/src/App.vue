@@ -780,7 +780,7 @@
         </div>
 
         <!-- Sala ativa -->
-        <template v-else-if="selectedRoom">
+        <div v-else-if="selectedRoom" class="room-wrapper">
           <!-- Header da sala -->
           <div class="chat-header room-header">
             <div class="room-header-info">
@@ -948,7 +948,7 @@
               <span class="send-icon">➤</span>
             </button>
           </div>
-        </template>
+        </div>
 
         <!-- Chat ativo -->
         <template v-else>
@@ -6908,6 +6908,26 @@ body {
   font-style: italic;
 }
 
+/* ==================== LAYOUT DA SALA ==================== */
+
+/* Wrapper da sala - layout flexbox */
+.room-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Container das mensagens da sala - scrollable */
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* ==================== NOVO INPUT DE SALA ==================== */
 
 .room-input-container {
@@ -6917,6 +6937,7 @@ body {
   padding: 16px 20px;
   background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
   border-top: 1px solid #2a2a4a;
+  flex-shrink: 0;
 }
 
 .color-picker-wrapper {
