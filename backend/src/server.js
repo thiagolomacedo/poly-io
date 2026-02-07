@@ -202,7 +202,7 @@ async function chamarGroqIA(mensagem, connectionId) {
           { role: 'system', content: IO_SYSTEM_PROMPT },
           ...historico
         ],
-        max_tokens: 200,
+        max_tokens: 500,
         temperature: 0.7
       })
     })
