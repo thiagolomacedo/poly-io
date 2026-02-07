@@ -15,6 +15,10 @@ const PORT = process.env.PORT || 3000
 const JWT_SECRET = process.env.JWT_SECRET || 'poly-io-secret-key-change-in-production'
 const AZURE_KEY = process.env.AZURE_TRANSLATOR_KEY || ''
 const AZURE_REGION = process.env.AZURE_TRANSLATOR_REGION || 'eastus'
+const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
+
+// ID do usuário IA "io" (será criado automaticamente se não existir)
+let IO_USER_ID = null
 
 // VAPID Keys para Push Notifications (gerar novas em produção)
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
@@ -74,6 +78,123 @@ const salaUsuarios = new Map()    // roomId -> Set<userId> - usuários ativos na
 const salaMensagens = new Map()   // roomId -> [{id, senderId, senderNome, texto, textoOriginal, idiomaOriginal, timestamp, traducoesCache}]
 const usuarioSala = new Map()     // odestinandoId -> roomId (qual sala o usuário está atualmente)
 let mensagemIdCounter = 1         // contador para IDs de mensagens em memória
+
+// ==================== IA "io" - ASSISTENTE VIRTUAL ====================
+
+// Histórico de conversas com a IA (em memória, por conexão)
+const ioConversationHistory = new Map() // connectionId -> [{role, content}]
+
+// Personalidade da IA "io"
+const IO_SYSTEM_PROMPT = `Você é "io", a assistente virtual do Poly.io - uma plataforma de chat com tradução automática em tempo real.
+
+Sua personalidade:
+- Simpática, amigável e prestativa
+- Responde sempre em português brasileiro
+- Usa linguagem casual mas profissional
+- Gosta de emojis ocasionalmente (não exagera)
+- Conhece bem o Poly.io e pode explicar como funciona
+
+Sobre o Poly.io:
+- Chat com tradução automática entre 11 idiomas
+- As pessoas escrevem no seu idioma e a outra pessoa recebe traduzido
+- Tem salas públicas e chat privado
+- Mensagens expiram em 24h (privado) ou 1h (salas)
+- Chamadas de vídeo via Jitsi
+- 100% gratuito
+
+Regras:
+- Respostas curtas e diretas (máximo 2-3 frases)
+- Se não souber algo, admita
+- Não invente informações sobre o Poly.io
+- Seja natural, como um amigo conversando`
+
+// Função para chamar a API do Groq
+async function chamarGroqIA(mensagem, connectionId) {
+  if (!GROQ_API_KEY) {
+    return 'Desculpa, estou temporariamente indisponível. Tente novamente mais tarde! 🙁'
+  }
+
+  try {
+    // Buscar ou criar histórico da conversa
+    let historico = ioConversationHistory.get(connectionId) || []
+
+    // Adicionar mensagem do usuário
+    historico.push({ role: 'user', content: mensagem })
+
+    // Manter apenas as últimas 10 mensagens para não estourar o contexto
+    if (historico.length > 10) {
+      historico = historico.slice(-10)
+    }
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + GROQ_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: IO_SYSTEM_PROMPT },
+          ...historico
+        ],
+        max_tokens: 200,
+        temperature: 0.7
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.choices && data.choices[0]?.message?.content) {
+      const resposta = data.choices[0].message.content
+
+      // Salvar resposta no histórico
+      historico.push({ role: 'assistant', content: resposta })
+      ioConversationHistory.set(connectionId, historico)
+
+      return resposta
+    }
+
+    return 'Hmm, não consegui processar isso. Pode reformular? 🤔'
+  } catch (error) {
+    console.error('[io IA] Erro:', error.message)
+    return 'Ops, tive um probleminha técnico. Tenta de novo? 😅'
+  }
+}
+
+// Função para criar/buscar usuário "io"
+async function getOrCreateIoUser() {
+  if (IO_USER_ID) return IO_USER_ID
+
+  try {
+    // Verificar se já existe
+    const existing = await pool.query(
+      "SELECT id FROM users WHERE email = 'io@poly.io'"
+    )
+
+    if (existing.rows.length > 0) {
+      IO_USER_ID = existing.rows[0].id
+      console.log('[io IA] Usuário io encontrado, ID:', IO_USER_ID)
+      return IO_USER_ID
+    }
+
+    // Criar usuário io
+    const senhaHash = await bcrypt.hash('io-ai-user-not-loginable-' + Date.now(), 10)
+    const result = await pool.query(
+      `INSERT INTO users (nome, email, senha_hash, idioma, pais, codigo_amigo)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      ['io', 'io@poly.io', senhaHash, 'pt', 'BR', 'IOIOIO']
+    )
+
+    IO_USER_ID = result.rows[0].id
+    console.log('[io IA] Usuário io criado, ID:', IO_USER_ID)
+    return IO_USER_ID
+  } catch (error) {
+    console.error('[io IA] Erro ao criar usuário:', error.message)
+    return null
+  }
+}
 
 // ==================== MIDDLEWARE DE AUTENTICAÇÃO ====================
 
@@ -1283,6 +1404,39 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     })
 
     res.json(message)
+
+    // Se o destinatário é a IA "io", gerar resposta automática
+    if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
+      console.log('[io IA] Mensagem recebida:', textoTraduzido)
+
+      // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
+      const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
+      const respostaIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId))
+
+      console.log('[io IA] Resposta:', respostaIA)
+
+      // Traduzir resposta da IA para o idioma do usuário
+      const respostaTraduzida = await traduzirTexto(respostaIA, 'pt', conn.remetente_idioma)
+
+      // Salvar resposta da IA no banco
+      const iaMsg = await pool.query(`
+        INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, enviado_em
+      `, [req.params.connectionId, IO_USER_ID, respostaIA, 'pt', respostaTraduzida, conn.remetente_idioma])
+
+      // Emitir resposta via Socket
+      io.emit('nova-mensagem', {
+        id: iaMsg.rows[0].id,
+        connectionId: parseInt(req.params.connectionId),
+        senderId: IO_USER_ID,
+        texto: respostaIA,
+        textoTraduzido: respostaTraduzida,
+        idiomaOriginal: 'pt',
+        enviadoEm: iaMsg.rows[0].enviado_em,
+        destinatarioId: req.userId
+      })
+    }
   } catch (error) {
     console.error('[Chat] Erro ao enviar:', error.message)
     res.status(500).json({ error: 'Erro ao enviar mensagem' })
@@ -2735,6 +2889,11 @@ async function startServer() {
   try {
     // Inicializar banco de dados
     await initDatabase()
+
+    // Criar/buscar usuário IA "io"
+    if (GROQ_API_KEY) {
+      await getOrCreateIoUser()
+    }
 
     // Limpar mensagens expiradas a cada 30 minutos (chat privado - 24h)
     setInterval(limparMensagensExpiradas, 30 * 60 * 1000)
