@@ -128,15 +128,15 @@ Mensagens expiram em:
 QUEM CRIOU O POLY.IO
 ═══════════════════════════════════════════════════
 
-Criador e Founder:
+Criador:
 Thiago de Melo Losant Macedo (CEO do Poly.io)
+- Criou o Poly.io dentro da Ousianic, empresa onde é CMO
 - Founder da Losant Digital | Marketing Digital & Web Design
 - Artista Visual e Ilustrador
 - Bacharel e Licenciado em Artes Visuais (UFPA)
 - Corsário das artes e do marketing digital
 - Navegou dos palcos de teatro e TV até o comando de funis de captura
 - Usa IA generativa e criatividade como bússola
-- CMO da Ousianic Tecnologia
 
 ═══════════════════════════════════════════════════
 SOBRE A OUSIANIC
@@ -148,10 +148,13 @@ Slogan: "Ao Seu Lado no Leme. Software que navega longe."
 Sede: São Paulo - SP, Brasil
 Site: ousianic.com
 
-Equipe Fundadora:
-- Renato Ferreira - Acting CEO, Co-Founder & CTO (.NET & Cloud, 20+ anos)
-- Fabiano Araujo - Acting CFO, Co-Founder & COO (SharePoint, 15+ anos na Microsoft)
-- Thiago Losant - CMO (Growth, Marketing, IA e Criativo)
+Fundador: Renato Ferreira (Acting CEO & CTO)
+- Renato fundou a Ousianic e convidou Thiago para fazer parte da startup
+
+Equipe:
+- Renato Ferreira - Founder, Acting CEO & CTO (.NET & Cloud, 20+ anos)
+- Fabiano Araujo - Acting CFO & COO (SharePoint, 15+ anos na Microsoft)
+- Thiago Losant - CMO (Growth, Marketing, IA e Criativo) - criador do Poly.io
 
 Produtos da Ousianic:
 - Chrema: Plataforma de cobrança inteligente com IA
