@@ -1019,7 +1019,11 @@
               }"
               @click="toggleMessageMenu(msg)"
             >
-              <div class="message-content" :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto) }">
+              <div
+                class="message-content"
+                :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto) }"
+                :style="msg.euEnviei && !isOnlyEmoji(msg.texto) ? { backgroundColor: msg.bubbleColor || messageBubbleColor } : {}"
+              >
                 <!-- Menu de ações para mensagens enviadas -->
                 <div v-if="msg.euEnviei && msg.showMenu && !msg.isEditing" class="message-actions">
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
@@ -1138,6 +1142,14 @@
               >
                 😊
               </button>
+              <label class="btn-color-picker" title="Cor do balão">
+                🎨
+                <input
+                  type="color"
+                  v-model="messageBubbleColor"
+                  class="color-input-hidden"
+                />
+              </label>
               <button
                 class="btn-mic"
                 :class="{ recording: isRecording }"
@@ -1227,6 +1239,7 @@ const selectedConnection = ref(null)
 const idiomaRecepcao = ref(null) // null = usar idioma do perfil (padrão)
 const messages = ref([])
 const newMessage = ref('')
+const messageBubbleColor = ref(localStorage.getItem('poly_bubble_color') || '#6366f1')
 const messagesContainer = ref(null)
 const myStatus = ref('online')
 const isOtherTyping = ref(false) // Indica se o outro usuário está digitando
@@ -2840,7 +2853,8 @@ async function handleNewMessage(msg) {
     textoOriginal: msg.texto,
     idiomaOriginal: msg.idiomaOriginal,
     enviadoEm: msg.enviadoEm,
-    showOriginal: false
+    showOriginal: false,
+    bubbleColor: euEnviei ? messageBubbleColor.value : null
   })
   scrollToBottom()
 }
@@ -4045,6 +4059,11 @@ watch(newMessage, (newVal, oldVal) => {
   } else if (!newVal && oldVal) {
     emitStoppedTyping()
   }
+})
+
+// Watch para salvar cor do balão
+watch(messageBubbleColor, (newColor) => {
+  localStorage.setItem('poly_bubble_color', newColor)
 })
 </script>
 
@@ -5611,6 +5630,36 @@ body {
 .btn-emoji:hover {
   border-color: #6366f1;
   background: #2a2a3a;
+}
+
+/* Botão cor do balão */
+.btn-color-picker {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-color-picker:hover {
+  border-color: #6366f1;
+  background: #2a2a3a;
+}
+
+.color-input-hidden {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* Mensagem de arquivo */
