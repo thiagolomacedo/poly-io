@@ -385,8 +385,8 @@
       <!-- Modal: Chamada Recebida -->
       <div v-if="incomingCall" class="call-modal-overlay">
         <div class="call-modal">
-          <div class="call-icon">📞</div>
-          <h3>Chamada de Vídeo</h3>
+          <div class="call-icon">{{ incomingCall.audioOnly ? '📞' : '📹' }}</div>
+          <h3>{{ incomingCall.audioOnly ? 'Ligação de Voz' : 'Chamada de Vídeo' }}</h3>
           <p class="caller-name">{{ incomingCall.callerName }}</p>
           <p class="call-text">está ligando...</p>
           <div class="call-buttons">
@@ -400,10 +400,10 @@
         </div>
       </div>
 
-      <!-- Overlay: Chamada de Vídeo Ativa (Jitsi) -->
+      <!-- Overlay: Chamada de Vídeo/Áudio Ativa (Jitsi) -->
       <div v-if="activeCall" class="video-call-overlay">
         <div class="video-call-header">
-          <span>Chamada com {{ activeCall.remoteName }}</span>
+          <span>{{ activeCall.audioOnly ? '📞' : '📹' }} {{ activeCall.audioOnly ? 'Ligação' : 'Chamada' }} com {{ activeCall.remoteName }}</span>
           <button class="btn-end-call" @click="endCall">
             ✕ Encerrar
           </button>
@@ -1168,9 +1168,9 @@
               </button>
               <button
                 class="btn-call"
-                @click="startVideoCall"
+                @click="startAudioCall"
                 :disabled="selectedConnection?.status === 'offline'"
-                :title="selectedConnection?.status === 'offline' ? 'Usuário offline' : 'Iniciar chamada'"
+                :title="selectedConnection?.status === 'offline' ? 'Usuário offline' : 'Ligação de voz'"
               >
                 📞
               </button>
@@ -1321,7 +1321,12 @@ const jitsiUrl = computed(() => {
   const room = activeCall.value.roomName
   const displayName = encodeURIComponent(currentUser.value?.nome || 'Usuário')
   // Usando meet.ffmuc.net - instância pública gratuita sem limite de tempo
-  return `https://meet.ffmuc.net/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
+  let url = `https://meet.ffmuc.net/${room}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false`
+  // Se for chamada de áudio, iniciar com vídeo desligado
+  if (activeCall.value.audioOnly) {
+    url += '&config.startWithVideoMuted=true'
+  }
+  return url
 })
 
 // ==================== SALAS ====================
@@ -3115,14 +3120,47 @@ function startVideoCall() {
   activeCall.value = {
     roomName,
     remoteName: selectedConnection.value.nome,
-    remoteId: selectedConnection.value.id
+    remoteId: selectedConnection.value.id,
+    audioOnly: false
   }
 
-  console.log('[Chamada] Iniciando:', roomName)
+  console.log('[Chamada] Iniciando vídeo:', roomName)
+}
+
+function startAudioCall() {
+  if (!selectedConnection.value || !socket) return
+
+  if (selectedConnection.value.status === 'offline') {
+    alert('Usuário está offline. Não é possível iniciar chamada.')
+    return
+  }
+
+  // Gerar nome da sala único
+  const timestamp = Date.now()
+  const roomName = `PolyIO-${selectedConnection.value.connectionId}-${timestamp}`
+
+  // Enviar convite via socket (com flag de áudio)
+  socket.emit('iniciar-chamada', {
+    recipientId: selectedConnection.value.id,
+    connectionId: selectedConnection.value.connectionId,
+    roomName,
+    audioOnly: true
+  })
+
+  // Entrar na chamada imediatamente (aguardando o outro aceitar)
+  activeCall.value = {
+    roomName,
+    remoteName: selectedConnection.value.nome,
+    remoteId: selectedConnection.value.id,
+    audioOnly: true
+  }
+
+  console.log('[Chamada] Iniciando áudio:', roomName)
 }
 
 function handleIncomingCall(data) {
-  console.log('[Chamada] Recebida de:', data.callerName)
+  const tipoLigacao = data.audioOnly ? 'áudio' : 'vídeo'
+  console.log(`[Chamada] Recebida de ${data.callerName} (${tipoLigacao})`)
   incomingCall.value = data
 
   // Tocar som de chamada (opcional)
@@ -3144,17 +3182,19 @@ function acceptCall() {
     roomName: call.roomName
   })
 
-  // Entrar na chamada
+  // Entrar na chamada (preserva audioOnly do convite)
   activeCall.value = {
     roomName: call.roomName,
     remoteName: call.callerName,
-    remoteId: call.callerId
+    remoteId: call.callerId,
+    audioOnly: call.audioOnly || false
   }
 
   // Limpar modal
   incomingCall.value = null
 
-  console.log('[Chamada] Aceita, entrando na sala:', call.roomName)
+  const tipoLigacao = call.audioOnly ? 'áudio' : 'vídeo'
+  console.log(`[Chamada] Aceita (${tipoLigacao}), entrando na sala:`, call.roomName)
 }
 
 function rejectCall() {

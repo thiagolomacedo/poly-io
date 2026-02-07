@@ -1837,12 +1837,13 @@ io.on('connection', (socket) => {
 
   // ==================== CHAMADA DE VÍDEO (Jitsi) ====================
 
-  // Iniciar chamada de vídeo
+  // Iniciar chamada de vídeo/áudio
   socket.on('iniciar-chamada', async (data) => {
     if (!socket.userId) return
 
-    const { recipientId, connectionId, roomName } = data
+    const { recipientId, connectionId, roomName, audioOnly } = data
     const recipientSocketId = usuariosOnline.get(recipientId)
+    const tipoLigacao = audioOnly ? 'áudio' : 'vídeo'
 
     // Buscar nome do chamador
     let callerName = 'Usuário'
@@ -1857,14 +1858,15 @@ io.on('connection', (socket) => {
         callerId: socket.userId,
         callerName,
         connectionId,
-        roomName
+        roomName,
+        audioOnly: audioOnly || false
       })
-      console.log(`[Chamada] ${socket.userId} -> ${recipientId} sala: ${roomName}`)
+      console.log(`[Chamada ${tipoLigacao}] ${socket.userId} -> ${recipientId} sala: ${roomName}`)
     } else {
       // Usuário offline - tentar enviar push notification
       const pushSent = await sendPushNotification(recipientId, {
         title: `${callerName} está ligando...`,
-        body: 'Toque para atender a chamada',
+        body: audioOnly ? 'Ligação de voz' : 'Chamada de vídeo',
         icon: '/icon-192.png',
         tag: 'incoming-call',
         type: 'call',
@@ -1873,7 +1875,8 @@ io.on('connection', (socket) => {
           callerId: socket.userId,
           callerName,
           connectionId,
-          roomName
+          roomName,
+          audioOnly: audioOnly || false
         }
       })
 
