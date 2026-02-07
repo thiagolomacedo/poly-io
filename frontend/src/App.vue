@@ -2,7 +2,7 @@
   <div class="app">
     <!-- Tela de Login/Registro -->
     <div v-if="!isLoggedIn" class="auth-screen">
-      <div class="auth-card">
+      <div v-if="!resetPasswordToken" class="auth-card">
         <div class="logo">
           <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
         </div>
@@ -54,6 +54,10 @@
           <button type="submit" class="btn-primary" :disabled="loading">
             {{ loading ? 'Entrando...' : 'Entrar' }}
           </button>
+
+          <p class="forgot-password-link">
+            <a href="#" @click.prevent="showForgotPassword = true">Esqueci minha senha</a>
+          </p>
         </form>
 
         <!-- Formulário de Registro -->
@@ -127,6 +131,72 @@
         <p class="info-text">
           Escreva no seu idioma.<br>
           A outra pessoa lê no idioma dela.
+        </p>
+
+        <!-- Modal: Esqueci minha senha -->
+        <div v-if="showForgotPassword" class="modal-overlay" @click="showForgotPassword = false">
+          <div class="modal-content" @click.stop>
+            <h3>Recuperar Senha</h3>
+            <p class="modal-subtitle">Digite o email cadastrado para receber o link de recuperação.</p>
+            <form @submit.prevent="requestPasswordReset" class="auth-form">
+              <div class="form-group">
+                <label>Email</label>
+                <input
+                  v-model="forgotPasswordEmail"
+                  type="email"
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+              <div class="modal-buttons">
+                <button type="submit" class="btn-primary" :disabled="loading">
+                  {{ loading ? 'Enviando...' : 'Enviar Link' }}
+                </button>
+                <button type="button" class="btn-secondary" @click="showForgotPassword = false">Cancelar</button>
+              </div>
+            </form>
+            <p v-if="forgotPasswordMessage" class="success-text">{{ forgotPasswordMessage }}</p>
+            <p v-if="forgotPasswordError" class="error-text">{{ forgotPasswordError }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tela: Resetar Senha (quando tem token na URL) -->
+      <div v-if="resetPasswordToken" class="auth-card reset-password-card">
+        <div class="logo">
+          <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
+        </div>
+        <h3>Nova Senha</h3>
+        <p class="modal-subtitle" v-if="resetPasswordEmail">Resetando senha para: <strong>{{ resetPasswordEmail }}</strong></p>
+        <form @submit.prevent="resetPassword" class="auth-form">
+          <div class="form-group">
+            <label>Nova Senha</label>
+            <input
+              v-model="newPassword"
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              minlength="6"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Confirmar Senha</label>
+            <input
+              v-model="confirmPassword"
+              type="password"
+              placeholder="Confirme a senha"
+              minlength="6"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-primary" :disabled="loading">
+            {{ loading ? 'Salvando...' : 'Salvar Nova Senha' }}
+          </button>
+        </form>
+        <p v-if="resetPasswordError" class="error-text">{{ resetPasswordError }}</p>
+        <p v-if="resetPasswordSuccess" class="success-text">{{ resetPasswordSuccess }}</p>
+        <p class="forgot-password-link" style="margin-top: 16px;">
+          <a href="#" @click.prevent="cancelResetPassword">Voltar ao Login</a>
         </p>
       </div>
     </div>
@@ -1232,6 +1302,18 @@ const registerForm = ref({
   pais: ''
 })
 
+// Estado de recuperação de senha
+const showForgotPassword = ref(false)
+const forgotPasswordEmail = ref('')
+const forgotPasswordMessage = ref('')
+const forgotPasswordError = ref('')
+const resetPasswordToken = ref('')
+const resetPasswordEmail = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const resetPasswordError = ref('')
+const resetPasswordSuccess = ref('')
+
 // Estado da aplicação
 const sidebarOpen = ref(true)
 const currentTab = ref('connections')
@@ -1792,6 +1874,120 @@ async function login() {
     authError.value = error.message
   } finally {
     loading.value = false
+  }
+}
+
+// Solicitar reset de senha
+async function requestPasswordReset() {
+  loading.value = true
+  forgotPasswordMessage.value = ''
+  forgotPasswordError.value = ''
+
+  try {
+    const res = await fetch(`${API_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: forgotPasswordEmail.value })
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao processar solicitação')
+    }
+
+    forgotPasswordMessage.value = 'Se o email existir, você receberá um link de recuperação em breve.'
+    forgotPasswordEmail.value = ''
+  } catch (error) {
+    forgotPasswordError.value = error.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// Resetar senha com token
+async function resetPassword() {
+  if (newPassword.value !== confirmPassword.value) {
+    resetPasswordError.value = 'As senhas não coincidem'
+    return
+  }
+
+  if (newPassword.value.length < 6) {
+    resetPasswordError.value = 'A senha deve ter no mínimo 6 caracteres'
+    return
+  }
+
+  loading.value = true
+  resetPasswordError.value = ''
+  resetPasswordSuccess.value = ''
+
+  try {
+    const res = await fetch(`${API_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: resetPasswordToken.value,
+        novaSenha: newPassword.value
+      })
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao alterar senha')
+    }
+
+    resetPasswordSuccess.value = 'Senha alterada com sucesso! Redirecionando...'
+
+    // Limpar token da URL e redirecionar para login
+    setTimeout(() => {
+      cancelResetPassword()
+    }, 2000)
+  } catch (error) {
+    resetPasswordError.value = error.message
+  } finally {
+    loading.value = false
+  }
+}
+
+// Cancelar reset e voltar ao login
+function cancelResetPassword() {
+  resetPasswordToken.value = ''
+  resetPasswordEmail.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  resetPasswordError.value = ''
+  resetPasswordSuccess.value = ''
+
+  // Limpar token da URL
+  const url = new URL(window.location.href)
+  url.searchParams.delete('reset')
+  window.history.replaceState({}, '', url)
+}
+
+// Verificar token de reset na URL
+async function checkResetToken() {
+  const urlParams = new URLSearchParams(window.location.search)
+  const resetToken = urlParams.get('reset')
+
+  if (resetToken) {
+    try {
+      const res = await fetch(`${API_URL}/auth/verify-reset-token/${resetToken}`)
+      const data = await res.json()
+
+      if (res.ok && data.valid) {
+        resetPasswordToken.value = resetToken
+        resetPasswordEmail.value = data.email
+      } else {
+        // Token inválido, limpar da URL
+        const url = new URL(window.location.href)
+        url.searchParams.delete('reset')
+        window.history.replaceState({}, '', url)
+        authError.value = 'Link de recuperação inválido ou expirado'
+      }
+    } catch (error) {
+      console.error('Erro ao verificar token:', error)
+    }
   }
 }
 
@@ -3990,6 +4186,7 @@ function updateApp() {
 // ==================== LIFECYCLE ====================
 
 onMounted(() => {
+  checkResetToken()
   checkAuth()
 
   // Fechar dropdown de status ao clicar fora
@@ -4288,6 +4485,43 @@ body {
   font-size: 0.8rem;
   color: #666;
   line-height: 1.5;
+}
+
+.success-text {
+  color: #22c55e;
+  font-size: 0.875rem;
+  margin-top: 16px;
+}
+
+.forgot-password-link {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+.forgot-password-link a {
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.forgot-password-link a:hover {
+  text-decoration: underline;
+}
+
+.modal-subtitle {
+  color: #888;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.reset-password-card {
+  text-align: center;
+}
+
+.reset-password-card h3 {
+  margin-bottom: 8px;
+  color: #fff;
 }
 
 /* ==================== MAIN SCREEN ==================== */

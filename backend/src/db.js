@@ -132,6 +132,23 @@ async function initDatabase() {
     // Inicializar tabelas de salas
     await initRoomsTables(client)
 
+    // Tabela de tokens de reset de senha
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        token VARCHAR(64) UNIQUE NOT NULL,
+        expira_em TIMESTAMP NOT NULL,
+        usado BOOLEAN DEFAULT FALSE,
+        criado_em TIMESTAMP DEFAULT NOW()
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
+      CREATE INDEX IF NOT EXISTS idx_password_resets_expira ON password_resets(expira_em);
+    `)
+    console.log('[DB] Tabela password_resets OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {

@@ -5,6 +5,8 @@ const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const webpush = require('web-push')
+const crypto = require('crypto')
+const nodemailer = require('nodemailer')
 const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -27,6 +29,25 @@ webpush.setVapidDetails(
 
 // Armazenar subscriptions de push (em memória - em produção usar banco)
 const pushSubscriptions = new Map() // odestinandoId -> subscription
+
+// Configuração de Email (para reset de senha)
+const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com'
+const EMAIL_PORT = process.env.EMAIL_PORT || 587
+const EMAIL_USER = process.env.EMAIL_USER || ''
+const EMAIL_PASS = process.env.EMAIL_PASS || ''
+const EMAIL_FROM = process.env.EMAIL_FROM || 'Poly.io <noreply@poly.io>'
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://poly-io.vercel.app'
+
+// Configurar transporter de email
+const emailTransporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  secure: EMAIL_PORT == 465,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
+  }
+})
 
 // Inicializar Express
 const app = express()
@@ -287,6 +308,145 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('[Auth] Erro no login:', error.message)
     res.status(500).json({ error: 'Erro ao fazer login' })
+  }
+})
+
+// Esqueci minha senha - Solicitar reset
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email é obrigatório' })
+  }
+
+  try {
+    // Verificar se email existe
+    const result = await pool.query('SELECT id, nome FROM users WHERE email = $1', [email.toLowerCase()])
+
+    if (result.rows.length === 0) {
+      // Por segurança, não revelamos se o email existe ou não
+      return res.json({ message: 'Se o email existir, você receberá um link de recuperação' })
+    }
+
+    const user = result.rows[0]
+
+    // Gerar token único
+    const token = crypto.randomBytes(32).toString('hex')
+    const expiraEm = new Date(Date.now() + 60 * 60 * 1000) // 1 hora
+
+    // Invalidar tokens anteriores do usuário
+    await pool.query('UPDATE password_resets SET usado = TRUE WHERE user_id = $1 AND usado = FALSE', [user.id])
+
+    // Salvar novo token
+    await pool.query(
+      'INSERT INTO password_resets (user_id, token, expira_em) VALUES ($1, $2, $3)',
+      [user.id, token, expiraEm]
+    )
+
+    // Montar link de reset
+    const resetLink = `${FRONTEND_URL}?reset=${token}`
+
+    // Enviar email
+    if (EMAIL_USER && EMAIL_PASS) {
+      await emailTransporter.sendMail({
+        from: EMAIL_FROM,
+        to: email,
+        subject: 'Poly.io - Recuperação de Senha',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #6366f1;">Poly.io</h2>
+            <p>Olá <strong>${user.nome}</strong>,</p>
+            <p>Você solicitou a recuperação de senha da sua conta.</p>
+            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                Redefinir Senha
+              </a>
+            </p>
+            <p style="color: #888; font-size: 14px;">Este link expira em 1 hora.</p>
+            <p style="color: #888; font-size: 14px;">Se você não solicitou esta recuperação, ignore este email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #888; font-size: 12px;">Poly.io - Chat sem barreiras de idioma</p>
+          </div>
+        `
+      })
+      console.log(`[Auth] Email de reset enviado para: ${email}`)
+    } else {
+      console.log(`[Auth] Email não configurado. Token de reset: ${token}`)
+    }
+
+    res.json({ message: 'Se o email existir, você receberá um link de recuperação' })
+  } catch (error) {
+    console.error('[Auth] Erro ao solicitar reset:', error.message)
+    res.status(500).json({ error: 'Erro ao processar solicitação' })
+  }
+})
+
+// Verificar token de reset
+app.get('/api/auth/verify-reset-token/:token', async (req, res) => {
+  const { token } = req.params
+
+  try {
+    const result = await pool.query(
+      `SELECT pr.*, u.email FROM password_resets pr
+       JOIN users u ON pr.user_id = u.id
+       WHERE pr.token = $1 AND pr.usado = FALSE AND pr.expira_em > NOW()`,
+      [token]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Link inválido ou expirado' })
+    }
+
+    res.json({ valid: true, email: result.rows[0].email })
+  } catch (error) {
+    console.error('[Auth] Erro ao verificar token:', error.message)
+    res.status(500).json({ error: 'Erro ao verificar link' })
+  }
+})
+
+// Resetar senha
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { token, novaSenha } = req.body
+
+  if (!token || !novaSenha) {
+    return res.status(400).json({ error: 'Token e nova senha são obrigatórios' })
+  }
+
+  if (novaSenha.length < 6) {
+    return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' })
+  }
+
+  try {
+    // Verificar token válido
+    const result = await pool.query(
+      `SELECT pr.*, u.id as user_id FROM password_resets pr
+       JOIN users u ON pr.user_id = u.id
+       WHERE pr.token = $1 AND pr.usado = FALSE AND pr.expira_em > NOW()`,
+      [token]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Link inválido ou expirado' })
+    }
+
+    const resetInfo = result.rows[0]
+
+    // Hash da nova senha
+    const senhaHash = await bcrypt.hash(novaSenha, 10)
+
+    // Atualizar senha do usuário
+    await pool.query('UPDATE users SET senha_hash = $1 WHERE id = $2', [senhaHash, resetInfo.user_id])
+
+    // Marcar token como usado
+    await pool.query('UPDATE password_resets SET usado = TRUE WHERE id = $1', [resetInfo.id])
+
+    console.log(`[Auth] Senha resetada para user_id: ${resetInfo.user_id}`)
+
+    res.json({ message: 'Senha alterada com sucesso!' })
+  } catch (error) {
+    console.error('[Auth] Erro ao resetar senha:', error.message)
+    res.status(500).json({ error: 'Erro ao alterar senha' })
   }
 })
 
