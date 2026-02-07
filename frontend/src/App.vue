@@ -287,14 +287,14 @@
             {{ getConnectionStatus(profileUser?.id) }}
           </div>
 
-          <!-- Botão Excluir Conta (só para o próprio perfil) -->
-          <button
+          <!-- Link Excluir Conta (só para o próprio perfil) -->
+          <a
             v-if="profileUser?.id === currentUser?.id"
-            class="btn-delete-account"
+            class="link-delete-account"
             @click="deleteAccount"
           >
-            Excluir minha conta
-          </button>
+            Excluir conta
+          </a>
         </div>
       </div>
 
@@ -5541,21 +5541,19 @@ body {
   text-align: center;
 }
 
-.btn-delete-account {
+.link-delete-account {
+  display: block;
   margin-top: 25px;
-  padding: 10px 20px;
-  background: transparent;
-  border: 1px solid #c53030;
-  color: #c53030;
-  border-radius: 6px;
+  color: #ef4444;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  text-decoration: none;
+  transition: opacity 0.2s;
 }
 
-.btn-delete-account:hover {
-  background: #c53030;
-  color: white;
+.link-delete-account:hover {
+  opacity: 0.7;
+  text-decoration: underline;
 }
 
 /* Responsive */
