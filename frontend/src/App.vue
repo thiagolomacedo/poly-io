@@ -494,7 +494,7 @@
             :class="{ active: currentTab === 'requests' }"
             @click="currentTab = 'requests'"
           >
-            <span class="nav-icon">📨</span>
+            <span class="nav-icon">✋</span>
             Solicitações
             <span v-if="pendingRequests.length" class="badge highlight">{{ pendingRequests.length }}</span>
           </button>
