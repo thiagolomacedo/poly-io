@@ -443,16 +443,30 @@
             </button>
           </div>
           <div class="status-row">
-            <div class="status-selector">
+            <div class="status-dropdown-wrapper">
               <button
-                v-for="s in statusOptions"
-                :key="s.value"
-                :class="['status-btn', s.value, { active: myStatus === s.value }]"
-                @click="changeStatus(s.value)"
-                :title="s.label"
+                class="status-dropdown-btn"
+                :class="myStatus"
+                @click="statusDropdownOpen = !statusDropdownOpen"
               >
                 <span class="status-dot"></span>
+                <span class="status-label">{{ statusOptions.find(s => s.value === myStatus)?.label }}</span>
+                <span class="dropdown-arrow">{{ statusDropdownOpen ? '▲' : '▼' }}</span>
               </button>
+              <div v-if="statusDropdownOpen" class="status-dropdown-menu" @click.stop>
+                <div
+                  v-for="s in statusOptions"
+                  :key="s.value"
+                  :class="['status-dropdown-item', s.value, { active: myStatus === s.value }]"
+                  @click="changeStatus(s.value); statusDropdownOpen = false"
+                >
+                  <div class="status-item-header">
+                    <span class="status-dot"></span>
+                    <span class="status-name">{{ s.label }}</span>
+                  </div>
+                  <p class="status-desc">{{ s.desc }}</p>
+                </div>
+              </div>
             </div>
             <button
               class="btn-mute-all"
@@ -1189,11 +1203,12 @@ const isOwnProfile = computed(() => profileUser.value?.id === currentUser.value?
 
 // Status options
 const statusOptions = [
-  { value: 'online', label: 'Online' },
-  { value: 'ausente', label: 'Ausente' },
-  { value: 'ocupado', label: 'Ocupado' },
-  { value: 'invisivel', label: 'Invisível' }
+  { value: 'online', label: 'Online', desc: 'Você está disponível para conversar.' },
+  { value: 'ausente', label: 'Ausente', desc: 'Mostra que você está em um intervalo. Ainda receberá notificações.' },
+  { value: 'ocupado', label: 'Ocupado', desc: 'Sons de notificação serão desligados.' },
+  { value: 'invisivel', label: 'Invisível', desc: 'Você aparecerá offline, mas ainda pode conversar.' }
 ]
+const statusDropdownOpen = ref(false)
 
 // Modal de perfil
 const showProfileModal = ref(false)
@@ -3636,6 +3651,13 @@ function updateApp() {
 onMounted(() => {
   checkAuth()
 
+  // Fechar dropdown de status ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.status-dropdown-wrapper')) {
+      statusDropdownOpen.value = false
+    }
+  })
+
   // Detectar atualizações do Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then((registration) => {
@@ -4143,6 +4165,116 @@ body {
 .status-btn.ausente .status-dot { background: #f59e0b; }
 .status-btn.ocupado .status-dot { background: #ef4444; }
 .status-btn.invisivel .status-dot { background: #6b7280; }
+
+/* Status Dropdown */
+.status-dropdown-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.status-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #2a2a3a;
+  border: 1px solid #3a3a4a;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.status-dropdown-btn:hover {
+  background: #3a3a4a;
+}
+
+.status-dropdown-btn .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dropdown-btn.online .status-dot { background: #10b981; }
+.status-dropdown-btn.ausente .status-dot { background: #f59e0b; }
+.status-dropdown-btn.ocupado .status-dot { background: #ef4444; }
+.status-dropdown-btn.invisivel .status-dot { background: #6b7280; }
+
+.status-dropdown-btn .status-label {
+  flex: 1;
+  text-align: left;
+}
+
+.status-dropdown-btn .dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.status-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1e1e2e;
+  border: 1px solid #3a3a4a;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.status-dropdown-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.status-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.status-dropdown-item:hover {
+  background: #2a2a3a;
+}
+
+.status-dropdown-item.active {
+  background: #3a3a4a;
+}
+
+.status-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.status-dropdown-item .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-dropdown-item.online .status-dot { background: #10b981; }
+.status-dropdown-item.ausente .status-dot { background: #f59e0b; }
+.status-dropdown-item.ocupado .status-dot { background: #ef4444; }
+.status-dropdown-item.invisivel .status-dot { background: #6b7280; }
+
+.status-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.status-desc {
+  font-size: 11px;
+  color: #888;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.4;
+}
 
 /* Status colors for avatars */
 .user-avatar.online::after {
