@@ -1088,6 +1088,49 @@ app.post('/api/connections/request/:userId', authMiddleware, async (req, res) =>
 
     console.log(`[Connections] Solicitação: ${req.userId} → ${targetUserId}`)
 
+    // Se o destinatário é a IA "io", aceitar automaticamente
+    if (IO_USER_ID && targetUserId === IO_USER_ID) {
+      await pool.query(
+        "UPDATE connections SET status = 'aceita', atualizado_em = NOW() WHERE id = $1",
+        [result.rows[0].id]
+      )
+      console.log(`[io IA] Conexão aceita automaticamente para usuário ${req.userId}`)
+
+      // Notificar que a conexão foi aceita
+      io.emit('conexao-atualizada', { userId: req.userId })
+
+      // Enviar mensagem de boas-vindas
+      const msgBoasVindas = 'Oi! 👋 Eu sou a io, assistente virtual do Poly.io. Pode me perguntar qualquer coisa sobre a plataforma ou simplesmente bater um papo! Como posso te ajudar?'
+
+      // Buscar idioma do usuário para traduzir boas-vindas
+      const userLang = await pool.query('SELECT idioma FROM users WHERE id = $1', [req.userId])
+      const idiomaUsuario = userLang.rows[0]?.idioma || 'pt'
+      const msgTraduzida = await traduzirTexto(msgBoasVindas, 'pt', idiomaUsuario)
+
+      // Salvar mensagem de boas-vindas
+      const welcomeMsg = await pool.query(`
+        INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id, enviado_em
+      `, [result.rows[0].id, IO_USER_ID, msgBoasVindas, 'pt', msgTraduzida, idiomaUsuario])
+
+      // Emitir mensagem de boas-vindas via socket
+      setTimeout(() => {
+        io.emit('nova-mensagem', {
+          id: welcomeMsg.rows[0].id,
+          connectionId: result.rows[0].id,
+          senderId: IO_USER_ID,
+          texto: msgBoasVindas,
+          textoTraduzido: msgTraduzida,
+          idiomaOriginal: 'pt',
+          enviadoEm: welcomeMsg.rows[0].enviado_em,
+          destinatarioId: req.userId
+        })
+      }, 500) // Pequeno delay para parecer mais natural
+
+      return res.json({ message: 'Conectado com io!', connectionId: result.rows[0].id, autoAccepted: true })
+    }
+
     // Notificar via socket
     io.emit('nova-solicitacao', { userId: targetUserId })
 
