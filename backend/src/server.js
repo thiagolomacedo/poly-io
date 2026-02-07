@@ -95,6 +95,156 @@ function authMiddleware(req, res, next) {
 
 // ==================== SERVIÇO DE TRADUÇÃO ====================
 
+// Dicionário de gírias PT-BR → frases para melhor tradução
+const GIRIAS_PT = {
+  // Cumprimentos e despedidas
+  'blz': 'tudo bem',
+  'blz?': 'tudo bem?',
+  'e ai': 'olá, como vai',
+  'e aí': 'olá, como vai',
+  'eai': 'olá, como vai',
+  'eaí': 'olá, como vai',
+  'fala': 'olá',
+  'salve': 'olá',
+  'opa': 'olá',
+  'oi': 'olá',
+  'flw': 'tchau, até mais',
+  'vlw': 'valeu, obrigado',
+  'vlw flw': 'valeu, tchau',
+  'tmj': 'estamos juntos',
+  'abs': 'abraços',
+  'bjs': 'beijos',
+
+  // Confirmações e reações
+  'show': 'muito bom, excelente',
+  'top': 'muito bom, excelente',
+  'massa': 'muito bom, legal',
+  'daora': 'muito bom, legal',
+  'dahora': 'muito bom, legal',
+  'brabo': 'muito bom, incrível',
+  'braba': 'muito bom, incrível',
+  'zika': 'muito bom, incrível',
+  'irado': 'muito bom, incrível',
+  'sinistro': 'muito bom, incrível',
+  'animal': 'muito bom, incrível',
+  'firmeza': 'combinado, certo',
+  'fechou': 'combinado, certo',
+  'suave': 'tranquilo, sem problemas',
+  'sussa': 'tranquilo, sem problemas',
+  'deboa': 'tranquilo, sem problemas',
+  'dboa': 'tranquilo, sem problemas',
+  'tranquilo': 'sem problemas, ok',
+  'beleza': 'ok, tudo bem',
+  'blz': 'ok, tudo bem',
+  'pdc': 'pode crer, entendi',
+  'dale': 'vamos lá',
+  'partiu': 'vamos lá',
+  'bora': 'vamos lá',
+  'vambora': 'vamos embora',
+
+  // Expressões
+  'mano': 'amigo',
+  'véi': 'amigo',
+  'vei': 'amigo',
+  'cara': 'amigo',
+  'brother': 'amigo',
+  'parça': 'parceiro, amigo',
+  'truta': 'amigo',
+  'mina': 'garota, mulher',
+  'mlk': 'menino, garoto',
+  'moleque': 'menino, garoto',
+  'gata': 'mulher bonita',
+  'gato': 'homem bonito',
+
+  // Abreviações
+  'vc': 'você',
+  'vcs': 'vocês',
+  'tb': 'também',
+  'tbm': 'também',
+  'pq': 'porque',
+  'pra': 'para',
+  'pro': 'para o',
+  'oq': 'o que',
+  'qdo': 'quando',
+  'qnd': 'quando',
+  'nd': 'nada',
+  'ngm': 'ninguém',
+  'msg': 'mensagem',
+  'hj': 'hoje',
+  'dps': 'depois',
+  'obg': 'obrigado',
+  'pfv': 'por favor',
+  'ctz': 'certeza',
+  'vdd': 'verdade',
+  'tlgd': 'entendeu',
+  'tlg': 'entende',
+  'fds': 'fim de semana',
+  'sdds': 'saudades',
+  'sdd': 'saudade',
+
+  // Risadas
+  'kkk': 'haha',
+  'kkkk': 'hahaha',
+  'kkkkk': 'hahahaha',
+  'rsrs': 'haha',
+  'rsrsrs': 'hahaha',
+  'hehe': 'hehe',
+  'hehehe': 'hehehe',
+
+  // Trabalho e cotidiano
+  'trampo': 'trabalho',
+  'trampar': 'trabalhar',
+  'trampando': 'trabalhando',
+  'rolê': 'passeio, saída',
+  'role': 'passeio, saída',
+  'rolezinho': 'passeio rápido',
+  'corre': 'tarefa, compromisso',
+  'correria': 'muitas tarefas',
+  'grana': 'dinheiro',
+  'din': 'dinheiro',
+  'pila': 'dinheiro',
+  'conto': 'mil reais',
+
+  // Interjeições
+  'eita': 'nossa, que surpresa',
+  'caramba': 'nossa, impressionante',
+  'mds': 'meu deus',
+  'plmds': 'pelo amor de deus',
+  'slc': 'que loucura',
+  'slk': 'que loucura',
+  'nmrl': 'não é mentira, sério',
+
+  // Perguntas comuns
+  'td bem': 'tudo bem',
+  'td certo': 'tudo certo',
+  'como vc ta': 'como você está',
+  'como vc tá': 'como você está',
+  'oq vc acha': 'o que você acha',
+  'bora la': 'vamos lá',
+  'bora lá': 'vamos lá'
+}
+
+// Função para expandir gírias antes da tradução
+function expandirGirias(texto) {
+  let textoExpandido = texto.toLowerCase()
+
+  // Ordenar chaves por tamanho (maior primeiro) para evitar substituições parciais
+  const chaves = Object.keys(GIRIAS_PT).sort((a, b) => b.length - a.length)
+
+  for (const giria of chaves) {
+    // Criar regex que encontra a gíria como palavra completa
+    const regex = new RegExp(`\\b${giria.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')
+    textoExpandido = textoExpandido.replace(regex, GIRIAS_PT[giria])
+  }
+
+  // Manter capitalização da primeira letra se o original tinha
+  if (texto[0] === texto[0].toUpperCase()) {
+    textoExpandido = textoExpandido.charAt(0).toUpperCase() + textoExpandido.slice(1)
+  }
+
+  return textoExpandido
+}
+
 function detectarIdioma(texto, idiomaFallback = null) {
   const textoLower = texto.toLowerCase()
 
@@ -113,7 +263,7 @@ function detectarIdioma(texto, idiomaFallback = null) {
 
   // Espanhol (expandido com gírias e expressões)
   if (/[ñ¿¡]/i.test(texto)) return 'es'
-  if (/\b(hola|gracias|buenos|buenas|cómo|estás|está|qué|por|favor|mucho|muy|también|pero|porque|cuando|donde|quien|ahora|después|antes|siempre|nunca|todo|nada|algo|alguien|nadie|tengo|tienes|tiene|tenemos|tienen|quiero|quieres|quiere|puedo|puedes|puede|vamos|voy|vas|viene|vengo|hacer|hago|haces|dice|digo|dices|estoy|estas|somos|soy|eres|esto|esta|estos|estas|ese|esa|aquí|allí|ahí|luego|pronto|tarde|mañana|ayer|hoy|semana|mes|año|casa|trabajo|amigo|amiga|familia|vida|amor|tiempo|cosa|día|noche|agua|comida|dinero|carro|coche|ciudad|país|mundo|gente|hombre|mujer|niño|niña|chico|chica|jefe|genial|guay|mola|tío|tía|vale|venga|claro|bueno|pues|oye|mira|ojalá|chévere|bacán|chido|padre|órale|ándale|güey|wey|neta|chamba|jalar|plata|lana|feria|paro|bronca|chingón|cabrón|pendejo|güero|cuate|carnal|compa|pana|parcero|marico|coño|hostia|joder|tío|flipar|currar|quedar|ligar|molar|
+  if (/\b(hola|gracias|buenos|buenas|cómo|estás|está|qué|por|favor|mucho|muy|también|pero|porque|cuando|donde|quien|ahora|después|antes|siempre|nunca|todo|nada|algo|alguien|nadie|tengo|tienes|tiene|tenemos|tienen|quiero|quieres|quiere|puedo|puedes|puede|vamos|voy|vas|viene|vengo|hacer|hago|haces|dice|digo|dices|estoy|estas|somos|soy|eres|esto|esta|estos|estas|ese|esa|aquí|allí|ahí|luego|pronto|tarde|mañana|ayer|hoy|semana|mes|año|casa|trabajo|amigo|amiga|familia|vida|amor|tiempo|cosa|día|noche|agua|comida|dinero|carro|coche|ciudad|país|mundo|gente|hombre|mujer|niño|niña|chico|chica|jefe|genial|guay|mola|tío|tía|vale|venga|claro|bueno|pues|oye|mira|ojalá|chévere|bacán|chido|padre|órale|ándale|güey|wey|neta|chamba|jalar|plata|lana|feria|paro|bronca|chingón|cabrón|pendejo|güero|cuate|carnal|compa|pana|parcero|marico|coño|hostia|joder|flipar|currar|quedar|ligar|molar)\b/i.test(textoLower)) return 'es'
 
   // Francês (expandido com gírias e expressões)
   if (/\b(bonjour|salut|merci|beaucoup|comment|ça|va|oui|non|je|tu|il|elle|nous|vous|ils|elles|suis|est|sont|avec|pour|dans|sur|très|bien|mal|aujourd'hui|demain|hier|maintenant|toujours|jamais|encore|aussi|même|tout|tous|rien|quelque|autre|nouveau|petit|grand|bon|beau|vieux|jeune|premier|dernier|avoir|être|faire|dire|aller|voir|savoir|pouvoir|vouloir|venir|prendre|donner|parler|aimer|penser|trouver|laisser|mettre|sembler|rester|partir|quoi|pourquoi|parce|donc|mais|ou|comme|quand|si|plus|moins|mieux|super|génial|cool|sympa|chouette|mec|meuf|nana|gars|mdr|lol|ptdr|bcp|stp|dsl|jsp|tkt|cad|càd|pk|pcq|bref|genre|grave|trop|vachement|carrément|kiffer|craindre|galérer|bosser|taffer|bouffer|piger|capter|bagnole|fric|thune|blé|pote|poulette|naze|relou|chiant|ouf|chanmé|daron|daronne)\b/i.test(textoLower)) return 'fr'
@@ -189,19 +339,29 @@ async function traduzirComMyMemory(texto, idiomaOrigem, idiomaDestino) {
 async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
   if (idiomaOrigem === idiomaDestino) return texto
 
+  // Pré-processar gírias PT-BR para melhor tradução
+  let textoParaTraduzir = texto
+  if (idiomaOrigem === 'pt') {
+    const textoExpandido = expandirGirias(texto)
+    if (textoExpandido !== texto.toLowerCase()) {
+      console.log(`  [Gírias] "${texto}" → "${textoExpandido}"`)
+      textoParaTraduzir = textoExpandido
+    }
+  }
+
   let azureOrigem = idiomaOrigem === 'zh' ? 'zh-Hans' : idiomaOrigem
   let azureDestino = idiomaDestino === 'zh' ? 'zh-Hans' : idiomaDestino
 
   if (AZURE_KEY) {
     try {
-      return await traduzirComAzure(texto, azureOrigem, azureDestino)
+      return await traduzirComAzure(textoParaTraduzir, azureOrigem, azureDestino)
     } catch (error) {
       console.log('  [Azure] Erro:', error.message)
     }
   }
 
   try {
-    return await traduzirComMyMemory(texto, idiomaOrigem, idiomaDestino)
+    return await traduzirComMyMemory(textoParaTraduzir, idiomaOrigem, idiomaDestino)
   } catch (error) {
     console.log('  [MyMemory] Erro:', error.message)
   }
