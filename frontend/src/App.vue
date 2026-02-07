@@ -1155,6 +1155,9 @@
                 <span class="message-time">
                   {{ formatTime(msg.enviadoEm) }}
                   <span v-if="msg.editado" class="edited-badge">(editado)</span>
+                  <span v-if="msg.euEnviei" class="read-status" :class="{ read: msg.lido }">
+                    {{ msg.lido ? '✓✓' : '✓' }}
+                  </span>
                 </span>
                 <!-- Reações da mensagem -->
                 <div v-if="msg.reactions && msg.reactions.length > 0" class="message-reactions">
@@ -2739,6 +2742,7 @@ async function initializeApp() {
   socket.on('usuario-parou-digitar', handleUserStoppedTyping)
   socket.on('mensagem-editada', handleMessageEdited)
   socket.on('reacao-mensagem', handleMessageReaction)
+  socket.on('mensagens-lidas', handleMessagesRead)
 
   // Eventos de chamada de vídeo
   socket.on('chamada-recebida', handleIncomingCall)
@@ -2988,9 +2992,19 @@ async function loadMessages() {
       idiomaOriginal: m.idiomaOriginal,
       enviadoEm: m.enviadoEm,
       editado: m.editado || false,
+      lido: m.lido || false,
+      reactions: m.reactions || [],
       showOriginal: false
     }))
     scrollToBottom()
+
+    // Marcar mensagens recebidas como lidas
+    if (socket && selectedConnection.value) {
+      socket.emit('marcar-lidas', {
+        connectionId: selectedConnection.value.connectionId,
+        senderId: selectedConnection.value.id
+      })
+    }
   } catch (error) {
     console.error('Erro ao carregar mensagens:', error)
   }
@@ -3066,6 +3080,7 @@ async function handleNewMessage(msg) {
     textoOriginal: msg.texto,
     idiomaOriginal: msg.idiomaOriginal,
     enviadoEm: msg.enviadoEm,
+    lido: !euEnviei,
     showOriginal: false,
     bubbleColor: euEnviei ? messageBubbleColor.value : null
   })
@@ -3293,6 +3308,19 @@ function handleMessageReaction(data) {
       userIds: r.user_ids
     }))
   }
+}
+
+// Handler para mensagens lidas (tempo real)
+function handleMessagesRead(data) {
+  if (selectedConnection.value?.connectionId !== data.connectionId) return
+
+  // Marcar todas as mensagens informadas como lidas
+  data.messageIds.forEach(msgId => {
+    const msg = messages.value.find(m => m.id === msgId)
+    if (msg) {
+      msg.lido = true
+    }
+  })
 }
 
 // ==================== CHAMADA DE VÍDEO (Jitsi) ====================
@@ -5741,6 +5769,16 @@ body {
 
 .message.sent .message-time {
   color: rgba(255, 255, 255, 0.8);
+}
+
+.read-status {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.read-status.read {
+  color: #22c55e;
 }
 
 .btn-original {

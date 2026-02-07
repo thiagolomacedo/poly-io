@@ -1995,6 +1995,39 @@ io.on('connection', (socket) => {
     }
   })
 
+  // Marcar mensagens como lidas
+  socket.on('marcar-lidas', async (data) => {
+    if (!socket.userId) return
+
+    const { connectionId, senderId } = data
+
+    try {
+      // Marcar todas as mensagens não lidas do remetente como lidas
+      const result = await pool.query(`
+        UPDATE messages
+        SET lido = TRUE
+        WHERE connection_id = $1
+          AND sender_id = $2
+          AND lido = FALSE
+        RETURNING id
+      `, [connectionId, senderId])
+
+      if (result.rowCount > 0) {
+        // Notificar o remetente que suas mensagens foram lidas
+        const senderSocketId = usuariosOnline.get(senderId)
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('mensagens-lidas', {
+            connectionId,
+            leitoPor: socket.userId,
+            messageIds: result.rows.map(r => r.id)
+          })
+        }
+      }
+    } catch (error) {
+      console.error('[Socket] Erro ao marcar mensagens como lidas:', error.message)
+    }
+  })
+
   // ==================== CHAMADA DE VÍDEO (Jitsi) ====================
 
   // Iniciar chamada de vídeo/áudio

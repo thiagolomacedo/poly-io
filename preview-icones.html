@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Preview - Ícones de Solicitação</title>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 40px;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-bottom: 10px;
+      color: #a78bfa;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+    }
+    h2 {
+      margin: 40px 0 15px;
+      color: #a78bfa;
+      font-size: 16px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+    h3 {
+      margin: 20px 0 10px;
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .atual {
+      background: #2d2d44;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .atual span {
+      font-size: 32px;
+    }
+    .opcoes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .opcao {
+      background: #2d2d44;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .opcao:hover {
+      background: #3d3d5c;
+      border-color: #a78bfa;
+    }
+    .opcao .icon {
+      font-size: 28px;
+      width: 50px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .opcao .icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    .opcao .icon .material-symbols-outlined {
+      font-size: 32px;
+    }
+    .opcao .icon .fa-solid,
+    .opcao .icon .fa-regular {
+      font-size: 26px;
+    }
+    .opcao .info {
+      flex: 1;
+    }
+    .opcao .nome {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .opcao .desc {
+      font-size: 12px;
+      color: #888;
+    }
+    .recomendado {
+      border-color: #22c55e !important;
+      background: #1a2e1a !important;
+    }
+    .recomendado::after {
+      content: '⭐ Recomendado';
+      font-size: 10px;
+      background: #22c55e;
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    /* Simulação do botão na sidebar */
+    .sidebar-sim {
+      background: #16213e;
+      padding: 15px;
+      border-radius: 12px;
+      max-width: 300px;
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #1a1a2e;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      width: 100%;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .tab-btn.active {
+      background: #a78bfa;
+    }
+    .tab-btn .badge {
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: auto;
+    }
+    .tab-btn .nav-icon {
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+    }
+    .tab-btn .nav-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .comparativo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-top: 20px;
+    }
+    .comparativo h4 {
+      color: #888;
+      font-size: 12px;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <h1>Preview - Ícone de Solicitações</h1>
+  <p class="subtitle">Escolha o melhor ícone para "Solicitações de conexão"</p>
+
+  <div class="atual">
+    <span>📨</span>
+    <div>
+      <strong>Atual:</strong> Envelope (📨)<br>
+      <small style="color: #888">Não transmite bem a ideia de "pedido de conexão"</small>
+    </div>
+  </div>
+
+  <!-- EMOJIS -->
+  <h2>🎨 Opção 1: Emojis (sem instalar nada)</h2>
+  <div class="opcoes">
+    <div class="opcao">
+      <span class="icon">🙋</span>
+      <div class="info">
+        <div class="nome">Pessoa pedindo</div>
+        <div class="desc">Alguém querendo atenção</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon">🤝</span>
+      <div class="info">
+        <div class="nome">Aperto de mãos</div>
+        <div class="desc">Conexão / Parceria</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon">👥</span>
+      <div class="info">
+        <div class="nome">Pessoas</div>
+        <div class="desc">Grupo / Conexões</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon">📥</span>
+      <div class="info">
+        <div class="nome">Caixa de entrada</div>
+        <div class="desc">Recebendo pedidos</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon">🔔</span>
+      <div class="info">
+        <div class="nome">Sino</div>
+        <div class="desc">Notificação</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon">✋</span>
+      <div class="info">
+        <div class="nome">Mão levantada</div>
+        <div class="desc">Pedindo atenção</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LUCIDE -->
+  <h2>✨ Opção 2: Lucide Icons (leve, moderno)</h2>
+  <p style="color: #666; font-size: 13px; margin-bottom: 15px;">~30KB | <a href="https://lucide.dev/icons/" target="_blank" style="color: #a78bfa;">lucide.dev</a></p>
+  <div class="opcoes">
+    <div class="opcao recomendado">
+      <span class="icon"><i data-lucide="user-plus"></i></span>
+      <div class="info">
+        <div class="nome">user-plus</div>
+        <div class="desc">Adicionar usuário - perfeito!</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i data-lucide="user-round-plus"></i></span>
+      <div class="info">
+        <div class="nome">user-round-plus</div>
+        <div class="desc">Versão arredondada</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i data-lucide="users"></i></span>
+      <div class="info">
+        <div class="nome">users</div>
+        <div class="desc">Múltiplos usuários</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i data-lucide="handshake"></i></span>
+      <div class="info">
+        <div class="nome">handshake</div>
+        <div class="desc">Aperto de mãos</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i data-lucide="bell-ring"></i></span>
+      <div class="info">
+        <div class="nome">bell-ring</div>
+        <div class="desc">Notificação</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i data-lucide="inbox"></i></span>
+      <div class="info">
+        <div class="nome">inbox</div>
+        <div class="desc">Caixa de entrada</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATERIAL SYMBOLS -->
+  <h2>📦 Opção 3: Material Symbols (Google)</h2>
+  <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Via Google Fonts | <a href="https://fonts.google.com/icons" target="_blank" style="color: #a78bfa;">fonts.google.com/icons</a></p>
+  <div class="opcoes">
+    <div class="opcao recomendado">
+      <span class="icon"><span class="material-symbols-outlined">person_add</span></span>
+      <div class="info">
+        <div class="nome">person_add</div>
+        <div class="desc">Adicionar pessoa - clássico!</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><span class="material-symbols-outlined">group_add</span></span>
+      <div class="info">
+        <div class="nome">group_add</div>
+        <div class="desc">Adicionar ao grupo</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><span class="material-symbols-outlined">people</span></span>
+      <div class="info">
+        <div class="nome">people</div>
+        <div class="desc">Pessoas</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><span class="material-symbols-outlined">notifications</span></span>
+      <div class="info">
+        <div class="nome">notifications</div>
+        <div class="desc">Notificações</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><span class="material-symbols-outlined">move_to_inbox</span></span>
+      <div class="info">
+        <div class="nome">move_to_inbox</div>
+        <div class="desc">Caixa de entrada</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><span class="material-symbols-outlined">handshake</span></span>
+      <div class="info">
+        <div class="nome">handshake</div>
+        <div class="desc">Aperto de mãos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FONT AWESOME -->
+  <h2>🎯 Opção 4: Font Awesome</h2>
+  <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Muito popular | <a href="https://fontawesome.com/icons" target="_blank" style="color: #a78bfa;">fontawesome.com</a></p>
+  <div class="opcoes">
+    <div class="opcao recomendado">
+      <span class="icon"><i class="fa-solid fa-user-plus"></i></span>
+      <div class="info">
+        <div class="nome">fa-user-plus</div>
+        <div class="desc">Adicionar usuário</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i class="fa-solid fa-users"></i></span>
+      <div class="info">
+        <div class="nome">fa-users</div>
+        <div class="desc">Usuários</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i class="fa-solid fa-bell"></i></span>
+      <div class="info">
+        <div class="nome">fa-bell</div>
+        <div class="desc">Sino</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i class="fa-solid fa-inbox"></i></span>
+      <div class="info">
+        <div class="nome">fa-inbox</div>
+        <div class="desc">Caixa de entrada</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i class="fa-solid fa-handshake"></i></span>
+      <div class="info">
+        <div class="nome">fa-handshake</div>
+        <div class="desc">Aperto de mãos</div>
+      </div>
+    </div>
+    <div class="opcao">
+      <span class="icon"><i class="fa-regular fa-hand"></i></span>
+      <div class="info">
+        <div class="nome">fa-hand</div>
+        <div class="desc">Mão levantada</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARATIVO NA SIDEBAR -->
+  <h2>👀 Como fica na Sidebar</h2>
+  <div class="comparativo">
+    <div>
+      <h4>Com Emoji (🙋)</h4>
+      <div class="sidebar-sim">
+        <button class="tab-btn">
+          <span class="nav-icon">💬</span>
+          Conexões
+        </button>
+        <button class="tab-btn">
+          <span class="nav-icon">🪟</span>
+          Salas
+        </button>
+        <button class="tab-btn active">
+          <span class="nav-icon">🙋</span>
+          Solicitações
+          <span class="badge">3</span>
+        </button>
+      </div>
+    </div>
+    <div>
+      <h4>Com Lucide (user-plus)</h4>
+      <div class="sidebar-sim">
+        <button class="tab-btn">
+          <span class="nav-icon"><i data-lucide="message-circle" style="width:18px;height:18px"></i></span>
+          Conexões
+        </button>
+        <button class="tab-btn">
+          <span class="nav-icon"><i data-lucide="layout-grid" style="width:18px;height:18px"></i></span>
+          Salas
+        </button>
+        <button class="tab-btn active">
+          <span class="nav-icon"><i data-lucide="user-plus" style="width:18px;height:18px"></i></span>
+          Solicitações
+          <span class="badge">3</span>
+        </button>
+      </div>
+    </div>
+    <div>
+      <h4>Com Material (person_add)</h4>
+      <div class="sidebar-sim">
+        <button class="tab-btn">
+          <span class="nav-icon"><span class="material-symbols-outlined" style="font-size:20px">chat</span></span>
+          Conexões
+        </button>
+        <button class="tab-btn">
+          <span class="nav-icon"><span class="material-symbols-outlined" style="font-size:20px">grid_view</span></span>
+          Salas
+        </button>
+        <button class="tab-btn active">
+          <span class="nav-icon"><span class="material-symbols-outlined" style="font-size:20px">person_add</span></span>
+          Solicitações
+          <span class="badge">3</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
