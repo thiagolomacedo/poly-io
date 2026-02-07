@@ -415,6 +415,46 @@
         ></iframe>
       </div>
 
+      <!-- Modal: Emoji Picker para Reações -->
+      <div v-if="showEmojiPicker" class="emoji-picker-overlay" @click="showEmojiPicker = false">
+        <div class="emoji-picker-modal" @click.stop>
+          <div class="emoji-picker-header">
+            <span>Reagir à mensagem</span>
+            <button class="btn-close-emoji" @click="showEmojiPicker = false">✕</button>
+          </div>
+          <div class="emoji-picker-search">
+            <input
+              v-model="emojiSearch"
+              type="text"
+              placeholder="Buscar emoji..."
+              class="emoji-search-input"
+            />
+          </div>
+          <div class="emoji-picker-grid">
+            <button
+              v-for="emoji in filteredEmojis"
+              :key="emoji"
+              class="emoji-btn"
+              @click="addReaction(emoji)"
+            >
+              {{ emoji }}
+            </button>
+          </div>
+          <div class="emoji-picker-categories">
+            <button
+              v-for="cat in emojiCategories"
+              :key="cat.name"
+              class="emoji-cat-btn"
+              :class="{ active: currentEmojiCategory === cat.name }"
+              @click="currentEmojiCategory = cat.name"
+              :title="cat.label"
+            >
+              {{ cat.icon }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Sidebar -->
       <aside class="sidebar" :class="{ open: sidebarOpen }">
         <div class="sidebar-header">
@@ -958,13 +998,19 @@
               :key="msg.id"
               class="message"
               :class="{ 'sent': msg.euEnviei, 'received': !msg.euEnviei }"
-              @click="msg.euEnviei ? toggleMessageMenu(msg) : null"
+              @click="toggleMessageMenu(msg)"
             >
               <div class="message-content">
-                <!-- Menu de ações (apenas para mensagens enviadas) -->
+                <!-- Menu de ações para mensagens enviadas -->
                 <div v-if="msg.euEnviei && msg.showMenu && !msg.isEditing" class="message-actions">
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
                     ✏️ Editar
+                  </button>
+                </div>
+                <!-- Menu de reações para mensagens recebidas -->
+                <div v-if="!msg.euEnviei && msg.showMenu" class="message-actions reaction-actions">
+                  <button class="btn-react-msg" @click.stop="openEmojiPicker(msg)">
+                    😊 Reagir
                   </button>
                 </div>
                 <!-- Modo edição -->
@@ -1013,6 +1059,19 @@
                   {{ formatTime(msg.enviadoEm) }}
                   <span v-if="msg.editado" class="edited-badge">(editado)</span>
                 </span>
+                <!-- Reações da mensagem -->
+                <div v-if="msg.reactions && msg.reactions.length > 0" class="message-reactions">
+                  <span
+                    v-for="reaction in msg.reactions"
+                    :key="reaction.emoji"
+                    class="reaction-badge"
+                    :class="{ 'my-reaction': reaction.userIds?.includes(currentUser?.id) }"
+                    @click.stop="toggleReaction(msg, reaction.emoji)"
+                    :title="reaction.count + ' ' + (reaction.count === 1 ? 'pessoa' : 'pessoas')"
+                  >
+                    {{ reaction.emoji }} {{ reaction.count > 1 ? reaction.count : '' }}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1163,6 +1222,28 @@ let speechRecognition = null
 // Chamada de vídeo (Jitsi)
 const incomingCall = ref(null)  // { callerId, callerName, connectionId, roomName }
 const activeCall = ref(null)    // { roomName, remoteName, remoteId }
+
+// Emoji Picker para reações
+const showEmojiPicker = ref(false)
+const emojiSearch = ref('')
+const currentEmojiCategory = ref('frequentes')
+const reactingToMessage = ref(null)
+
+const emojiCategories = [
+  { name: 'frequentes', label: 'Frequentes', icon: '⭐' },
+  { name: 'smileys', label: 'Smileys', icon: '😀' },
+  { name: 'gestos', label: 'Gestos', icon: '👋' },
+  { name: 'coracoes', label: 'Corações', icon: '❤️' },
+  { name: 'objetos', label: 'Objetos', icon: '🎉' }
+]
+
+const emojiData = {
+  frequentes: ['👍','👎','❤️','😂','😮','😢','😡','🔥','👏','🎉','💯','✅'],
+  smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐'],
+  gestos: ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏'],
+  coracoes: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟'],
+  objetos: ['🎉','🎊','🎈','🎁','🏆','🥇','🔥','⭐','💫','✨','💥','💯','✅','❌','❓','❗','💬','💭','🔔','🎵','🎶','💡','📌','📍']
+}
 const jitsiUrl = computed(() => {
   if (!activeCall.value) return ''
   const room = activeCall.value.roomName
@@ -1200,6 +1281,16 @@ const createRoomForm = reactive({
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
 const isOwnProfile = computed(() => profileUser.value?.id === currentUser.value?.id)
+
+// Emojis filtrados para o picker
+const filteredEmojis = computed(() => {
+  const categoryEmojis = emojiData[currentEmojiCategory.value] || emojiData.frequentes
+  if (!emojiSearch.value) return categoryEmojis
+  // Busca simples - mostrar todos se tiver busca
+  const search = emojiSearch.value.toLowerCase()
+  const allEmojis = Object.values(emojiData).flat()
+  return allEmojis.filter((_, i) => i < 50) // Mostrar primeiros 50 na busca
+})
 
 // Status options
 const statusOptions = [
@@ -2337,6 +2428,7 @@ async function initializeApp() {
   socket.on('usuario-digitando', handleUserTyping)
   socket.on('usuario-parou-digitar', handleUserStoppedTyping)
   socket.on('mensagem-editada', handleMessageEdited)
+  socket.on('reacao-mensagem', handleMessageReaction)
 
   // Eventos de chamada de vídeo
   socket.on('chamada-recebida', handleIncomingCall)
@@ -2699,6 +2791,83 @@ function toggleMessageMenu(msg) {
   msg.showMenu = !msg.showMenu
 }
 
+// ==================== REAÇÕES EM MENSAGENS ====================
+
+function openEmojiPicker(msg) {
+  reactingToMessage.value = msg
+  emojiSearch.value = ''
+  currentEmojiCategory.value = 'frequentes'
+  showEmojiPicker.value = true
+  msg.showMenu = false
+}
+
+async function addReaction(emoji) {
+  if (!reactingToMessage.value) return
+
+  const msg = reactingToMessage.value
+  showEmojiPicker.value = false
+
+  try {
+    const res = await fetch(`${API_URL}/chat/message/${msg.id}/reaction`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ emoji })
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      // Atualizar reações da mensagem
+      const message = messages.value.find(m => m.id === msg.id)
+      if (message) {
+        message.reactions = data.reactions.map(r => ({
+          emoji: r.emoji,
+          count: parseInt(r.count),
+          userIds: r.user_ids
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao adicionar reação:', error)
+  }
+
+  reactingToMessage.value = null
+}
+
+async function toggleReaction(msg, emoji) {
+  const hasMyReaction = msg.reactions?.some(
+    r => r.emoji === emoji && r.userIds?.includes(currentUser.value?.id)
+  )
+
+  try {
+    const res = await fetch(`${API_URL}/chat/message/${msg.id}/reaction`, {
+      method: hasMyReaction ? 'DELETE' : 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ emoji })
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      // Atualizar reações
+      const message = messages.value.find(m => m.id === msg.id)
+      if (message) {
+        message.reactions = data.reactions.map(r => ({
+          emoji: r.emoji,
+          count: parseInt(r.count),
+          userIds: r.user_ids
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao toggle reação:', error)
+  }
+}
+
 async function deleteMessage(msg) {
   if (!confirm('Excluir esta mensagem?')) return
 
@@ -2786,6 +2955,20 @@ function handleMessageEdited(data) {
     msg.texto = data.texto
     msg.textoOriginal = data.textoOriginal
     msg.editado = true
+  }
+}
+
+// Handler para reação em mensagem (tempo real)
+function handleMessageReaction(data) {
+  if (selectedConnection.value?.connectionId !== data.connectionId) return
+
+  const msg = messages.value.find(m => m.id === data.messageId)
+  if (msg) {
+    msg.reactions = data.reactions.map(r => ({
+      emoji: r.emoji,
+      count: parseInt(r.count),
+      userIds: r.user_ids
+    }))
   }
 }
 
@@ -4779,6 +4962,172 @@ body {
 
 .btn-edit-msg:hover {
   background: #444;
+}
+
+/* Botão de reagir */
+.btn-react-msg {
+  padding: 6px 10px;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-react-msg:hover {
+  background: #444;
+}
+
+/* Reações na mensagem */
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.reaction-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  background: #2a2a3a;
+  border: 1px solid #3a3a4a;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reaction-badge:hover {
+  background: #3a3a4a;
+  border-color: #4a4a5a;
+}
+
+.reaction-badge.my-reaction {
+  background: #3730a3;
+  border-color: #4f46e5;
+}
+
+/* Emoji Picker Modal */
+.emoji-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.emoji-picker-modal {
+  background: #1e1e2e;
+  border-radius: 16px;
+  width: 320px;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.emoji-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a3a;
+  font-weight: 600;
+}
+
+.btn-close-emoji {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-close-emoji:hover {
+  background: #2a2a3a;
+  color: #fff;
+}
+
+.emoji-picker-search {
+  padding: 8px 12px;
+}
+
+.emoji-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #2a2a3a;
+  border: 1px solid #3a3a4a;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.emoji-search-input:focus {
+  border-color: #4f46e5;
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 220px;
+}
+
+.emoji-btn {
+  font-size: 24px;
+  padding: 8px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.emoji-btn:hover {
+  background: #2a2a3a;
+}
+
+.emoji-picker-categories {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  border-top: 1px solid #2a2a3a;
+}
+
+.emoji-cat-btn {
+  font-size: 18px;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.15s;
+}
+
+.emoji-cat-btn:hover {
+  opacity: 1;
+  background: #2a2a3a;
+}
+
+.emoji-cat-btn.active {
+  opacity: 1;
+  background: #3730a3;
 }
 
 /* Modo edição */

@@ -105,6 +105,22 @@ async function initDatabase() {
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS editado BOOLEAN DEFAULT FALSE
     `)
 
+    // Tabela de reações em mensagens
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS message_reactions (
+        id SERIAL PRIMARY KEY,
+        message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        emoji VARCHAR(10) NOT NULL,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        UNIQUE(message_id, user_id, emoji)
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id)
+    `)
+    console.log('[DB] Tabela message_reactions OK')
+
     // Índices para melhor performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_connections_users ON connections(user_a_id, user_b_id);

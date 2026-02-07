@@ -816,6 +816,30 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       ORDER BY m.enviado_em ASC
     `, [req.params.connectionId])
 
+    // Buscar reações de todas as mensagens de uma vez
+    const messageIds = result.rows.map(m => m.id)
+    let reactionsMap = {}
+    if (messageIds.length > 0) {
+      const reactionsResult = await pool.query(`
+        SELECT message_id, emoji, COUNT(*) as count,
+               array_agg(user_id) as user_ids
+        FROM message_reactions
+        WHERE message_id = ANY($1)
+        GROUP BY message_id, emoji
+      `, [messageIds])
+
+      reactionsResult.rows.forEach(r => {
+        if (!reactionsMap[r.message_id]) {
+          reactionsMap[r.message_id] = []
+        }
+        reactionsMap[r.message_id].push({
+          emoji: r.emoji,
+          count: parseInt(r.count),
+          userIds: r.user_ids
+        })
+      })
+    }
+
     // Formatar mensagens (traduz sob demanda apenas se idioma diferente do salvo)
     const messages = await Promise.all(result.rows.map(async (msg) => {
       let texto
@@ -841,7 +865,8 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         enviadoEm: msg.enviado_em,
         lido: msg.lido,
         editado: msg.editado || false,
-        euEnviei: msg.sender_id === req.userId
+        euEnviei: msg.sender_id === req.userId,
+        reactions: reactionsMap[msg.id] || []
       }
     }))
 
@@ -1008,6 +1033,135 @@ app.delete('/api/chat/:connectionId/messages', authMiddleware, async (req, res) 
   } catch (error) {
     console.error('[Chat] Erro ao limpar:', error.message)
     res.status(500).json({ error: 'Erro ao limpar mensagens' })
+  }
+})
+
+// ==================== REAÇÕES EM MENSAGENS ====================
+
+// Adicionar reação a uma mensagem
+app.post('/api/chat/message/:messageId/reaction', authMiddleware, async (req, res) => {
+  const { emoji } = req.body
+  const { messageId } = req.params
+
+  if (!emoji) {
+    return res.status(400).json({ error: 'Emoji obrigatório' })
+  }
+
+  try {
+    // Verificar se a mensagem existe e o usuário tem acesso
+    const msgCheck = await pool.query(`
+      SELECT m.id, m.connection_id, c.user_a_id, c.user_b_id
+      FROM messages m
+      JOIN connections c ON m.connection_id = c.id
+      WHERE m.id = $1 AND (c.user_a_id = $2 OR c.user_b_id = $2)
+    `, [messageId, req.userId])
+
+    if (msgCheck.rowCount === 0) {
+      return res.status(404).json({ error: 'Mensagem não encontrada' })
+    }
+
+    // Inserir ou atualizar reação
+    const result = await pool.query(`
+      INSERT INTO message_reactions (message_id, user_id, emoji)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+      RETURNING *
+    `, [messageId, req.userId, emoji])
+
+    // Buscar todas as reações da mensagem
+    const reactions = await pool.query(`
+      SELECT emoji, COUNT(*) as count,
+             array_agg(user_id) as user_ids
+      FROM message_reactions
+      WHERE message_id = $1
+      GROUP BY emoji
+    `, [messageId])
+
+    // Emitir via Socket.io para o outro usuário
+    const msg = msgCheck.rows[0]
+    const outroUserId = msg.user_a_id === req.userId ? msg.user_b_id : msg.user_a_id
+    const outroSocketId = usuariosOnline.get(outroUserId)
+    if (outroSocketId) {
+      io.to(outroSocketId).emit('reacao-mensagem', {
+        messageId: parseInt(messageId),
+        connectionId: msg.connection_id,
+        reactions: reactions.rows,
+        userId: req.userId,
+        emoji
+      })
+    }
+
+    res.json({ reactions: reactions.rows })
+  } catch (error) {
+    console.error('[Reactions] Erro ao adicionar:', error.message)
+    res.status(500).json({ error: 'Erro ao adicionar reação' })
+  }
+})
+
+// Remover reação de uma mensagem
+app.delete('/api/chat/message/:messageId/reaction', authMiddleware, async (req, res) => {
+  const { emoji } = req.body
+  const { messageId } = req.params
+
+  try {
+    // Buscar info da mensagem antes de deletar
+    const msgCheck = await pool.query(`
+      SELECT m.id, m.connection_id, c.user_a_id, c.user_b_id
+      FROM messages m
+      JOIN connections c ON m.connection_id = c.id
+      WHERE m.id = $1 AND (c.user_a_id = $2 OR c.user_b_id = $2)
+    `, [messageId, req.userId])
+
+    await pool.query(`
+      DELETE FROM message_reactions
+      WHERE message_id = $1 AND user_id = $2 AND emoji = $3
+    `, [messageId, req.userId, emoji])
+
+    // Buscar reações atualizadas
+    const reactions = await pool.query(`
+      SELECT emoji, COUNT(*) as count,
+             array_agg(user_id) as user_ids
+      FROM message_reactions
+      WHERE message_id = $1
+      GROUP BY emoji
+    `, [messageId])
+
+    // Emitir via Socket.io para o outro usuário
+    if (msgCheck.rowCount > 0) {
+      const msg = msgCheck.rows[0]
+      const outroUserId = msg.user_a_id === req.userId ? msg.user_b_id : msg.user_a_id
+      const outroSocketId = usuariosOnline.get(outroUserId)
+      if (outroSocketId) {
+        io.to(outroSocketId).emit('reacao-mensagem', {
+          messageId: parseInt(messageId),
+          connectionId: msg.connection_id,
+          reactions: reactions.rows
+        })
+      }
+    }
+
+    res.json({ reactions: reactions.rows })
+  } catch (error) {
+    console.error('[Reactions] Erro ao remover:', error.message)
+    res.status(500).json({ error: 'Erro ao remover reação' })
+  }
+})
+
+// Buscar reações de uma mensagem
+app.get('/api/chat/message/:messageId/reactions', authMiddleware, async (req, res) => {
+  try {
+    const reactions = await pool.query(`
+      SELECT emoji, COUNT(*) as count,
+             array_agg(user_id) as user_ids
+      FROM message_reactions
+      WHERE message_id = $1
+      GROUP BY emoji
+    `, [req.params.messageId])
+
+    res.json({ reactions: reactions.rows })
+  } catch (error) {
+    console.error('[Reactions] Erro ao buscar:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar reações' })
   }
 })
 
