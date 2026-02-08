@@ -898,6 +898,12 @@
                 <span class="name">{{ conn.nome }}</span>
                 <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ getPaisLabel(conn.pais, conn.idioma) }}</span>
               </div>
+              <span
+                v-if="unreadCounts[conn.connectionId]"
+                class="unread-badge"
+              >
+                {{ unreadCounts[conn.connectionId] > 99 ? '99+' : unreadCounts[conn.connectionId] }}
+              </span>
               <button
                 class="btn-mute-connection"
                 :class="{ muted: isConnectionMuted(conn.connectionId) }"
@@ -1595,6 +1601,9 @@ let typingTimeout = null // Timer para resetar o indicador
 // Configurações de notificação
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
 const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
+
+// Contador de mensagens não lidas por conexão { connectionId: count }
+const unreadCounts = ref(JSON.parse(localStorage.getItem('poly_unread_counts') || '{}'))
 
 // Gravação de áudio
 const isRecording = ref(false)
@@ -3829,6 +3838,14 @@ async function selectConnection(conn) {
   idiomaRecepcao.value = null // Reset para idioma padrão ao mudar de conversa
   isOtherTyping.value = false // Reset indicador de digitação
   sidebarOpen.value = false
+
+  // Zerar contador de não lidas para esta conexão
+  const connId = conn.connectionId.toString()
+  if (unreadCounts.value[connId]) {
+    delete unreadCounts.value[connId]
+    localStorage.setItem('poly_unread_counts', JSON.stringify(unreadCounts.value))
+  }
+
   await loadMessages()
 
   // Carregar arquivos pendentes do IndexedDB
@@ -3916,6 +3933,14 @@ async function handleNewMessage(msg) {
     const estaMudo = notificacaoGlobalMudo.value || isConnectionMuted(msg.connectionId)
     if (!estaMudo) {
       playBubblePop()
+    }
+
+    // Incrementar contador de não lidas se não está no chat ativo
+    const isActiveChat = selectedConnection.value?.connectionId === msg.connectionId
+    if (!isActiveChat) {
+      const connId = msg.connectionId.toString()
+      unreadCounts.value[connId] = (unreadCounts.value[connId] || 0) + 1
+      localStorage.setItem('poly_unread_counts', JSON.stringify(unreadCounts.value))
     }
   }
 
@@ -5783,6 +5808,35 @@ body {
 .btn-mute-connection.muted {
   opacity: 1;
   background: #333;
+}
+
+/* Badge de mensagens não lidas */
+.unread-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 4px;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 2px 12px rgba(236, 72, 153, 0.6);
+  }
 }
 
 .status-btn {
