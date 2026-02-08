@@ -1,3 +1,4 @@
+console.log('[Server] Iniciando imports...')
 const express = require('express')
 const cors = require('cors')
 const http = require('http')
@@ -7,9 +8,19 @@ const jwt = require('jsonwebtoken')
 const webpush = require('web-push')
 const crypto = require('crypto')
 const nodemailer = require('nodemailer')
-const FormData = require('form-data')
-const nodeFetch = require('node-fetch')
+
+// Imports para transcrição de áudio
+let FormData, nodeFetch
+try {
+  FormData = require('form-data')
+  nodeFetch = require('node-fetch')
+  console.log('[Server] form-data e node-fetch carregados')
+} catch (e) {
+  console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
+}
+
 const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
+console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
 
@@ -1707,6 +1718,10 @@ app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
 
   if (!GROQ_API_KEY) {
     return res.status(503).json({ error: 'Serviço de transcrição não configurado' })
+  }
+
+  if (!FormData || !nodeFetch) {
+    return res.status(503).json({ error: 'Dependências de transcrição não disponíveis' })
   }
 
   try {
