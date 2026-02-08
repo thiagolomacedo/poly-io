@@ -7801,6 +7801,26 @@ body {
     overflow-x: hidden;
   }
 
+  /* Área de mensagens da SALA no mobile */
+  .room-wrapper {
+    padding-top: 70px; /* Compensar header fixo */
+  }
+
+  .messages-area {
+    margin-bottom: 100px; /* Compensar input fixo */
+    padding-bottom: 20px;
+  }
+
+  /* Input da sala fixo no rodapé */
+  .room-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding: 12px;
+  }
+
   /* Input fixo no rodapé */
   .message-input {
     position: fixed;
