@@ -452,6 +452,72 @@
         </div>
       </div>
 
+      <!-- Modal: Encaminhar Mensagem -->
+      <div v-if="showForwardModal" class="modal-overlay" @click="showForwardModal = false">
+        <div class="modal-content forward-modal" @click.stop>
+          <div class="forward-header">
+            <button class="btn-close-forward" @click="showForwardModal = false">✕</button>
+            <h3>Encaminhar mensagem para</h3>
+          </div>
+
+          <div class="forward-search">
+            <input
+              v-model="forwardSearch"
+              type="text"
+              placeholder="🔍 Pesquisar contato..."
+              class="forward-search-input"
+            />
+          </div>
+
+          <div class="forward-preview">
+            <div class="forward-preview-label">Mensagem:</div>
+            <div class="forward-preview-text">{{ forwardingMessage?.textoOriginal || forwardingMessage?.texto }}</div>
+          </div>
+
+          <div class="forward-contacts-list">
+            <label
+              v-for="contact in filteredForwardContacts"
+              :key="contact.id"
+              class="forward-contact-item"
+              :class="{ selected: selectedForwardContacts.includes(contact.connectionId) }"
+            >
+              <input
+                type="checkbox"
+                :value="contact.connectionId"
+                v-model="selectedForwardContacts"
+                class="forward-checkbox"
+              />
+              <img
+                v-if="contact.email"
+                :src="getGravatarUrl(contact.email, 40)"
+                class="forward-avatar"
+              />
+              <span v-else class="forward-avatar-letter">{{ contact.nome?.charAt(0).toUpperCase() }}</span>
+              <div class="forward-contact-info">
+                <span class="forward-contact-name">{{ contact.nome }}</span>
+                <span class="forward-contact-lang">{{ getIdiomaLabel(contact.idioma) }}</span>
+              </div>
+            </label>
+            <p v-if="filteredForwardContacts.length === 0" class="no-contacts">
+              Nenhum contato encontrado
+            </p>
+          </div>
+
+          <div class="forward-footer">
+            <span class="forward-selected-count">
+              {{ selectedForwardContacts.length }} selecionado{{ selectedForwardContacts.length !== 1 ? 's' : '' }}
+            </span>
+            <button
+              class="btn-forward-send"
+              :disabled="selectedForwardContacts.length === 0"
+              @click="forwardMessage"
+            >
+              Enviar ➤
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal: Chamada Recebida -->
       <div v-if="incomingCall" class="call-modal-overlay">
         <div class="call-modal">
@@ -1103,11 +1169,17 @@
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
                     ✏️ Editar
                   </button>
+                  <button class="btn-forward-msg" @click.stop="openForwardModal(msg)">
+                    ↪️ Encaminhar
+                  </button>
                 </div>
                 <!-- Menu de reações para mensagens recebidas -->
                 <div v-if="!msg.euEnviei && msg.showMenu" class="message-actions reaction-actions">
                   <button class="btn-react-msg" @click.stop="openEmojiPicker(msg)">
                     😊 Reagir
+                  </button>
+                  <button class="btn-forward-msg" @click.stop="openForwardModal(msg)">
+                    ↪️ Encaminhar
                   </button>
                 </div>
                 <!-- Modo edição -->
@@ -1439,6 +1511,13 @@ const showParticipantsModal = ref(false) // Modal de participantes (mobile)
 const colorPickerMode = ref('message')  // 'message' ou 'name'
 const currentTime = ref(Date.now())     // Timer para contagem regressiva
 const roomSoundMuted = ref(false)       // Som da sala silenciado
+
+// Encaminhar mensagem
+const showForwardModal = ref(false)
+const forwardingMessage = ref(null)
+const forwardSearch = ref('')
+const selectedForwardContacts = ref([])
+
 const createRoomForm = reactive({
   name: '',
   description: '',
@@ -1459,6 +1538,26 @@ const filteredEmojis = computed(() => {
   // Busca - mostrar de todas categorias
   const allEmojis = Object.values(emojiData).flat()
   return [...new Set(allEmojis)].slice(0, 100)
+})
+
+// Contatos filtrados para encaminhamento
+const filteredForwardContacts = computed(() => {
+  // Filtrar apenas conexões aceitas (excluindo io e o contato atual)
+  let contactsList = connections.value.filter(c =>
+    c.status === 'accepted' &&
+    c.id !== 1 && // Excluir io
+    c.connectionId !== selectedConnection.value?.connectionId // Excluir contato atual
+  )
+
+  // Aplicar busca
+  if (forwardSearch.value) {
+    const search = forwardSearch.value.toLowerCase()
+    contactsList = contactsList.filter(c =>
+      c.nome?.toLowerCase().includes(search)
+    )
+  }
+
+  return contactsList
 })
 
 function getCurrentCategoryLabel() {
@@ -3238,6 +3337,52 @@ function toggleMessageMenu(msg) {
   })
   // Toggle menu desta mensagem
   msg.showMenu = !msg.showMenu
+}
+
+// ==================== ENCAMINHAR MENSAGEM ====================
+
+function openForwardModal(msg) {
+  forwardingMessage.value = msg
+  forwardSearch.value = ''
+  selectedForwardContacts.value = []
+  showForwardModal.value = true
+  msg.showMenu = false
+}
+
+async function forwardMessage() {
+  if (!forwardingMessage.value || selectedForwardContacts.value.length === 0) return
+
+  const textoOriginal = forwardingMessage.value.textoOriginal || forwardingMessage.value.texto
+
+  try {
+    // Enviar para cada contato selecionado
+    for (const connectionId of selectedForwardContacts.value) {
+      await fetch(`${API_URL}/chat/forward`, {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          connectionId,
+          texto: textoOriginal
+        })
+      })
+    }
+
+    // Feedback visual
+    const count = selectedForwardContacts.value.length
+
+    // Fechar modal e limpar
+    showForwardModal.value = false
+    forwardingMessage.value = null
+    selectedForwardContacts.value = []
+
+    alert(`Mensagem encaminhada para ${count} contato(s)!`)
+  } catch (error) {
+    console.error('Erro ao encaminhar mensagem:', error)
+    alert('Erro ao encaminhar mensagem')
+  }
 }
 
 // ==================== REAÇÕES EM MENSAGENS ====================
@@ -7252,6 +7397,207 @@ body {
   background: #6366f1;
   color: #fff;
   border-color: #6366f1;
+}
+
+/* Modal Encaminhar Mensagem */
+.forward-modal {
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.forward-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.forward-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.btn-close-forward {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.btn-close-forward:hover {
+  color: #fff;
+}
+
+.forward-search {
+  padding: 12px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.forward-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0d1b2a;
+  border: 1px solid #333;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.forward-search-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.forward-preview {
+  padding: 12px 20px;
+  background: #0d1b2a;
+  border-bottom: 1px solid #333;
+}
+
+.forward-preview-label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.forward-preview-text {
+  font-size: 13px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.forward-contacts-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  max-height: 300px;
+}
+
+.forward-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.forward-contact-item:hover {
+  background: #1a2a3a;
+}
+
+.forward-contact-item.selected {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.forward-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: #6366f1;
+}
+
+.forward-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.forward-avatar-letter {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+}
+
+.forward-contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.forward-contact-name {
+  font-size: 14px;
+  color: #fff;
+}
+
+.forward-contact-lang {
+  font-size: 11px;
+  color: #888;
+}
+
+.no-contacts {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  font-size: 14px;
+}
+
+.forward-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid #333;
+  background: #16213e;
+}
+
+.forward-selected-count {
+  font-size: 13px;
+  color: #888;
+}
+
+.btn-forward-send {
+  padding: 10px 24px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-forward-send:hover:not(:disabled) {
+  background: #5558e3;
+}
+
+.btn-forward-send:disabled {
+  background: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Botão encaminhar no menu de ações */
+.btn-forward-msg {
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btn-forward-msg:hover {
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .visibility-hint {

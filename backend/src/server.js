@@ -1754,6 +1754,78 @@ app.delete('/api/chat/:connectionId/messages', authMiddleware, async (req, res) 
   }
 })
 
+// Encaminhar mensagem
+app.post('/api/chat/forward', authMiddleware, async (req, res) => {
+  const { connectionId, texto } = req.body
+
+  if (!connectionId || !texto) {
+    return res.status(400).json({ error: 'connectionId e texto são obrigatórios' })
+  }
+
+  try {
+    // Verificar se a conexão existe e está aceita
+    const connResult = await pool.query(`
+      SELECT c.*, u1.idioma as idioma_a, u2.idioma as idioma_b
+      FROM connections c
+      JOIN users u1 ON c.user_a_id = u1.id
+      JOIN users u2 ON c.user_b_id = u2.id
+      WHERE c.id = $1 AND c.status = 'accepted'
+        AND (c.user_a_id = $2 OR c.user_b_id = $2)
+    `, [connectionId, req.userId])
+
+    if (connResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Conexão não encontrada' })
+    }
+
+    const conn = connResult.rows[0]
+    const recipientId = conn.user_a_id === req.userId ? conn.user_b_id : conn.user_a_id
+    const recipientIdioma = conn.user_a_id === req.userId ? conn.idioma_b : conn.idioma_a
+    const senderIdioma = conn.user_a_id === req.userId ? conn.idioma_a : conn.idioma_b
+
+    // Detectar idioma e traduzir
+    const detectedLang = detectLanguage(texto) || senderIdioma
+    let textoTraduzido = texto
+
+    if (detectedLang !== recipientIdioma) {
+      textoTraduzido = await translateText(texto, detectedLang, recipientIdioma)
+    }
+
+    // Salvar mensagem encaminhada (prefixo ↪️ indica encaminhamento)
+    const msgResult = await pool.query(`
+      INSERT INTO messages (connection_id, sender_id, texto_original, texto_traduzido, idioma_detectado)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [connectionId, req.userId, `↪️ ${texto}`, `↪️ ${textoTraduzido}`, detectedLang])
+
+    const newMessage = msgResult.rows[0]
+
+    // Buscar nome do remetente
+    const senderResult = await pool.query('SELECT nome FROM users WHERE id = $1', [req.userId])
+    const senderNome = senderResult.rows[0]?.nome
+
+    // Emitir via socket para o destinatário
+    const recipientSocketId = onlineUsers.get(recipientId)
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('nova-mensagem', {
+        id: newMessage.id,
+        connectionId: connectionId,
+        senderId: req.userId,
+        senderNome: senderNome,
+        texto: `↪️ ${textoTraduzido}`,
+        textoOriginal: `↪️ ${texto}`,
+        textoTraduzido: `↪️ ${textoTraduzido}`,
+        enviadoEm: newMessage.enviado_em,
+        euEnviei: false
+      })
+    }
+
+    res.json({ success: true, messageId: newMessage.id })
+  } catch (error) {
+    console.error('[Chat] Erro ao encaminhar:', error.message)
+    res.status(500).json({ error: 'Erro ao encaminhar mensagem' })
+  }
+})
+
 // ==================== REAÇÕES EM MENSAGENS ====================
 
 // Adicionar reação a uma mensagem
