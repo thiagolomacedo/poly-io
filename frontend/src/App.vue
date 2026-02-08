@@ -4956,11 +4956,12 @@ async function transcreverAudio(msg) {
       })
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      throw new Error('Falha na transcrição')
+      throw new Error(data.details || data.error || 'Falha na transcrição')
     }
 
-    const data = await response.json()
     msg.transcricao = data.transcricao
     msg.traducaoAudio = data.traducao
     msg.showOriginalAudio = false
@@ -4969,7 +4970,7 @@ async function transcreverAudio(msg) {
 
   } catch (error) {
     console.error('[Transcrição] Erro:', error)
-    alert('Não foi possível transcrever o áudio. Tente novamente.')
+    alert('Erro na transcrição: ' + error.message)
   } finally {
     msg.transcrevendo = false
   }

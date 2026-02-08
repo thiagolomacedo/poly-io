@@ -1768,8 +1768,11 @@ app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('[Transcrição] Erro:', error.message)
-    res.status(500).json({ error: 'Erro ao transcrever áudio' })
+    console.error('[Transcrição] Erro:', error.message, error.stack)
+    res.status(500).json({
+      error: 'Erro ao transcrever áudio',
+      details: error.message
+    })
   }
 })
 
