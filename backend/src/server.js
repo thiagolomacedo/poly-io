@@ -1383,7 +1383,14 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
         CASE
           WHEN c.user_a_id = $1 THEN u2.avatar_config
           ELSE u1.avatar_config
-        END as avatar_config
+        END as avatar_config,
+        (
+          SELECT COUNT(*)
+          FROM messages m
+          WHERE m.connection_id = c.id
+            AND m.sender_id != $1
+            AND m.lido = false
+        ) as unread_count
       FROM connections c
       JOIN users u1 ON c.user_a_id = u1.id
       JOIN users u2 ON c.user_b_id = u2.id

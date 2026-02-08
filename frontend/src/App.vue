@@ -3705,6 +3705,18 @@ async function loadConnections() {
       status: onlineUsers[c.user_id] || 'offline'
     }))
 
+    // Atualizar contadores de não lidos do banco de dados
+    data.forEach(c => {
+      const connId = c.connection_id.toString()
+      const dbCount = parseInt(c.unread_count) || 0
+      if (dbCount > 0) {
+        // Usar o maior valor entre localStorage e banco
+        const localCount = unreadCounts.value[connId] || 0
+        unreadCounts.value[connId] = Math.max(dbCount, localCount)
+      }
+    })
+    localStorage.setItem('poly_unread_counts', JSON.stringify(unreadCounts.value))
+
     // Verificar se há chat para abrir (vindo de push notification)
     const openChatId = localStorage.getItem('poly_open_chat')
     if (openChatId) {
