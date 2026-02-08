@@ -1291,7 +1291,7 @@ app.get('/api/users', authMiddleware, async (req, res) => {
 app.get('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, avatar_config, criado_em FROM users WHERE id = $1',
       [req.params.id]
     )
 
