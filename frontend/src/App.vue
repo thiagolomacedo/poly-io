@@ -1974,10 +1974,14 @@ const defaultAvatar = {
 }
 const myAvatar = ref(savedAvatar ? { ...defaultAvatar, ...JSON.parse(savedAvatar) } : defaultAvatar)
 
-// URL do avatar do usuário atual (Kawaii ou Gravatar baseado na preferência)
+// URL do avatar do usuário atual (baseado no avatar_config do banco)
 const myAvatarUrl = computed(() => {
-  const savedType = localStorage.getItem('poly_avatar_type')
-  if (savedType === 'gravatar' && currentUser.value?.email) {
+  // Se currentUser tem avatar_config no banco, usa Kawaii
+  // Se não tem (null), usa Gravatar
+  if (currentUser.value?.avatar_config) {
+    return generateAvatarSvg(currentUser.value.avatar_config, 80)
+  }
+  if (currentUser.value?.email) {
     return getGravatarUrl(currentUser.value.email, 80)
   }
   return generateAvatarSvg(myAvatar.value, 80)
@@ -2294,16 +2298,15 @@ function generateAvatarSvg(config, size = 80) {
 
 // Abre o modal de edição de avatar
 function openAvatarEditor() {
-  editingAvatar.value = { ...myAvatar.value }
-  avatarEditorTab.value = 'expression'
-  // Detectar tipo atual: se tem avatar_config salvo no banco, é Kawaii
-  const savedType = localStorage.getItem('poly_avatar_type')
-  if (savedType) {
-    avatarType.value = savedType
+  // Carregar do banco se tiver, senão do local
+  if (currentUser.value?.avatar_config) {
+    editingAvatar.value = { ...defaultAvatar, ...currentUser.value.avatar_config }
   } else {
-    // Se currentUser tem avatar_config, é Kawaii, senão Gravatar
-    avatarType.value = currentUser.value?.avatar_config ? 'kawaii' : 'gravatar'
+    editingAvatar.value = { ...myAvatar.value }
   }
+  avatarEditorTab.value = 'expression'
+  // Detectar tipo atual baseado no banco (avatar_config existe = Kawaii)
+  avatarType.value = currentUser.value?.avatar_config ? 'kawaii' : 'gravatar'
   showAvatarModal.value = true
 }
 
@@ -2317,7 +2320,6 @@ async function saveAvatar() {
       if (avatarType.value === 'kawaii') {
         // Salvar Kawaii
         myAvatar.value = { ...editingAvatar.value }
-        localStorage.setItem('poly_avatar_type', 'kawaii')
         await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
           method: 'PUT',
           headers: {
@@ -2326,9 +2328,10 @@ async function saveAvatar() {
           },
           body: JSON.stringify({ avatarConfig: myAvatar.value })
         })
+        // Atualizar currentUser para refletir a mudança
+        currentUser.value.avatar_config = myAvatar.value
       } else {
         // Usar Gravatar - limpar avatar_config
-        localStorage.setItem('poly_avatar_type', 'gravatar')
         await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
           method: 'PUT',
           headers: {
@@ -2338,9 +2341,7 @@ async function saveAvatar() {
           body: JSON.stringify({ avatarConfig: null })
         })
         // Atualizar currentUser para refletir a mudança
-        if (currentUser.value) {
-          currentUser.value.avatar_config = null
-        }
+        currentUser.value.avatar_config = null
       }
     } catch (error) {
       console.error('Erro ao salvar avatar no servidor:', error)
