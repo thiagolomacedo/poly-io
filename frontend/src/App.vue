@@ -222,8 +222,8 @@
 
           <div class="profile-avatar-large">
             <img
-              v-if="profileUser?.email"
-              :src="getGravatarUrl(profileUser.email, 150)"
+              v-if="profileUser?.email || profileUser?.avatar_config || profileUser?.id === 1"
+              :src="getUserAvatarUrl(profileUser, 150)"
               :alt="profileUser.nome"
               @error="$event.target.style.display='none'"
             />
