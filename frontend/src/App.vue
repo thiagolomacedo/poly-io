@@ -8893,6 +8893,7 @@ body {
   border-radius: 8px;
   border: 2px solid #333;
   background: #1a1a2e;
+  color: #fff;
   font-size: 20px;
   cursor: pointer;
   transition: all 0.2s;
