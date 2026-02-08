@@ -278,10 +278,18 @@ FORMATO: [IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
    Sinônimos: "pode mandar mensagem", "pode me mandar", "quero que você mande", "manda mensagem quando quiser", "pode aparecer", "pode falar comigo", "volta a mandar", "quero suas mensagens", "senti sua falta", "pode me escrever"
    → Responda: [IO_ACTION:{"tipo":"optin","valor":"true"}]Resposta animada dizendo que vai aparecer de vez em quando
 
-5. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
+5. LEMBRETE - Quando o usuário pedir para você lembrar algo em uma data/hora específica:
+   Sinônimos: "me lembra", "me lembre", "lembra de me avisar", "me avisa", "não deixa eu esquecer", "me notifica", "agenda pra mim", "cria um lembrete"
+   → Extraia: data, hora e o que lembrar
+   → Formato da data: DD/MM/AAAA HH:MM (use ano atual se não especificado, horário padrão 09:00 se não informado)
+   → Responda: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"o que lembrar"}]Confirme o lembrete de forma carinhosa
+   Exemplo: "me lembra dia 09 de fevereiro às 18h que tenho reunião importante"
+   → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 18:00","texto":"reunião importante"}]Pode deixar! Vou te lembrar no dia 09/02 às 18h sobre a reunião importante! 📝
+
+7. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
    → Pergunte naturalmente: "A propósito, como você gostaria que eu te chamasse?"
 
-6. PERGUNTAR ANIVERSÁRIO - Se a conversa estiver fluindo e você não sabe o aniversário:
+8. PERGUNTAR ANIVERSÁRIO - Se a conversa estiver fluindo e você não sabe o aniversário:
    → Pergunte naturalmente: "Ei, quando é seu aniversário? Adoro lembrar de datas especiais!"
 
 IMPORTANTE:
@@ -428,6 +436,34 @@ async function processarAcaoIo(userId, acao) {
           [userId]
         )
         console.log(`[io IA] Opt-in: usuário ${userId} quer mensagens proativas`)
+        break
+
+      case 'lembrete':
+        // Converter DD/MM/AAAA HH:MM para timestamp
+        try {
+          const [dataParte, horaParte] = acao.data.split(' ')
+          const [dia, mes, ano] = dataParte.split('/')
+          const [hora, minuto] = (horaParte || '09:00').split(':')
+          const dataLembrete = new Date(
+            parseInt(ano) || new Date().getFullYear(),
+            parseInt(mes) - 1,
+            parseInt(dia),
+            parseInt(hora) || 9,
+            parseInt(minuto) || 0
+          )
+
+          if (dataLembrete > new Date()) {
+            await pool.query(
+              'INSERT INTO io_reminders (user_id, texto, remind_at) VALUES ($1, $2, $3)',
+              [userId, acao.texto, dataLembrete]
+            )
+            console.log(`[io IA] Lembrete criado para ${dataLembrete.toLocaleString('pt-BR')}: "${acao.texto}" (user ${userId})`)
+          } else {
+            console.log(`[io IA] Lembrete ignorado - data no passado: ${dataLembrete}`)
+          }
+        } catch (e) {
+          console.error('[io IA] Erro ao criar lembrete:', e)
+        }
         break
     }
   } catch (error) {
@@ -3727,6 +3763,53 @@ async function verificarMensagensProativasIo() {
   await enviarMensagensProativasAleatorias()
 }
 
+// Verificar e enviar lembretes pendentes
+async function verificarLembretesIo() {
+  if (!IO_USER_ID) return
+
+  try {
+    // Buscar lembretes que já passaram da hora e ainda não foram enviados
+    const result = await pool.query(`
+      SELECT r.id, r.user_id, r.texto, r.remind_at, u.nome, u.io_apelido
+      FROM io_reminders r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.remind_at <= NOW() AND r.sent = FALSE
+    `)
+
+    for (const lembrete of result.rows) {
+      const apelido = lembrete.io_apelido || lembrete.nome
+
+      // Buscar conexão entre io e o usuário
+      const connResult = await pool.query(`
+        SELECT id FROM connections
+        WHERE ((user_a_id = $1 AND user_b_id = $2) OR (user_a_id = $2 AND user_b_id = $1))
+        AND status = 'aceita'
+      `, [IO_USER_ID, lembrete.user_id])
+
+      if (connResult.rows.length > 0) {
+        const connectionId = connResult.rows[0].id
+
+        // Mensagem de lembrete
+        const mensagem = `Oi ${apelido}! 🔔 Lembrete: ${lembrete.texto}`
+
+        // Enviar mensagem como io
+        await enviarMensagemProativaIo(lembrete.user_id, mensagem)
+
+        console.log(`[io Lembrete] Enviado para ${apelido}: "${lembrete.texto}"`)
+      }
+
+      // Marcar como enviado
+      await pool.query('UPDATE io_reminders SET sent = TRUE WHERE id = $1', [lembrete.id])
+    }
+
+    if (result.rows.length > 0) {
+      console.log(`[io Lembrete] ${result.rows.length} lembrete(s) enviado(s)`)
+    }
+  } catch (error) {
+    console.error('[io Lembrete] Erro ao verificar lembretes:', error)
+  }
+}
+
 async function startServer() {
   try {
     // Inicializar banco de dados
@@ -3759,6 +3842,10 @@ async function startServer() {
       // Verificar aniversariantes ao iniciar (com delay de 1 minuto)
       setTimeout(verificarAniversariantesIo, 60 * 1000)
       console.log('[io Proativo] Sistema de mensagens proativas ativado')
+
+      // io: Verificar lembretes a cada minuto
+      setInterval(verificarLembretesIo, 60 * 1000)
+      console.log('[io Lembrete] Sistema de lembretes ativado')
     }
 
     // Iniciar servidor

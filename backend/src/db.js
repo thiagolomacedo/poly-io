@@ -176,6 +176,23 @@ async function initDatabase() {
     `)
     console.log('[DB] Tabela password_resets OK')
 
+    // Tabela de lembretes da io
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS io_reminders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        texto VARCHAR(500) NOT NULL,
+        remind_at TIMESTAMP NOT NULL,
+        sent BOOLEAN DEFAULT FALSE,
+        criado_em TIMESTAMP DEFAULT NOW()
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_io_reminders_remind_at ON io_reminders(remind_at);
+      CREATE INDEX IF NOT EXISTS idx_io_reminders_sent ON io_reminders(sent);
+    `)
+    console.log('[DB] Tabela io_reminders OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
