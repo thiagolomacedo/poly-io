@@ -1814,7 +1814,7 @@ function getUserAvatarUrl(user, size = 80) {
   // io tem avatar personalizado
   // io é identificada pelo nome (id é dinâmico)
   if (user?.nome === 'io') {
-    return '/io-avatar.jpg'
+    return '/io-avatar.png'
   }
   // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
   if (user?.avatar_config) {
