@@ -222,7 +222,7 @@
 
           <div class="profile-avatar-large">
             <img
-              v-if="profileUser?.email || profileUser?.avatar_config || profileUser?.id === 1"
+              v-if="profileUser?.email || profileUser?.avatar_config || profileUser?.nome === 'io'"
               :src="getUserAvatarUrl(profileUser, 150)"
               :alt="profileUser.nome"
               @error="$event.target.style.display='none'"
@@ -833,7 +833,7 @@
               @click="selectConnection(conn)"
             >
               <div class="user-avatar" :class="[conn.status || 'offline']">
-                <img v-if="conn.avatar_config || conn.email || conn.id === 1" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
+                <img v-if="conn.avatar_config || conn.email || conn.nome === 'io'" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
                 <span v-else>{{ conn.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="user-info">
@@ -1216,7 +1216,7 @@
             <div class="chat-user" @click="openProfile(selectedConnection)" style="cursor: pointer;">
               <div class="user-avatar" :class="[selectedConnection.status || 'offline']">
                 <img
-                  v-if="selectedConnection.avatar_config || selectedConnection.email || selectedConnection.id === 1"
+                  v-if="selectedConnection.avatar_config || selectedConnection.email || selectedConnection.nome === 'io'"
                   :src="getUserAvatarUrl(selectedConnection, 80)"
                   class="gravatar-img"
                   @error="$event.target.style.display='none'"
@@ -1812,8 +1812,8 @@ function getGravatarUrl(email, size = 100) {
 // Obter avatar do usuário (Kawaii se salvou, senão Gravatar)
 function getUserAvatarUrl(user, size = 80) {
   // io tem avatar personalizado
-  // io tem id fixo = 1
-  if (user?.id === 1) {
+  // io é identificada pelo nome (id é dinâmico)
+  if (user?.nome === 'io') {
     return '/io-avatar.jpg'
   }
   // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
