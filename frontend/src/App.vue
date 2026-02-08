@@ -7588,7 +7588,7 @@ body {
 .btn-forward-msg {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #fff;
   font-size: 12px;
   cursor: pointer;
   padding: 4px 8px;
@@ -7597,7 +7597,7 @@ body {
 }
 
 .btn-forward-msg:hover {
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .visibility-hint {
