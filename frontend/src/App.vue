@@ -1812,7 +1812,8 @@ function getGravatarUrl(email, size = 100) {
 // Obter avatar do usuário (Kawaii se salvou, senão Gravatar)
 function getUserAvatarUrl(user, size = 80) {
   // io tem avatar personalizado
-  if (user?.id === 1 || user?.nome === 'io') {
+  // io tem id fixo = 1
+  if (user?.id === 1) {
     return '/io-avatar.jpg'
   }
   // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
