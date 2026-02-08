@@ -1276,7 +1276,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { io } from 'socket.io-client'
-import { jsPDF } from 'jspdf'
+import html2pdf from 'html2pdf.js'
 
 // Configuração da API
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -3107,105 +3107,16 @@ async function handleNewMessage(msg) {
 }
 
 async function exportChat() {
-  console.log('exportChat chamado', { selectedConnection: selectedConnection.value, messages: messages.value?.length })
   if (!selectedConnection.value) return
 
   try {
-    // Criar PDF
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    })
-
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
-    const margin = 15
-    const contentWidth = pageWidth - (margin * 2)
-    let y = margin
-
-    // Cores Poly.io
-    const bgColor = [10, 10, 10]        // #0a0a0a
-    const primaryColor = [99, 102, 241] // #6366f1
-    const textColor = [255, 255, 255]   // branco
-    const mutedColor = [150, 150, 150]  // cinza
-
-    // Função para adicionar nova página
-    function addNewPage() {
-      pdf.addPage()
-      // Fundo escuro
-      pdf.setFillColor(...bgColor)
-      pdf.rect(0, 0, pageWidth, pageHeight, 'F')
-      y = margin
-    }
-
-    // Função para verificar espaço e adicionar página se necessário
-    function checkSpace(needed) {
-      if (y + needed > pageHeight - margin) {
-        addNewPage()
-        return true
-      }
-      return false
-    }
-
-    // Fundo escuro da primeira página
-    pdf.setFillColor(...bgColor)
-    pdf.rect(0, 0, pageWidth, pageHeight, 'F')
-
-    // ========== HEADER ==========
-    // Logo Poly.io
-    pdf.setFontSize(32)
-    pdf.setTextColor(...textColor)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('Poly', pageWidth / 2 - 12, y + 10)
-    pdf.setTextColor(...primaryColor)
-    pdf.text('.io', pageWidth / 2 + 12, y + 10)
-
-    y += 18
-
-    // Tagline
-    pdf.setFontSize(10)
-    pdf.setTextColor(...mutedColor)
-    pdf.setFont('helvetica', 'normal')
-    pdf.text('Chat profissional sem barreiras de idioma', pageWidth / 2, y, { align: 'center' })
-
-    y += 12
-
-    // Linha decorativa
-    pdf.setDrawColor(...primaryColor)
-    pdf.setLineWidth(0.5)
-    pdf.line(margin, y, pageWidth - margin, y)
-
-    y += 10
-
-    // Info da conversa
-    pdf.setFontSize(12)
-    pdf.setTextColor(...textColor)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text(`Conversa com ${selectedConnection.value.nome}`, pageWidth / 2, y, { align: 'center' })
-
-    y += 7
-
-    pdf.setFontSize(9)
-    pdf.setTextColor(...mutedColor)
-    pdf.setFont('helvetica', 'normal')
-    const dataExport = new Date().toLocaleString('pt-BR')
-    pdf.text(`Exportado em ${dataExport}`, pageWidth / 2, y, { align: 'center' })
-
-    y += 12
-
-    // Linha separadora
-    pdf.setDrawColor(50, 50, 50)
-    pdf.setLineWidth(0.2)
-    pdf.line(margin, y, pageWidth - margin, y)
-
-    y += 10
-
-    // ========== MENSAGENS ==========
     const meuNome = currentUser.value.nome
+    const outroNome = selectedConnection.value.nome
+    const dataExport = new Date().toLocaleString('pt-BR')
 
+    // Gerar HTML das mensagens
+    let messagesHtml = ''
     for (const msg of messages.value) {
-      // Pular mensagens de arquivo/áudio sem texto
       if (!msg.textoOriginal && !msg.texto_original) continue
 
       const texto = msg.textoOriginal || msg.texto_original || ''
@@ -3216,97 +3127,98 @@ async function exportChat() {
       })
       const data = new Date(msg.enviadoEm || msg.enviado_em).toLocaleDateString('pt-BR')
       const euEnviei = msg.senderId === currentUser.value.id || msg.sender_id === currentUser.value.id
-      const nomeRemetente = euEnviei ? meuNome : selectedConnection.value.nome
+      const nomeRemetente = euEnviei ? meuNome : outroNome
 
-      // Calcular altura necessária
-      pdf.setFontSize(9)
-      const textoLines = pdf.splitTextToSize(texto, contentWidth - 20)
-      let msgHeight = 18 + (textoLines.length * 4)
-
-      if (traducao && traducao !== texto) {
-        const traducaoLines = pdf.splitTextToSize(`Tradução: ${traducao}`, contentWidth - 25)
-        msgHeight += 4 + (traducaoLines.length * 3.5)
-      }
-
-      // Verificar espaço
-      checkSpace(msgHeight + 5)
-
-      // Balão da mensagem
-      const balloonX = euEnviei ? margin + 20 : margin
-      const balloonWidth = contentWidth - 20
-      const balloonColor = euEnviei ? [30, 30, 60] : [25, 25, 35]
-
-      pdf.setFillColor(...balloonColor)
-      pdf.roundedRect(balloonX, y, balloonWidth, msgHeight, 3, 3, 'F')
-
-      // Borda colorida para minhas mensagens
-      if (euEnviei) {
-        pdf.setDrawColor(...primaryColor)
-        pdf.setLineWidth(0.3)
-        pdf.line(balloonX + balloonWidth, y + 3, balloonX + balloonWidth, y + msgHeight - 3)
-      }
-
-      let textY = y + 6
-
-      // Nome e hora
-      pdf.setFontSize(8)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...(euEnviei ? primaryColor : [100, 200, 150]))
-      pdf.text(nomeRemetente, balloonX + 5, textY)
-
-      pdf.setFont('helvetica', 'normal')
-      pdf.setTextColor(...mutedColor)
-      pdf.text(`${data} ${hora}`, balloonX + balloonWidth - 5, textY, { align: 'right' })
-
-      textY += 6
-
-      // Texto original
-      pdf.setFontSize(9)
-      pdf.setTextColor(...textColor)
-      pdf.setFont('helvetica', 'normal')
-      for (const line of textoLines) {
-        pdf.text(line, balloonX + 5, textY)
-        textY += 4
-      }
-
-      // Tradução (se diferente)
-      if (traducao && traducao !== texto) {
-        textY += 2
-        pdf.setFontSize(8)
-        pdf.setTextColor(130, 130, 180)
-        pdf.setFont('helvetica', 'italic')
-        const traducaoLines = pdf.splitTextToSize(`Tradução: ${traducao}`, contentWidth - 25)
-        for (const line of traducaoLines) {
-          pdf.text(line, balloonX + 5, textY)
-          textY += 3.5
-        }
-      }
-
-      y += msgHeight + 5
+      messagesHtml += `
+        <div style="
+          background: ${euEnviei ? '#1e1e3c' : '#191923'};
+          border-radius: 8px;
+          padding: 12px 15px;
+          margin-bottom: 10px;
+          ${euEnviei ? 'margin-left: 30px; border-right: 3px solid #6366f1;' : 'margin-right: 30px;'}
+        ">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+            <span style="color: ${euEnviei ? '#6366f1' : '#64c896'}; font-weight: bold; font-size: 11px;">
+              ${nomeRemetente}
+            </span>
+            <span style="color: #888; font-size: 10px;">${data} ${hora}</span>
+          </div>
+          <div style="color: #fff; font-size: 13px; line-height: 1.5;">${texto}</div>
+          ${traducao && traducao !== texto ? `
+            <div style="color: #8282b4; font-size: 11px; font-style: italic; margin-top: 6px;">
+              Tradução: ${traducao}
+            </div>
+          ` : ''}
+        </div>
+      `
     }
 
-    // ========== FOOTER ==========
-    // Ir para a última página e adicionar footer
-    const totalPages = pdf.internal.getNumberOfPages()
-    for (let i = 1; i <= totalPages; i++) {
-      pdf.setPage(i)
+    // HTML completo do PDF
+    const htmlContent = `
+      <div id="pdf-content" style="
+        background: #0a0a0a;
+        color: #fff;
+        padding: 30px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100%;
+      ">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #6366f1;">
+          <div style="font-size: 36px; font-weight: bold; margin-bottom: 8px;">
+            <span style="color: #fff;">Poly</span><span style="color: #6366f1;">.io</span>
+          </div>
+          <div style="color: #888; font-size: 14px;">Chat profissional sem barreiras de idioma</div>
+        </div>
 
-      // Linha do footer
-      pdf.setDrawColor(50, 50, 50)
-      pdf.setLineWidth(0.2)
-      pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
+        <!-- Info da conversa -->
+        <div style="text-align: center; margin-bottom: 25px;">
+          <div style="font-size: 18px; font-weight: bold; color: #fff;">Conversa com ${outroNome}</div>
+          <div style="color: #888; font-size: 12px; margin-top: 5px;">Exportado em ${dataExport}</div>
+        </div>
 
-      // Texto do footer
-      pdf.setFontSize(8)
-      pdf.setTextColor(...mutedColor)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Poly.io - Chat profissional sem barreiras de idioma', pageWidth / 2, pageHeight - 10, { align: 'center' })
-      pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
+        <div style="border-top: 1px solid #333; margin-bottom: 20px;"></div>
+
+        <!-- Mensagens -->
+        ${messagesHtml}
+
+        <!-- Footer -->
+        <div style="border-top: 1px solid #333; margin-top: 30px; padding-top: 15px; text-align: center;">
+          <div style="color: #888; font-size: 11px;">Poly.io - Chat profissional sem barreiras de idioma</div>
+        </div>
+      </div>
+    `
+
+    // Criar elemento temporário
+    const container = document.createElement('div')
+    container.innerHTML = htmlContent
+    container.style.position = 'absolute'
+    container.style.left = '-9999px'
+    container.style.width = '210mm'
+    document.body.appendChild(container)
+
+    // Configurar html2pdf
+    const opt = {
+      margin: 0,
+      filename: `poly-io-${outroNome}-${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0a0a0a'
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: { mode: 'avoid-all' }
     }
 
-    // Salvar PDF
-    const nomeArquivo = `poly-io-${selectedConnection.value.nome}-${new Date().toISOString().slice(0, 10)}.pdf`
-    pdf.save(nomeArquivo)
+    // Gerar PDF
+    await html2pdf().set(opt).from(container.firstChild).save()
+
+    // Remover elemento temporário
+    document.body.removeChild(container)
 
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
