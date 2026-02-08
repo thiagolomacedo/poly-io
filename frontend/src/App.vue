@@ -3189,12 +3189,15 @@ async function exportChat() {
     `
 
     // Criar elemento temporário
-    const container = document.createElement('div')
-    container.innerHTML = htmlContent
-    container.style.position = 'absolute'
-    container.style.left = '-9999px'
-    container.style.width = '210mm'
-    document.body.appendChild(container)
+    const element = document.createElement('div')
+    element.innerHTML = htmlContent
+    element.style.position = 'absolute'
+    element.style.left = '-9999px'
+    element.style.width = '210mm'
+    document.body.appendChild(element)
+
+    // Pegar o div interno com o conteúdo
+    const pdfContent = element.querySelector('#pdf-content')
 
     // Configurar html2pdf
     const opt = {
@@ -3215,10 +3218,10 @@ async function exportChat() {
     }
 
     // Gerar PDF
-    await html2pdf().set(opt).from(container.firstChild).save()
+    await html2pdf().set(opt).from(pdfContent).save()
 
     // Remover elemento temporário
-    document.body.removeChild(container)
+    document.body.removeChild(element)
 
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
