@@ -531,6 +531,9 @@
             <button :class="{ active: avatarType === 'kawaii' }" @click="avatarType = 'kawaii'">
               ✨ Kawaii
             </button>
+            <button :class="{ active: avatarType === 'pixel' }" @click="avatarType = 'pixel'">
+              🎮 Pixel
+            </button>
             <button :class="{ active: avatarType === 'gravatar' }" @click="avatarType = 'gravatar'">
               📷 Gravatar
             </button>
@@ -542,6 +545,11 @@
               v-if="avatarType === 'kawaii' && editingAvatar"
               :src="generateAvatarSvg(editingAvatar, 140)"
               class="avatar-preview-large"
+            />
+            <img
+              v-else-if="avatarType === 'pixel'"
+              :src="generatePixelAvatarSvg(pixelGrid, 140)"
+              class="avatar-preview-large pixel-preview"
             />
             <img
               v-else-if="avatarType === 'gravatar' && currentUser?.email"
@@ -561,6 +569,56 @@
             <p>Sua foto vem do <a href="https://gravatar.com" target="_blank">Gravatar.com</a></p>
             <p class="gravatar-email">{{ currentUser?.email }}</p>
             <p class="gravatar-tip">Para mudar a foto, acesse gravatar.com</p>
+          </div>
+
+          <!-- Pixel Art: Editor -->
+          <div class="pixel-editor" v-if="avatarType === 'pixel'">
+            <!-- Ferramentas -->
+            <div class="pixel-tools">
+              <button :class="{ active: pixelTool === 'brush' }" @click="pixelTool = 'brush'" title="Pincel">🖌️</button>
+              <button :class="{ active: pixelTool === 'eraser' }" @click="pixelTool = 'eraser'" title="Borracha">🧹</button>
+              <button :class="{ active: pixelTool === 'fill' }" @click="pixelTool = 'fill'" title="Balde">🪣</button>
+              <button @click="clearPixelGrid" title="Limpar">🗑️</button>
+            </div>
+
+            <!-- Grid 16x16 -->
+            <div
+              class="pixel-grid"
+              @mousedown="startPixelDraw"
+              @mouseup="stopPixelDraw"
+              @mouseleave="stopPixelDraw"
+            >
+              <div
+                v-for="(row, y) in pixelGrid"
+                :key="'row-'+y"
+                class="pixel-row"
+              >
+                <div
+                  v-for="(color, x) in row"
+                  :key="'pixel-'+x+'-'+y"
+                  class="pixel-cell"
+                  :style="{ backgroundColor: color || 'transparent' }"
+                  @mousedown="paintPixel(x, y)"
+                  @mouseenter="paintPixelIfDrawing(x, y)"
+                  @touchstart.prevent="paintPixel(x, y)"
+                  @touchmove.prevent="handlePixelTouch($event)"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Paleta de Cores -->
+            <div class="pixel-palette">
+              <button
+                v-for="color in pixelPalette"
+                :key="'pal-'+color"
+                class="pixel-color-btn"
+                :class="{ active: pixelColor === color, transparent: color === null }"
+                :style="{ backgroundColor: color || 'transparent' }"
+                @click="pixelColor = color"
+              >
+                <span v-if="color === null">✕</span>
+              </button>
+            </div>
           </div>
 
           <!-- Opções de Personalização -->
@@ -1809,15 +1867,20 @@ function getGravatarUrl(email, size = 100) {
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=mp`
 }
 
-// Obter avatar do usuário (Kawaii se salvou, senão Gravatar)
+// Obter avatar do usuário (Kawaii/Pixel se salvou, senão Gravatar)
 function getUserAvatarUrl(user, size = 80) {
   // io tem avatar personalizado
   // io é identificada pelo nome (id é dinâmico)
   if (user?.nome === 'io') {
     return '/io-avatar.png'
   }
-  // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
+  // Prioridade: Avatar personalizado (Kawaii ou Pixel) > Gravatar > null
   if (user?.avatar_config) {
+    // Verificar se é pixel art
+    if (user.avatar_config.type === 'pixel' && user.avatar_config.grid) {
+      return generatePixelAvatarSvg(user.avatar_config.grid, size)
+    }
+    // Senão é Kawaii
     return generateAvatarSvg(user.avatar_config, size)
   }
   if (user?.email) {
@@ -1964,7 +2027,110 @@ const avatarOptions = {
 
 // Tab atual do editor e tipo de avatar
 const avatarEditorTab = ref('expression')
-const avatarType = ref('kawaii') // 'kawaii' ou 'gravatar'
+const avatarType = ref('kawaii') // 'kawaii', 'pixel' ou 'gravatar'
+
+// ==================== PIXEL ART AVATAR ====================
+
+// Paleta de cores para pixel art (16 cores)
+const pixelPalette = [
+  null, // Transparente
+  '#1a1a1a', '#ffffff', '#9ca3af', // Preto, Branco, Cinza
+  '#ef4444', '#f97316', '#fbbf24', '#facc15', // Vermelho, Laranja, Amarelo
+  '#22c55e', '#10b981', '#06b6d4', '#3b82f6', // Verdes, Cyan, Azul
+  '#8b5cf6', '#a855f7', '#ec4899', '#f472b6'  // Roxos, Rosas
+]
+
+// Estado do editor pixel
+const pixelTool = ref('brush') // 'brush', 'eraser', 'fill'
+const pixelColor = ref('#1a1a1a')
+const isDrawingPixel = ref(false)
+
+// Grid 16x16 (inicializa vazio ou carrega do localStorage)
+const savedPixelGrid = localStorage.getItem('poly_pixel_avatar')
+const createEmptyGrid = () => Array(16).fill(null).map(() => Array(16).fill(null))
+const pixelGrid = ref(savedPixelGrid ? JSON.parse(savedPixelGrid) : createEmptyGrid())
+
+// Funções do editor pixel
+function startPixelDraw() {
+  isDrawingPixel.value = true
+}
+
+function stopPixelDraw() {
+  isDrawingPixel.value = false
+}
+
+function paintPixel(x, y) {
+  if (pixelTool.value === 'brush') {
+    pixelGrid.value[y][x] = pixelColor.value
+  } else if (pixelTool.value === 'eraser') {
+    pixelGrid.value[y][x] = null
+  } else if (pixelTool.value === 'fill') {
+    floodFill(x, y, pixelGrid.value[y][x], pixelColor.value)
+  }
+  // Salvar no localStorage
+  localStorage.setItem('poly_pixel_avatar', JSON.stringify(pixelGrid.value))
+}
+
+function paintPixelIfDrawing(x, y) {
+  if (isDrawingPixel.value && pixelTool.value !== 'fill') {
+    paintPixel(x, y)
+  }
+}
+
+function handlePixelTouch(event) {
+  const touch = event.touches[0]
+  const element = document.elementFromPoint(touch.clientX, touch.clientY)
+  if (element?.classList.contains('pixel-cell')) {
+    const row = element.parentElement
+    const grid = row.parentElement
+    const y = Array.from(grid.children).indexOf(row)
+    const x = Array.from(row.children).indexOf(element)
+    if (x >= 0 && y >= 0) {
+      paintPixel(x, y)
+    }
+  }
+}
+
+function floodFill(x, y, targetColor, newColor) {
+  if (targetColor === newColor) return
+  if (x < 0 || x >= 16 || y < 0 || y >= 16) return
+  if (pixelGrid.value[y][x] !== targetColor) return
+
+  pixelGrid.value[y][x] = newColor
+  floodFill(x + 1, y, targetColor, newColor)
+  floodFill(x - 1, y, targetColor, newColor)
+  floodFill(x, y + 1, targetColor, newColor)
+  floodFill(x, y - 1, targetColor, newColor)
+}
+
+function clearPixelGrid() {
+  pixelGrid.value = createEmptyGrid()
+  localStorage.setItem('poly_pixel_avatar', JSON.stringify(pixelGrid.value))
+}
+
+// Gera SVG do pixel art
+function generatePixelAvatarSvg(grid, size = 80) {
+  const pixelSize = size / 16
+  let rects = ''
+
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const color = grid[y][x]
+      if (color) {
+        rects += `<rect x="${x * pixelSize}" y="${y * pixelSize}" width="${pixelSize}" height="${pixelSize}" fill="${color}"/>`
+      }
+    }
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <rect width="${size}" height="${size}" fill="#2d2d2d"/>
+    ${rects}
+  </svg>`
+
+  return 'data:image/svg+xml,' + encodeURIComponent(svg.trim())
+}
+
+// ==================== KAWAII AVATAR ====================
 
 // Configuração do avatar Kawaii (carrega do localStorage)
 const savedAvatar = localStorage.getItem('poly_avatar')
@@ -1981,9 +2147,12 @@ const myAvatar = ref(savedAvatar ? { ...defaultAvatar, ...JSON.parse(savedAvatar
 
 // URL do avatar do usuário atual (baseado no avatar_config do banco)
 const myAvatarUrl = computed(() => {
-  // Se currentUser tem avatar_config no banco, usa Kawaii
+  // Se currentUser tem avatar_config no banco, usa Kawaii ou Pixel
   // Se não tem (null), usa Gravatar
   if (currentUser.value?.avatar_config) {
+    if (currentUser.value.avatar_config.type === 'pixel' && currentUser.value.avatar_config.grid) {
+      return generatePixelAvatarSvg(currentUser.value.avatar_config.grid, 80)
+    }
     return generateAvatarSvg(currentUser.value.avatar_config, 80)
   }
   if (currentUser.value?.email) {
@@ -2305,13 +2474,19 @@ function generateAvatarSvg(config, size = 80) {
 function openAvatarEditor() {
   // Carregar do banco se tiver, senão do local
   if (currentUser.value?.avatar_config) {
-    editingAvatar.value = { ...defaultAvatar, ...currentUser.value.avatar_config }
+    // Verificar se é pixel art
+    if (currentUser.value.avatar_config.type === 'pixel') {
+      pixelGrid.value = currentUser.value.avatar_config.grid || createEmptyGrid()
+      avatarType.value = 'pixel'
+    } else {
+      editingAvatar.value = { ...defaultAvatar, ...currentUser.value.avatar_config }
+      avatarType.value = 'kawaii'
+    }
   } else {
     editingAvatar.value = { ...myAvatar.value }
+    avatarType.value = 'gravatar'
   }
   avatarEditorTab.value = 'expression'
-  // Detectar tipo atual baseado no banco (avatar_config existe = Kawaii)
-  avatarType.value = currentUser.value?.avatar_config ? 'kawaii' : 'gravatar'
   showAvatarModal.value = true
 }
 
@@ -2335,6 +2510,19 @@ async function saveAvatar() {
         })
         // Atualizar currentUser para refletir a mudança
         currentUser.value.avatar_config = myAvatar.value
+      } else if (avatarType.value === 'pixel') {
+        // Salvar Pixel Art
+        const pixelConfig = { type: 'pixel', grid: pixelGrid.value }
+        await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
+          method: 'PUT',
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ avatarConfig: pixelConfig })
+        })
+        // Atualizar currentUser para refletir a mudança
+        currentUser.value.avatar_config = pixelConfig
       } else {
         // Usar Gravatar - limpar avatar_config
         await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
@@ -8278,6 +8466,135 @@ body {
   height: 140px;
   border-radius: 50%;
   border: 3px solid #6366f1;
+}
+
+.avatar-preview-large.pixel-preview {
+  border-radius: 8px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ==================== PIXEL EDITOR ==================== */
+
+.pixel-editor {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pixel-tools {
+  display: flex;
+  gap: 8px;
+}
+
+.pixel-tools button {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid #333;
+  background: #1a1a2e;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pixel-tools button:hover {
+  background: #2a2a4e;
+  border-color: #6366f1;
+}
+
+.pixel-tools button.active {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.pixel-grid {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #6366f1;
+  border-radius: 4px;
+  background: #2d2d2d;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.pixel-row {
+  display: flex;
+}
+
+.pixel-cell {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-sizing: border-box;
+}
+
+.pixel-cell:hover {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.pixel-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-width: 280px;
+}
+
+.pixel-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid #333;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #666;
+}
+
+.pixel-color-btn:hover {
+  transform: scale(1.15);
+  border-color: #6366f1;
+}
+
+.pixel-color-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+.pixel-color-btn.transparent {
+  background: linear-gradient(45deg, #444 25%, transparent 25%),
+              linear-gradient(-45deg, #444 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, #444 75%),
+              linear-gradient(-45deg, transparent 75%, #444 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+  background-color: #222;
+}
+
+/* Mobile: pixel cells maiores */
+@media (max-width: 480px) {
+  .pixel-cell {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pixel-color-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .pixel-tools button {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .avatar-options {
