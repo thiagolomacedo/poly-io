@@ -1144,13 +1144,21 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
           ELSE u1.nome
         END as nome,
         CASE
+          WHEN c.user_a_id = $1 THEN u2.email
+          ELSE u1.email
+        END as email,
+        CASE
           WHEN c.user_a_id = $1 THEN u2.idioma
           ELSE u1.idioma
         END as idioma,
         CASE
           WHEN c.user_a_id = $1 THEN u2.pais
           ELSE u1.pais
-        END as pais
+        END as pais,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.avatar_config
+          ELSE u1.avatar_config
+        END as avatar_config
       FROM connections c
       JOIN users u1 ON c.user_a_id = u1.id
       JOIN users u2 ON c.user_b_id = u2.id
@@ -1175,8 +1183,10 @@ app.get('/api/connections/pending', authMiddleware, async (req, res) => {
         c.criado_em,
         u.id as user_id,
         u.nome,
+        u.email,
         u.idioma,
-        u.pais
+        u.pais,
+        u.avatar_config
       FROM connections c
       JOIN users u ON c.solicitado_por = u.id
       WHERE (c.user_a_id = $1 OR c.user_b_id = $1)
@@ -1197,7 +1207,15 @@ app.get('/api/connections/pending', authMiddleware, async (req, res) => {
         CASE
           WHEN c.user_a_id = $1 THEN u2.nome
           ELSE u1.nome
-        END as nome
+        END as nome,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.email
+          ELSE u1.email
+        END as email,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.avatar_config
+          ELSE u1.avatar_config
+        END as avatar_config
       FROM connections c
       JOIN users u1 ON c.user_a_id = u1.id
       JOIN users u2 ON c.user_b_id = u2.id

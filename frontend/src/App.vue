@@ -488,8 +488,8 @@
                 class="forward-checkbox"
               />
               <img
-                v-if="contact.email"
-                :src="getGravatarUrl(contact.email, 40)"
+                v-if="contact.avatar_config || contact.email"
+                :src="getUserAvatarUrl(contact, 40)"
                 class="forward-avatar"
               />
               <span v-else class="forward-avatar-letter">{{ contact.nome?.charAt(0).toUpperCase() }}</span>
@@ -811,7 +811,8 @@
               @click="selectConnection(conn)"
             >
               <div class="user-avatar" :class="[conn.status || 'offline']">
-                {{ conn.nome.charAt(0).toUpperCase() }}
+                <img v-if="conn.avatar_config || conn.email" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
+                <span v-else>{{ conn.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="user-info">
                 <span class="name">{{ conn.nome }}</span>
@@ -910,7 +911,8 @@
               class="user-item request-item"
             >
               <div class="user-avatar">
-                {{ req.nome.charAt(0).toUpperCase() }}
+                <img v-if="req.avatar_config || req.email" :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
+                <span v-else>{{ req.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="user-info">
                 <span class="name">{{ req.nome }}</span>
@@ -932,7 +934,8 @@
               class="user-item"
             >
               <div class="user-avatar">
-                {{ req.nome.charAt(0).toUpperCase() }}
+                <img v-if="req.avatar_config || req.email" :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
+                <span v-else>{{ req.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="user-info">
                 <span class="name">{{ req.nome }}</span>
@@ -1191,8 +1194,8 @@
             <div class="chat-user" @click="openProfile(selectedConnection)" style="cursor: pointer;">
               <div class="user-avatar" :class="[selectedConnection.status || 'offline']">
                 <img
-                  v-if="selectedConnection.email"
-                  :src="getGravatarUrl(selectedConnection.email, 80)"
+                  v-if="selectedConnection.avatar_config || selectedConnection.email"
+                  :src="getUserAvatarUrl(selectedConnection, 80)"
                   class="gravatar-img"
                   @error="$event.target.style.display='none'"
                 />
@@ -1782,6 +1785,14 @@ function getGravatarUrl(email, size = 100) {
   // Criar hash MD5 do email (simplificado - usar biblioteca em produção)
   const hash = md5(email.toLowerCase().trim())
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=mp`
+}
+
+// Obter avatar do usuário (Kawaii se tiver, senão Gravatar)
+function getUserAvatarUrl(user, size = 80) {
+  if (user?.avatar_config) {
+    return generateAvatarSvg(user.avatar_config, size)
+  }
+  return getGravatarUrl(user?.email, size)
 }
 
 // Função MD5 simplificada para Gravatar
@@ -5889,6 +5900,13 @@ body {
   font-size: 1rem;
   flex-shrink: 0;
   position: relative;
+}
+
+.connection-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .user-info {
