@@ -771,10 +771,17 @@ function traduzirFraseCurta(texto, idiomaOrigem, idiomaDestino) {
   const chave = `${idiomaOrigem}-${idiomaDestino}`
   const dicionario = FRASES_CURTAS[chave]
   if (dicionario) {
-    const textoLower = texto.toLowerCase().trim()
+    // Normalizar Unicode (NFC) para garantir que acentos sejam comparados corretamente
+    const textoLower = texto.toLowerCase().trim().normalize('NFC')
     if (dicionario[textoLower]) {
       console.log(`  [Dicionário] "${texto}" → "${dicionario[textoLower]}"`)
       return dicionario[textoLower]
+    }
+    // Tentar também sem acentos (remover diacríticos)
+    const textoSemAcento = textoLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    if (dicionario[textoSemAcento]) {
+      console.log(`  [Dicionário sem acento] "${texto}" → "${dicionario[textoSemAcento]}"`)
+      return dicionario[textoSemAcento]
     }
   }
   return null
