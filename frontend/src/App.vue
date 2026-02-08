@@ -2047,7 +2047,7 @@ const isDrawingPixel = ref(false)
 
 // Grid 16x16 (inicializa vazio ou carrega do localStorage)
 const savedPixelGrid = localStorage.getItem('poly_pixel_avatar')
-const createEmptyGrid = () => Array(16).fill(null).map(() => Array(16).fill(null))
+const createEmptyGrid = () => Array(32).fill(null).map(() => Array(32).fill(null))
 const pixelGrid = ref(savedPixelGrid ? JSON.parse(savedPixelGrid) : createEmptyGrid())
 
 // Funções do editor pixel
@@ -2093,7 +2093,7 @@ function handlePixelTouch(event) {
 
 function floodFill(x, y, targetColor, newColor) {
   if (targetColor === newColor) return
-  if (x < 0 || x >= 16 || y < 0 || y >= 16) return
+  if (x < 0 || x >= 32 || y < 0 || y >= 32) return
   if (pixelGrid.value[y][x] !== targetColor) return
 
   pixelGrid.value[y][x] = newColor
@@ -2110,12 +2110,13 @@ function clearPixelGrid() {
 
 // Gera SVG do pixel art
 function generatePixelAvatarSvg(grid, size = 80) {
-  const pixelSize = size / 16
+  const gridSize = grid?.length || 32
+  const pixelSize = size / gridSize
   let rects = ''
 
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
-      const color = grid[y][x]
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      const color = grid[y]?.[x]
       if (color) {
         rects += `<rect x="${x * pixelSize}" y="${y * pixelSize}" width="${pixelSize}" height="${pixelSize}" fill="${color}"/>`
       }
@@ -8525,15 +8526,16 @@ body {
 }
 
 .pixel-cell {
-  width: 16px;
-  height: 16px;
-  border: 1px solid rgba(255,255,255,0.1);
+  width: 8px;
+  height: 8px;
+  border: none;
   box-sizing: border-box;
+  background-clip: padding-box;
 }
 
 .pixel-cell:hover {
-  outline: 2px solid #6366f1;
-  outline-offset: -2px;
+  outline: 1px solid #6366f1;
+  outline-offset: -1px;
   z-index: 1;
 }
 
@@ -8579,21 +8581,21 @@ body {
   background-color: #222;
 }
 
-/* Mobile: pixel cells maiores */
+/* Mobile: ajustes para 32x32 */
 @media (max-width: 480px) {
   .pixel-cell {
-    width: 14px;
-    height: 14px;
+    width: 7px;
+    height: 7px;
   }
 
   .pixel-color-btn {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 
   .pixel-tools button {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
   }
 }
 
