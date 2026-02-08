@@ -1276,6 +1276,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { io } from 'socket.io-client'
+import { jsPDF } from 'jspdf'
 
 // Configuração da API
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -3109,16 +3110,203 @@ async function exportChat() {
   if (!selectedConnection.value) return
 
   try {
-    const res = await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}/export`, {
-      headers: authHeaders()
+    // Criar PDF
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
     })
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `chat-${selectedConnection.value.nome}-${new Date().toISOString().slice(0, 10)}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const margin = 15
+    const contentWidth = pageWidth - (margin * 2)
+    let y = margin
+
+    // Cores Poly.io
+    const bgColor = [10, 10, 10]        // #0a0a0a
+    const primaryColor = [99, 102, 241] // #6366f1
+    const textColor = [255, 255, 255]   // branco
+    const mutedColor = [150, 150, 150]  // cinza
+
+    // Função para adicionar nova página
+    function addNewPage() {
+      pdf.addPage()
+      // Fundo escuro
+      pdf.setFillColor(...bgColor)
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+      y = margin
+    }
+
+    // Função para verificar espaço e adicionar página se necessário
+    function checkSpace(needed) {
+      if (y + needed > pageHeight - margin) {
+        addNewPage()
+        return true
+      }
+      return false
+    }
+
+    // Fundo escuro da primeira página
+    pdf.setFillColor(...bgColor)
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F')
+
+    // ========== HEADER ==========
+    // Logo Poly.io
+    pdf.setFontSize(32)
+    pdf.setTextColor(...textColor)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Poly', pageWidth / 2 - 12, y + 10)
+    pdf.setTextColor(...primaryColor)
+    pdf.text('.io', pageWidth / 2 + 12, y + 10)
+
+    y += 18
+
+    // Tagline
+    pdf.setFontSize(10)
+    pdf.setTextColor(...mutedColor)
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Chat profissional sem barreiras de idioma', pageWidth / 2, y, { align: 'center' })
+
+    y += 12
+
+    // Linha decorativa
+    pdf.setDrawColor(...primaryColor)
+    pdf.setLineWidth(0.5)
+    pdf.line(margin, y, pageWidth - margin, y)
+
+    y += 10
+
+    // Info da conversa
+    pdf.setFontSize(12)
+    pdf.setTextColor(...textColor)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(`Conversa com ${selectedConnection.value.nome}`, pageWidth / 2, y, { align: 'center' })
+
+    y += 7
+
+    pdf.setFontSize(9)
+    pdf.setTextColor(...mutedColor)
+    pdf.setFont('helvetica', 'normal')
+    const dataExport = new Date().toLocaleString('pt-BR')
+    pdf.text(`Exportado em ${dataExport}`, pageWidth / 2, y, { align: 'center' })
+
+    y += 12
+
+    // Linha separadora
+    pdf.setDrawColor(50, 50, 50)
+    pdf.setLineWidth(0.2)
+    pdf.line(margin, y, pageWidth - margin, y)
+
+    y += 10
+
+    // ========== MENSAGENS ==========
+    const meuNome = user.value.nome
+
+    for (const msg of messages.value) {
+      // Pular mensagens de arquivo/áudio sem texto
+      if (!msg.textoOriginal && !msg.texto_original) continue
+
+      const texto = msg.textoOriginal || msg.texto_original || ''
+      const traducao = msg.textoTraduzido || msg.texto_traduzido || ''
+      const hora = new Date(msg.enviadoEm || msg.enviado_em).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      const data = new Date(msg.enviadoEm || msg.enviado_em).toLocaleDateString('pt-BR')
+      const euEnviei = msg.senderId === user.value.id || msg.sender_id === user.value.id
+      const nomeRemetente = euEnviei ? meuNome : selectedConnection.value.nome
+
+      // Calcular altura necessária
+      pdf.setFontSize(9)
+      const textoLines = pdf.splitTextToSize(texto, contentWidth - 20)
+      let msgHeight = 18 + (textoLines.length * 4)
+
+      if (traducao && traducao !== texto) {
+        const traducaoLines = pdf.splitTextToSize(`Tradução: ${traducao}`, contentWidth - 25)
+        msgHeight += 4 + (traducaoLines.length * 3.5)
+      }
+
+      // Verificar espaço
+      checkSpace(msgHeight + 5)
+
+      // Balão da mensagem
+      const balloonX = euEnviei ? margin + 20 : margin
+      const balloonWidth = contentWidth - 20
+      const balloonColor = euEnviei ? [30, 30, 60] : [25, 25, 35]
+
+      pdf.setFillColor(...balloonColor)
+      pdf.roundedRect(balloonX, y, balloonWidth, msgHeight, 3, 3, 'F')
+
+      // Borda colorida para minhas mensagens
+      if (euEnviei) {
+        pdf.setDrawColor(...primaryColor)
+        pdf.setLineWidth(0.3)
+        pdf.line(balloonX + balloonWidth, y + 3, balloonX + balloonWidth, y + msgHeight - 3)
+      }
+
+      let textY = y + 6
+
+      // Nome e hora
+      pdf.setFontSize(8)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(...(euEnviei ? primaryColor : [100, 200, 150]))
+      pdf.text(nomeRemetente, balloonX + 5, textY)
+
+      pdf.setFont('helvetica', 'normal')
+      pdf.setTextColor(...mutedColor)
+      pdf.text(`${data} ${hora}`, balloonX + balloonWidth - 5, textY, { align: 'right' })
+
+      textY += 6
+
+      // Texto original
+      pdf.setFontSize(9)
+      pdf.setTextColor(...textColor)
+      pdf.setFont('helvetica', 'normal')
+      for (const line of textoLines) {
+        pdf.text(line, balloonX + 5, textY)
+        textY += 4
+      }
+
+      // Tradução (se diferente)
+      if (traducao && traducao !== texto) {
+        textY += 2
+        pdf.setFontSize(8)
+        pdf.setTextColor(130, 130, 180)
+        pdf.setFont('helvetica', 'italic')
+        const traducaoLines = pdf.splitTextToSize(`Tradução: ${traducao}`, contentWidth - 25)
+        for (const line of traducaoLines) {
+          pdf.text(line, balloonX + 5, textY)
+          textY += 3.5
+        }
+      }
+
+      y += msgHeight + 5
+    }
+
+    // ========== FOOTER ==========
+    // Ir para a última página e adicionar footer
+    const totalPages = pdf.internal.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i)
+
+      // Linha do footer
+      pdf.setDrawColor(50, 50, 50)
+      pdf.setLineWidth(0.2)
+      pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
+
+      // Texto do footer
+      pdf.setFontSize(8)
+      pdf.setTextColor(...mutedColor)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('Poly.io - Chat profissional sem barreiras de idioma', pageWidth / 2, pageHeight - 10, { align: 'center' })
+      pdf.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' })
+    }
+
+    // Salvar PDF
+    const nomeArquivo = `poly-io-${selectedConnection.value.nome}-${new Date().toISOString().slice(0, 10)}.pdf`
+    pdf.save(nomeArquivo)
+
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
   }
