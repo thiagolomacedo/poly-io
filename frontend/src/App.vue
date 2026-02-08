@@ -1787,12 +1787,16 @@ function getGravatarUrl(email, size = 100) {
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=mp`
 }
 
-// Obter avatar do usuário (Kawaii se tiver, senão Gravatar)
+// Obter avatar do usuário (Kawaii se salvou, senão Gravatar)
 function getUserAvatarUrl(user, size = 80) {
+  // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
   if (user?.avatar_config) {
     return generateAvatarSvg(user.avatar_config, size)
   }
-  return getGravatarUrl(user?.email, size)
+  if (user?.email) {
+    return getGravatarUrl(user.email, size)
+  }
+  return null
 }
 
 // Função MD5 simplificada para Gravatar
