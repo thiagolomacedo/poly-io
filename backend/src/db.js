@@ -313,7 +313,9 @@ async function verificarSalasInativas() {
 async function limparMensagensExpiradas() {
   try {
     const result = await pool.query(`
-      DELETE FROM messages WHERE expira_em < NOW()
+      DELETE FROM messages
+      WHERE expira_em < NOW()
+         OR (expira_em IS NULL AND enviado_em < NOW() - INTERVAL '24 hours')
     `)
     if (result.rowCount > 0) {
       console.log(`[DB] ${result.rowCount} mensagens expiradas removidas`)
