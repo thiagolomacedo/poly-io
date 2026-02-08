@@ -833,7 +833,7 @@
               @click="selectConnection(conn)"
             >
               <div class="user-avatar" :class="[conn.status || 'offline']">
-                <img v-if="conn.avatar_config || conn.email" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
+                <img v-if="conn.avatar_config || conn.email || conn.id === 1" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
                 <span v-else>{{ conn.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="user-info">
@@ -1216,7 +1216,7 @@
             <div class="chat-user" @click="openProfile(selectedConnection)" style="cursor: pointer;">
               <div class="user-avatar" :class="[selectedConnection.status || 'offline']">
                 <img
-                  v-if="selectedConnection.avatar_config || selectedConnection.email"
+                  v-if="selectedConnection.avatar_config || selectedConnection.email || selectedConnection.id === 1"
                   :src="getUserAvatarUrl(selectedConnection, 80)"
                   class="gravatar-img"
                   @error="$event.target.style.display='none'"
@@ -1811,6 +1811,10 @@ function getGravatarUrl(email, size = 100) {
 
 // Obter avatar do usuário (Kawaii se salvou, senão Gravatar)
 function getUserAvatarUrl(user, size = 80) {
+  // io tem avatar personalizado
+  if (user?.id === 1 || user?.nome === 'io') {
+    return '/io-avatar.jpg'
+  }
   // Prioridade: Kawaii (se salvou no banco) > Gravatar > null
   if (user?.avatar_config) {
     return generateAvatarSvg(user.avatar_config, size)
