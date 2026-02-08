@@ -3409,8 +3409,10 @@ async function loadConnections() {
       id: c.user_id,
       connectionId: c.connection_id,
       nome: c.nome,
+      email: c.email,
       idioma: c.idioma,
       pais: c.pais,
+      avatar_config: c.avatar_config,
       online: c.user_id in onlineUsers,
       status: onlineUsers[c.user_id] || 'offline'
     }))
@@ -3455,11 +3457,15 @@ async function loadPendingRequests() {
       id: r.user_id,
       connectionId: r.connection_id,
       nome: r.nome,
-      idioma: r.idioma
+      email: r.email,
+      idioma: r.idioma,
+      avatar_config: r.avatar_config
     }))
     sentRequests.value = (data.enviadas || []).map(r => ({
       id: r.user_id,
-      nome: r.nome
+      nome: r.nome,
+      email: r.email,
+      avatar_config: r.avatar_config
     }))
   } catch (error) {
     console.error('Erro ao carregar solicitações:', error)
