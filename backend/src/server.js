@@ -729,13 +729,59 @@ async function traduzirComMyMemory(texto, idiomaOrigem, idiomaDestino) {
   const data = await response.json()
   if (data.responseStatus === 200 && data.responseData?.translatedText) {
     const translated = data.responseData.translatedText
-    if (translated !== texto.toUpperCase()) return translated
+    // Verificar se realmente traduziu (não só adicionou pontuação)
+    const textoNormalizado = texto.toLowerCase().replace(/[.,!?;:]/g, '').trim()
+    const traduzidoNormalizado = translated.toLowerCase().replace(/[.,!?;:]/g, '').trim()
+    if (traduzidoNormalizado !== textoNormalizado && translated !== texto.toUpperCase()) {
+      return translated
+    }
+    console.log(`  [MyMemory] Tradução igual ao original: "${texto}" → "${translated}"`)
   }
   throw new Error('MyMemory translation failed')
 }
 
+// Dicionário de frases curtas comuns (fallback quando API falha)
+const FRASES_CURTAS = {
+  'pt-en': {
+    'olá': 'Hello', 'oi': 'Hi', 'oi!': 'Hi!', 'olá!': 'Hello!',
+    'tchau': 'Bye', 'tchau!': 'Bye!', 'até logo': 'See you later',
+    'bom dia': 'Good morning', 'boa tarde': 'Good afternoon', 'boa noite': 'Good night',
+    'tudo bem': 'How are you', 'tudo bem?': 'How are you?',
+    'obrigado': 'Thank you', 'obrigada': 'Thank you', 'valeu': 'Thanks',
+    'sim': 'Yes', 'não': 'No', 'ok': 'OK', 'beleza': 'Alright',
+    'olá amigo': 'Hello friend', 'oi amigo': 'Hi friend',
+    'olá amiga': 'Hello friend', 'oi amiga': 'Hi friend',
+    'como vai': 'How are you', 'como vai?': 'How are you?',
+    'tudo certo': 'All good', 'tudo certo?': 'All good?'
+  },
+  'pt-es': {
+    'olá': 'Hola', 'oi': 'Hola', 'tchau': 'Chau',
+    'bom dia': 'Buenos días', 'boa tarde': 'Buenas tardes', 'boa noite': 'Buenas noches',
+    'tudo bem': 'Todo bien', 'tudo bem?': '¿Todo bien?',
+    'obrigado': 'Gracias', 'obrigada': 'Gracias',
+    'olá amigo': 'Hola amigo', 'oi amigo': 'Hola amigo'
+  }
+}
+
+function traduzirFraseCurta(texto, idiomaOrigem, idiomaDestino) {
+  const chave = `${idiomaOrigem}-${idiomaDestino}`
+  const dicionario = FRASES_CURTAS[chave]
+  if (dicionario) {
+    const textoLower = texto.toLowerCase().trim()
+    if (dicionario[textoLower]) {
+      console.log(`  [Dicionário] "${texto}" → "${dicionario[textoLower]}"`)
+      return dicionario[textoLower]
+    }
+  }
+  return null
+}
+
 async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
   if (idiomaOrigem === idiomaDestino) return texto
+
+  // Tentar dicionário de frases curtas primeiro (mais rápido e confiável)
+  const traducaoCurta = traduzirFraseCurta(texto, idiomaOrigem, idiomaDestino)
+  if (traducaoCurta) return traducaoCurta
 
   // Pré-processar gírias PT-BR para melhor tradução
   let textoParaTraduzir = texto
