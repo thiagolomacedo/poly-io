@@ -528,13 +528,13 @@
 
           <!-- Seletor de Tipo de Avatar -->
           <div class="avatar-type-selector">
-            <button :class="{ active: avatarType === 'kawaii' }" @click="avatarType = 'kawaii'">
+            <button :class="{ active: avatarType === 'kawaii' }" @click="switchAvatarType('kawaii')">
               ✨ Kawaii
             </button>
-            <button :class="{ active: avatarType === 'pixel' }" @click="avatarType = 'pixel'">
+            <button :class="{ active: avatarType === 'pixel' }" @click="switchAvatarType('pixel')">
               🎮 Pixel
             </button>
-            <button :class="{ active: avatarType === 'gravatar' }" @click="avatarType = 'gravatar'">
+            <button :class="{ active: avatarType === 'gravatar' }" @click="switchAvatarType('gravatar')">
               📷 Gravatar
             </button>
           </div>
@@ -2196,6 +2196,15 @@ const myAvatarUrl = computed(() => {
 
 const showAvatarModal = ref(false)
 const editingAvatar = ref(null)
+
+// Troca o tipo de avatar e inicializa editingAvatar se necessário
+function switchAvatarType(type) {
+  avatarType.value = type
+  // Se mudar para kawaii e editingAvatar estiver null, inicializa
+  if (type === 'kawaii' && !editingAvatar.value) {
+    editingAvatar.value = { ...defaultAvatar }
+  }
+}
 
 // Watch para salvar avatar quando muda
 watch(myAvatar, (newAvatar) => {
