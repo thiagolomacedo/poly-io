@@ -1710,21 +1710,23 @@ app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
   try {
     console.log('[Transcrição] Iniciando transcrição de áudio...')
 
-    // Remover prefixo data URL se presente (data:audio/webm;base64,...)
+    // Extrair tipo MIME e dados base64
+    const mimeMatch = audioData.match(/^data:(audio\/[^;]+);base64,/)
+    const mimeType = mimeMatch ? mimeMatch[1] : 'audio/webm'
     const base64Data = audioData.replace(/^data:audio\/[^;]+;base64,/, '')
+
+    // Determinar extensão do arquivo
+    const extMap = { 'audio/webm': 'webm', 'audio/mp4': 'mp4', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3' }
+    const ext = extMap[mimeType] || 'webm'
 
     // Converter base64 para buffer
     const audioBuffer = Buffer.from(base64Data, 'base64')
+    console.log('[Transcrição] Áudio recebido:', audioBuffer.length, 'bytes, tipo:', mimeType)
 
-    // Criar FormData para enviar ao Groq Whisper
-    const FormData = require('form-data')
+    // Criar Blob e FormData nativos (Node 18+)
+    const audioBlob = new Blob([audioBuffer], { type: mimeType })
     const formData = new FormData()
-
-    // Adicionar arquivo de áudio
-    formData.append('file', audioBuffer, {
-      filename: 'audio.webm',
-      contentType: 'audio/webm'
-    })
+    formData.append('file', audioBlob, `audio.${ext}`)
     formData.append('model', 'whisper-large-v3')
     formData.append('response_format', 'text')
 
@@ -1732,16 +1734,15 @@ app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
     const whisperResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + GROQ_API_KEY,
-        ...formData.getHeaders()
+        'Authorization': 'Bearer ' + GROQ_API_KEY
       },
       body: formData
     })
 
     if (!whisperResponse.ok) {
       const errorText = await whisperResponse.text()
-      console.error('[Transcrição] Erro Whisper:', errorText)
-      throw new Error('Falha na transcrição')
+      console.error('[Transcrição] Erro Whisper:', whisperResponse.status, errorText)
+      throw new Error('Falha na transcrição: ' + errorText)
     }
 
     const transcricao = await whisperResponse.text()
