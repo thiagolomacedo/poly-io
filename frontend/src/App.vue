@@ -3107,6 +3107,7 @@ async function handleNewMessage(msg) {
 }
 
 async function exportChat() {
+  console.log('exportChat chamado', { selectedConnection: selectedConnection.value, messages: messages.value?.length })
   if (!selectedConnection.value) return
 
   try {
@@ -3309,6 +3310,7 @@ async function exportChat() {
 
   } catch (error) {
     console.error('Erro ao exportar chat:', error)
+    alert('Erro ao exportar: ' + error.message)
   }
 }
 
