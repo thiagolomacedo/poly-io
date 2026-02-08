@@ -771,17 +771,32 @@ function traduzirFraseCurta(texto, idiomaOrigem, idiomaDestino) {
   const chave = `${idiomaOrigem}-${idiomaDestino}`
   const dicionario = FRASES_CURTAS[chave]
   if (dicionario) {
-    // Normalizar Unicode (NFC) para garantir que acentos sejam comparados corretamente
+    // Normalizar: lowercase, trim, Unicode NFC
     const textoLower = texto.toLowerCase().trim().normalize('NFC')
+
+    // 1. Tentar match direto
     if (dicionario[textoLower]) {
       console.log(`  [Dicionário] "${texto}" → "${dicionario[textoLower]}"`)
       return dicionario[textoLower]
     }
-    // Tentar também sem acentos (remover diacríticos)
-    const textoSemAcento = textoLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+    // 2. Tentar sem pontuação
+    const textoSemPontuacao = textoLower.replace(/[.,!?;:¿¡]+$/g, '').trim()
+    if (dicionario[textoSemPontuacao]) {
+      const resultado = dicionario[textoSemPontuacao]
+      // Preservar pontuação original
+      const pontuacao = texto.match(/[.,!?;:¿¡]+$/)?.[0] || ''
+      console.log(`  [Dicionário] "${texto}" → "${resultado}${pontuacao}"`)
+      return resultado + pontuacao
+    }
+
+    // 3. Tentar sem acentos
+    const textoSemAcento = textoSemPontuacao.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     if (dicionario[textoSemAcento]) {
-      console.log(`  [Dicionário sem acento] "${texto}" → "${dicionario[textoSemAcento]}"`)
-      return dicionario[textoSemAcento]
+      const resultado = dicionario[textoSemAcento]
+      const pontuacao = texto.match(/[.,!?;:¿¡]+$/)?.[0] || ''
+      console.log(`  [Dicionário sem acento] "${texto}" → "${resultado}${pontuacao}"`)
+      return resultado + pontuacao
     }
   }
   return null
