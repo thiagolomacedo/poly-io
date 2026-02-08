@@ -1695,6 +1695,83 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
   }
 })
 
+// Transcrever áudio usando Groq Whisper + traduzir
+app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
+  const { audioData, idiomaOrigem, idiomaDestino } = req.body
+
+  if (!audioData) {
+    return res.status(400).json({ error: 'Áudio não fornecido' })
+  }
+
+  if (!GROQ_API_KEY) {
+    return res.status(503).json({ error: 'Serviço de transcrição não configurado' })
+  }
+
+  try {
+    console.log('[Transcrição] Iniciando transcrição de áudio...')
+
+    // Remover prefixo data URL se presente (data:audio/webm;base64,...)
+    const base64Data = audioData.replace(/^data:audio\/[^;]+;base64,/, '')
+
+    // Converter base64 para buffer
+    const audioBuffer = Buffer.from(base64Data, 'base64')
+
+    // Criar FormData para enviar ao Groq Whisper
+    const FormData = require('form-data')
+    const formData = new FormData()
+
+    // Adicionar arquivo de áudio
+    formData.append('file', audioBuffer, {
+      filename: 'audio.webm',
+      contentType: 'audio/webm'
+    })
+    formData.append('model', 'whisper-large-v3')
+    formData.append('response_format', 'text')
+
+    // Chamar Groq Whisper API
+    const whisperResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + GROQ_API_KEY,
+        ...formData.getHeaders()
+      },
+      body: formData
+    })
+
+    if (!whisperResponse.ok) {
+      const errorText = await whisperResponse.text()
+      console.error('[Transcrição] Erro Whisper:', errorText)
+      throw new Error('Falha na transcrição')
+    }
+
+    const transcricao = await whisperResponse.text()
+    console.log('[Transcrição] Texto transcrito:', transcricao.substring(0, 100))
+
+    // Traduzir se idiomas diferentes
+    let traducao = transcricao
+    if (idiomaOrigem && idiomaDestino && idiomaOrigem !== idiomaDestino) {
+      try {
+        traducao = await traduzirTexto(transcricao, idiomaOrigem, idiomaDestino)
+        console.log('[Transcrição] Tradução:', traducao.substring(0, 100))
+      } catch (translateError) {
+        console.error('[Transcrição] Erro ao traduzir:', translateError.message)
+        // Retorna só a transcrição se falhar a tradução
+      }
+    }
+
+    res.json({
+      transcricao,
+      traducao,
+      idiomaOrigem: idiomaOrigem || 'auto',
+      idiomaDestino: idiomaDestino || idiomaOrigem || 'auto'
+    })
+
+  } catch (error) {
+    console.error('[Transcrição] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao transcrever áudio' })
+  }
+})
+
 // Traduzir texto sob demanda (para mensagens novas quando idioma diferente)
 app.post('/api/translate', authMiddleware, async (req, res) => {
   const { texto, idiomaOrigem, idiomaDestino } = req.body

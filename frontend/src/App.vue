@@ -1384,6 +1384,28 @@
                 <div v-else-if="msg.isAudio" class="audio-message">
                   <span class="audio-icon">🎤</span>
                   <audio :src="msg.audioData" controls class="audio-player"></audio>
+                  <button
+                    v-if="!msg.euEnviei && !msg.transcricao && !msg.transcrevendo"
+                    class="btn-transcribe"
+                    @click.stop="transcreverAudio(msg)"
+                    title="Transcrever e traduzir áudio"
+                  >
+                    📝
+                  </button>
+                  <span v-if="msg.transcrevendo" class="transcribing-indicator">⏳</span>
+                  <div v-if="msg.transcricao" class="transcription-result">
+                    <p class="transcription-text">{{ msg.traducaoAudio || msg.transcricao }}</p>
+                    <button
+                      v-if="msg.traducaoAudio && msg.traducaoAudio !== msg.transcricao"
+                      class="btn-original-audio"
+                      @click.stop="msg.showOriginalAudio = !msg.showOriginalAudio"
+                    >
+                      {{ msg.showOriginalAudio ? '🔄' : '🌐' }}
+                    </button>
+                    <p v-if="msg.showOriginalAudio" class="original-audio-text">
+                      Original: {{ msg.transcricao }}
+                    </p>
+                  </div>
                 </div>
                 <!-- Mensagem de arquivo -->
                 <div v-else-if="msg.isFile" class="file-message">
@@ -4909,6 +4931,50 @@ function handleAudioReceived(data) {
   }
 }
 
+// ==================== TRANSCRIÇÃO DE ÁUDIO ====================
+
+async function transcreverAudio(msg) {
+  if (!msg.audioData || msg.transcrevendo) return
+
+  msg.transcrevendo = true
+
+  try {
+    // Buscar idiomas: remetente (quem enviou) e receptor (eu)
+    const idiomaOrigem = selectedConnection.value?.idioma || 'pt'
+    const idiomaDestino = currentUser.value?.idioma || 'pt'
+
+    const response = await fetch(`${API_URL}/api/transcribe-audio`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({
+        audioData: msg.audioData,
+        idiomaOrigem,
+        idiomaDestino
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Falha na transcrição')
+    }
+
+    const data = await response.json()
+    msg.transcricao = data.transcricao
+    msg.traducaoAudio = data.traducao
+    msg.showOriginalAudio = false
+
+    console.log('[Transcrição] Sucesso:', data.transcricao?.substring(0, 50))
+
+  } catch (error) {
+    console.error('[Transcrição] Erro:', error)
+    alert('Não foi possível transcrever o áudio. Tente novamente.')
+  } finally {
+    msg.transcrevendo = false
+  }
+}
+
 // ==================== INDICADOR DE DIGITAÇÃO ====================
 
 function handleUserTyping(data) {
@@ -7249,6 +7315,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .audio-icon {
@@ -7263,6 +7330,69 @@ body {
 
 .audio-player::-webkit-media-controls-panel {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* Transcrição de áudio */
+.btn-transcribe {
+  background: rgba(99, 102, 241, 0.2);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.btn-transcribe:hover {
+  background: rgba(99, 102, 241, 0.4);
+  transform: scale(1.1);
+}
+
+.transcribing-indicator {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.transcription-result {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #6366f1;
+}
+
+.transcription-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  line-height: 1.4;
+}
+
+.btn-original-audio {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.btn-original-audio:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.original-audio-text {
+  margin: 6px 0 0 0;
+  font-size: 0.8rem;
+  color: #888;
+  font-style: italic;
 }
 
 /* Mobile Menu */
