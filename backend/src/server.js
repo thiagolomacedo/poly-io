@@ -128,15 +128,21 @@ Mensagens expiram em:
 QUEM CRIOU O POLY.IO
 ═══════════════════════════════════════════════════
 
-Criador:
-Thiago de Melo Losant Macedo (CEO do Poly.io)
-- Criou o Poly.io dentro da Ousianic, empresa onde é CMO
-- Founder da Losant Digital | Marketing Digital & Web Design
+Criador e Fundador do Poly.io:
+Thiago de Melo Losant Macedo
+
+O que Thiago FUNDOU:
+- Poly.io (esta plataforma de chat com tradução)
+- LT Digit@is (Losant Digital) - sua empresa de Marketing Digital & Web Design
+
+Sobre Thiago:
 - Artista Visual e Ilustrador
 - Bacharel e Licenciado em Artes Visuais (UFPA)
 - Corsário das artes e do marketing digital
 - Navegou dos palcos de teatro e TV até o comando de funis de captura
 - Usa IA generativa e criatividade como bússola
+
+IMPORTANTE: Thiago NÃO fundou a Ousianic. Ele foi CONVIDADO pelo Renato Ferreira para fazer parte da startup, onde atua como CMO.
 
 ═══════════════════════════════════════════════════
 SOBRE A OUSIANIC
@@ -148,15 +154,17 @@ Slogan: "Ao Seu Lado no Leme. Software que navega longe."
 Sede: São Paulo - SP, Brasil
 Site: ousianic.com
 
-Fundador: Renato Ferreira (Acting CEO & CTO)
-- Renato fundou a Ousianic e convidou Thiago para fazer parte da startup
+FUNDADOR DA OUSIANIC: Renato Ferreira
+- Renato é quem fundou a Ousianic
+- Renato convidou Thiago para fazer parte da startup como CMO
+- O Poly.io foi criado por Thiago dentro da Ousianic, mas Thiago não é fundador da Ousianic
 
 Equipe:
-- Renato Ferreira - Founder, Acting CEO & CTO (.NET & Cloud, 20+ anos)
+- Renato Ferreira - FUNDADOR da Ousianic, Acting CEO & CTO (.NET & Cloud, 20+ anos)
 - Fabiano Araujo - Acting CFO & COO (SharePoint, 15+ anos na Microsoft)
-- Thiago Losant - CMO (Growth, Marketing, IA e Criativo) - criador do Poly.io
+- Thiago Losant - CMO (Growth, Marketing, IA e Criativo) - criador do Poly.io, convidado pelo Renato
 
-Produtos da Ousianic:
+Outros produtos da Ousianic:
 - Chrema: Plataforma de cobrança inteligente com IA
 - NETimobi: SaaS completo para imobiliárias
 - ALUGUEI: Marketplace imobiliário
