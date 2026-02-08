@@ -518,31 +518,53 @@
         </div>
       </div>
 
-      <!-- Modal: Kawaii Avatar Builder -->
+      <!-- Modal: Avatar Builder -->
       <div v-if="showAvatarModal" class="modal-overlay" @click="cancelAvatarEdit">
         <div class="modal-content avatar-modal" @click.stop>
           <div class="avatar-modal-header">
-            <h3>✨ Kawaii Avatar</h3>
+            <h3>🖼️ Meu Avatar</h3>
             <button class="btn-close-modal" @click="cancelAvatarEdit">✕</button>
+          </div>
+
+          <!-- Seletor de Tipo de Avatar -->
+          <div class="avatar-type-selector">
+            <button :class="{ active: avatarType === 'kawaii' }" @click="avatarType = 'kawaii'">
+              ✨ Kawaii
+            </button>
+            <button :class="{ active: avatarType === 'gravatar' }" @click="avatarType = 'gravatar'">
+              📷 Gravatar
+            </button>
           </div>
 
           <!-- Preview do Avatar -->
           <div class="avatar-preview-container">
             <img
-              v-if="editingAvatar"
+              v-if="avatarType === 'kawaii' && editingAvatar"
               :src="generateAvatarSvg(editingAvatar, 140)"
+              class="avatar-preview-large"
+            />
+            <img
+              v-else-if="avatarType === 'gravatar' && currentUser?.email"
+              :src="getGravatarUrl(currentUser.email, 140)"
               class="avatar-preview-large"
             />
           </div>
 
-          <!-- Tabs de Navegação -->
-          <div class="avatar-tabs">
+          <!-- Kawaii: Tabs de Navegação -->
+          <div class="avatar-tabs" v-if="avatarType === 'kawaii'">
             <button :class="{ active: avatarEditorTab === 'expression' }" @click="avatarEditorTab = 'expression'">😊 Expressão</button>
             <button :class="{ active: avatarEditorTab === 'style' }" @click="avatarEditorTab = 'style'">🎨 Estilo</button>
           </div>
 
+          <!-- Gravatar: Info -->
+          <div class="gravatar-info" v-if="avatarType === 'gravatar'">
+            <p>Sua foto vem do <a href="https://gravatar.com" target="_blank">Gravatar.com</a></p>
+            <p class="gravatar-email">{{ currentUser?.email }}</p>
+            <p class="gravatar-tip">Para mudar a foto, acesse gravatar.com</p>
+          </div>
+
           <!-- Opções de Personalização -->
-          <div class="avatar-options" v-if="editingAvatar">
+          <div class="avatar-options" v-if="avatarType === 'kawaii' && editingAvatar">
 
             <!-- TAB: EXPRESSÃO -->
             <template v-if="avatarEditorTab === 'expression'">
@@ -714,7 +736,7 @@
           <div class="current-user">
             <div class="current-user-avatar" @click.stop="openAvatarEditor" title="Editar avatar">
               <img
-                :src="generateAvatarSvg(myAvatar, 80)"
+                :src="myAvatarUrl"
                 class="custom-avatar-small"
               />
               <span class="avatar-edit-badge">✏️</span>
@@ -1935,8 +1957,9 @@ const avatarOptions = {
   accessoryColors: ['#ec4899', '#ef4444', '#f59e0b', '#10b981', '#6366f1', '#ffffff', '#1a1a1a']
 }
 
-// Tab atual do editor
+// Tab atual do editor e tipo de avatar
 const avatarEditorTab = ref('expression')
+const avatarType = ref('kawaii') // 'kawaii' ou 'gravatar'
 
 // Configuração do avatar Kawaii (carrega do localStorage)
 const savedAvatar = localStorage.getItem('poly_avatar')
@@ -1950,6 +1973,15 @@ const defaultAvatar = {
   accessoryColor: '#ec4899'
 }
 const myAvatar = ref(savedAvatar ? { ...defaultAvatar, ...JSON.parse(savedAvatar) } : defaultAvatar)
+
+// URL do avatar do usuário atual (Kawaii ou Gravatar baseado na preferência)
+const myAvatarUrl = computed(() => {
+  const savedType = localStorage.getItem('poly_avatar_type')
+  if (savedType === 'gravatar' && currentUser.value?.email) {
+    return getGravatarUrl(currentUser.value.email, 80)
+  }
+  return generateAvatarSvg(myAvatar.value, 80)
+})
 
 const showAvatarModal = ref(false)
 const editingAvatar = ref(null)
@@ -2264,25 +2296,52 @@ function generateAvatarSvg(config, size = 80) {
 function openAvatarEditor() {
   editingAvatar.value = { ...myAvatar.value }
   avatarEditorTab.value = 'expression'
+  // Detectar tipo atual: se tem avatar_config salvo no banco, é Kawaii
+  const savedType = localStorage.getItem('poly_avatar_type')
+  if (savedType) {
+    avatarType.value = savedType
+  } else {
+    // Se currentUser tem avatar_config, é Kawaii, senão Gravatar
+    avatarType.value = currentUser.value?.avatar_config ? 'kawaii' : 'gravatar'
+  }
   showAvatarModal.value = true
 }
 
 // Salva o avatar editado (local + backend)
 async function saveAvatar() {
-  myAvatar.value = { ...editingAvatar.value }
   showAvatarModal.value = false
 
   // Sincronizar com o banco de dados
   if (currentUser.value?.id) {
     try {
-      await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
-        method: 'PUT',
-        headers: {
-          ...authHeaders(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ avatarConfig: myAvatar.value })
-      })
+      if (avatarType.value === 'kawaii') {
+        // Salvar Kawaii
+        myAvatar.value = { ...editingAvatar.value }
+        localStorage.setItem('poly_avatar_type', 'kawaii')
+        await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
+          method: 'PUT',
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ avatarConfig: myAvatar.value })
+        })
+      } else {
+        // Usar Gravatar - limpar avatar_config
+        localStorage.setItem('poly_avatar_type', 'gravatar')
+        await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
+          method: 'PUT',
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ avatarConfig: null })
+        })
+        // Atualizar currentUser para refletir a mudança
+        if (currentUser.value) {
+          currentUser.value.avatar_config = null
+        }
+      }
     } catch (error) {
       console.error('Erro ao salvar avatar no servidor:', error)
     }
@@ -8147,6 +8206,58 @@ body {
 
 .btn-close-modal:hover {
   color: #fff;
+}
+
+.avatar-type-selector {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #0d1b2a;
+}
+
+.avatar-type-selector button {
+  flex: 1;
+  padding: 10px 16px;
+  background: #1a1a2e;
+  border: 2px solid #333;
+  color: #888;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-type-selector button:hover {
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.avatar-type-selector button.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.gravatar-info {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.gravatar-info a {
+  color: #6366f1;
+}
+
+.gravatar-email {
+  font-size: 14px;
+  color: #fff;
+  margin: 8px 0;
+}
+
+.gravatar-tip {
+  font-size: 12px;
+  color: #666;
+  margin-top: 12px;
 }
 
 .avatar-preview-container {
