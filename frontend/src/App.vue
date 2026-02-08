@@ -3675,16 +3675,18 @@ async function initializeApp() {
 
 async function loadConnections() {
   try {
-    const res = await fetch(`${API_URL}/connections`, {
-      headers: authHeaders()
+    const res = await fetch(`${API_URL}/connections?_t=${Date.now()}`, {
+      headers: authHeaders(),
+      cache: 'no-store'
     })
     const data = await res.json()
 
     // Buscar quem está online e seus status
     let onlineUsers = {}
     try {
-      const onlineRes = await fetch(`${API_URL}/users/online`, {
-        headers: authHeaders()
+      const onlineRes = await fetch(`${API_URL}/users/online?_t=${Date.now()}`, {
+        headers: authHeaders(),
+        cache: 'no-store'
       })
       onlineUsers = await onlineRes.json()
     } catch (e) {
@@ -3889,13 +3891,15 @@ async function loadMessages() {
 
   try {
     // Monta URL com idioma de recepção se diferente do padrão
-    let url = `${API_URL}/chat/${selectedConnection.value.connectionId}`
+    // Adiciona timestamp para evitar cache em mobile
+    let url = `${API_URL}/chat/${selectedConnection.value.connectionId}?_t=${Date.now()}`
     if (idiomaRecepcao.value) {
-      url += `?idiomaDestino=${idiomaRecepcao.value}`
+      url += `&idiomaDestino=${idiomaRecepcao.value}`
     }
 
     const res = await fetch(url, {
-      headers: authHeaders()
+      headers: authHeaders(),
+      cache: 'no-store' // Força busca sem cache
     })
     const data = await res.json()
     messages.value = data.map(m => ({

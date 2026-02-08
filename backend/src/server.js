@@ -82,6 +82,14 @@ const io = new Server(server, {
 app.use(cors())
 app.use(express.json({ limit: '10mb' })) // Limite maior para áudios em base64
 
+// Prevenir cache em rotas de API (importante para mobile)
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+  next()
+})
+
 // Mapa de usuários online (socket) e seus status
 const usuariosOnline = new Map() // userId -> socketId
 const usuariosStatus = new Map() // userId -> 'online' | 'ausente' | 'ocupado' | 'invisivel'
