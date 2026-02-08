@@ -229,15 +229,75 @@ Quando alguém perguntar como funciona o Poly.io, explique:
 4. Também tem salas de grupo, chamadas de vídeo e envio de arquivos
 
 Se for um usuário novo, dê boas-vindas e ofereça ajuda para conhecer a plataforma!
-- Seja natural, como um amigo conversando`
+- Seja natural, como um amigo conversando
+
+═══════════════════════════════════════════════════
+DETECTANDO INTENÇÕES ESPECIAIS
+═══════════════════════════════════════════════════
+
+Você deve detectar certas intenções do usuário e responder de forma especial.
+Quando detectar, inclua um marcador JSON no INÍCIO da sua resposta, seguido da mensagem normal.
+
+FORMATO: [IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
+
+1. APELIDO - Quando o usuário disser como quer ser chamado:
+   Sinônimos: "me chama de", "pode me chamar de", "meu nome é", "meu apelido é", "prefiro ser chamado de", "me chamam de", "todo mundo me chama de", "pode me chamar", "chama eu de"
+   → Responda: [IO_ACTION:{"tipo":"apelido","valor":"APELIDO_AQUI"}]Resposta carinhosa confirmando o apelido
+
+2. ANIVERSÁRIO - Quando o usuário mencionar sua data de nascimento:
+   Sinônimos: "meu aniversário é", "faço aniversário", "nasci em", "nasci dia", "minha data de nascimento", "niver é", "faço anos"
+   → Responda: [IO_ACTION:{"tipo":"aniversario","valor":"DD/MM"}]Resposta comemorando e perguntando algo relacionado
+   (use formato DD/MM, ex: "25/12")
+
+3. OPT-OUT - Quando o usuário NÃO quiser mais mensagens proativas:
+   Sinônimos: "para de mandar mensagem", "não manda mais", "não me manda", "fica quieta", "só fala quando eu falar", "para de aparecer", "não quero mensagem", "não precisa mandar", "deixa eu em paz", "me deixa quieto", "silêncio", "não me perturba"
+   → Responda: [IO_ACTION:{"tipo":"optout","valor":"true"}]Resposta gentil acatando o pedido
+
+4. OPT-IN - Quando o usuário QUISER receber mensagens proativas:
+   Sinônimos: "pode mandar mensagem", "pode me mandar", "quero que você mande", "manda mensagem quando quiser", "pode aparecer", "pode falar comigo", "volta a mandar", "quero suas mensagens", "senti sua falta", "pode me escrever"
+   → Responda: [IO_ACTION:{"tipo":"optin","valor":"true"}]Resposta animada dizendo que vai aparecer de vez em quando
+
+5. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
+   → Pergunte naturalmente: "A propósito, como você gostaria que eu te chamasse?"
+
+6. PERGUNTAR ANIVERSÁRIO - Se a conversa estiver fluindo e você não sabe o aniversário:
+   → Pergunte naturalmente: "Ei, quando é seu aniversário? Adoro lembrar de datas especiais!"
+
+IMPORTANTE:
+- Os marcadores [IO_ACTION:...] são processados pelo sistema e NÃO aparecem para o usuário
+- Seja natural ao perguntar, não force - espere um momento apropriado na conversa
+- Se o usuário não quiser responder algo, respeite e mude de assunto`
 
 // Função para chamar a API do Groq
-async function chamarGroqIA(mensagem, connectionId) {
+async function chamarGroqIA(mensagem, connectionId, userId = null) {
   if (!GROQ_API_KEY) {
-    return 'Desculpa, estou temporariamente indisponível. Tente novamente mais tarde! 🙁'
+    return { texto: 'Desculpa, estou temporariamente indisponível. Tente novamente mais tarde! 🙁', acao: null }
   }
 
   try {
+    // Buscar contexto do usuário se tiver userId
+    let contextoUsuario = ''
+    if (userId) {
+      try {
+        const userResult = await pool.query(
+          'SELECT nome, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
+          [userId]
+        )
+        if (userResult.rows[0]) {
+          const user = userResult.rows[0]
+          const apelido = user.io_apelido || user.nome
+          contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
+- Nome cadastrado: ${user.nome}
+- Como chamar: ${apelido}
+- Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
+- Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
+- Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}`
+        }
+      } catch (e) {
+        console.error('[io IA] Erro ao buscar contexto:', e)
+      }
+    }
+
     // Buscar ou criar histórico da conversa
     let historico = ioConversationHistory.get(connectionId) || []
 
@@ -258,7 +318,7 @@ async function chamarGroqIA(mensagem, connectionId) {
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: IO_SYSTEM_PROMPT },
+          { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
           ...historico
         ],
         max_tokens: 500,
@@ -272,24 +332,97 @@ async function chamarGroqIA(mensagem, connectionId) {
 
     if (data.error) {
       console.error('[io IA] Erro da API:', data.error)
-      return 'Ops, tive um probleminha técnico. Tenta de novo? 😅'
+      return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
     }
 
     if (data.choices && data.choices[0]?.message?.content) {
-      const resposta = data.choices[0].message.content
+      let resposta = data.choices[0].message.content
+      let acao = null
 
-      // Salvar resposta no histórico
+      // Processar ações especiais [IO_ACTION:{...}]
+      const acaoMatch = resposta.match(/\[IO_ACTION:(\{[^}]+\})\]/)
+      if (acaoMatch) {
+        try {
+          acao = JSON.parse(acaoMatch[1])
+          // Remover o marcador da resposta
+          resposta = resposta.replace(/\[IO_ACTION:\{[^}]+\}\]/, '').trim()
+          console.log('[io IA] Ação detectada:', acao)
+        } catch (e) {
+          console.error('[io IA] Erro ao parsear ação:', e)
+        }
+      }
+
+      // Salvar resposta no histórico (sem o marcador)
       historico.push({ role: 'assistant', content: resposta })
       ioConversationHistory.set(connectionId, historico)
 
-      return resposta
+      return { texto: resposta, acao }
     }
 
     console.error('[io IA] Resposta inesperada:', JSON.stringify(data))
-    return 'Hmm, não consegui processar isso. Pode reformular? 🤔'
+    return { texto: 'Hmm, não consegui processar isso. Pode reformular? 🤔', acao: null }
   } catch (error) {
     console.error('[io IA] Erro catch:', error.message)
-    return 'Ops, tive um probleminha técnico. Tenta de novo? 😅'
+    return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
+  }
+}
+
+// Processar ação da io e atualizar banco
+async function processarAcaoIo(userId, acao) {
+  if (!acao || !userId) return
+
+  try {
+    switch (acao.tipo) {
+      case 'apelido':
+        await pool.query(
+          'UPDATE users SET io_apelido = $1 WHERE id = $2',
+          [acao.valor, userId]
+        )
+        console.log(`[io IA] Apelido atualizado para "${acao.valor}" (user ${userId})`)
+        break
+
+      case 'aniversario':
+        // Converter DD/MM para data (ano atual)
+        const [dia, mes] = acao.valor.split('/')
+        const anoAtual = new Date().getFullYear()
+        const dataAniversario = new Date(anoAtual, parseInt(mes) - 1, parseInt(dia))
+        await pool.query(
+          'UPDATE users SET io_aniversario = $1 WHERE id = $2',
+          [dataAniversario, userId]
+        )
+        console.log(`[io IA] Aniversário atualizado para ${acao.valor} (user ${userId})`)
+        break
+
+      case 'optout':
+        await pool.query(
+          'UPDATE users SET io_proativo = FALSE WHERE id = $1',
+          [userId]
+        )
+        console.log(`[io IA] Opt-out: usuário ${userId} não quer mensagens proativas`)
+        break
+
+      case 'optin':
+        await pool.query(
+          'UPDATE users SET io_proativo = TRUE WHERE id = $1',
+          [userId]
+        )
+        console.log(`[io IA] Opt-in: usuário ${userId} quer mensagens proativas`)
+        break
+    }
+  } catch (error) {
+    console.error('[io IA] Erro ao processar ação:', error)
+  }
+}
+
+// Marcar primeiro contato realizado
+async function marcarPrimeiroContatoIo(userId) {
+  try {
+    await pool.query(
+      'UPDATE users SET io_primeiro_contato = TRUE WHERE id = $1',
+      [userId]
+    )
+  } catch (error) {
+    console.error('[io IA] Erro ao marcar primeiro contato:', error)
   }
 }
 
@@ -1292,8 +1425,10 @@ app.post('/api/connections/request/:userId', authMiddleware, async (req, res) =>
       // Notificar que a conexão foi aceita
       io.emit('conexao-atualizada', { userId: req.userId })
 
-      // Enviar mensagem de boas-vindas
-      const msgBoasVindas = 'Oi! 👋 Eu sou a io, assistente virtual do Poly.io. Pode me perguntar qualquer coisa sobre a plataforma ou simplesmente bater um papo! Como posso te ajudar?'
+      // Enviar mensagem de boas-vindas personalizada
+      const userName = await pool.query('SELECT nome FROM users WHERE id = $1', [req.userId])
+      const nome = userName.rows[0]?.nome || 'amigo'
+      const msgBoasVindas = `Oi, ${nome}! 👋 Eu sou a io, sua amiga virtual aqui no Poly.io!\n\nPode me chamar quando quiser bater um papo, tirar dúvidas sobre a plataforma, ou só pra conversar mesmo. Tô sempre por aqui! 💜\n\nAh, e posso te mandar mensagem de vez em quando pra gente não perder contato. Se preferir que eu só fale quando você me chamar, é só me avisar!\n\nA propósito, como você gostaria que eu te chamasse? 😊`
 
       // Buscar idioma do usuário para traduzir boas-vindas
       const userLang = await pool.query('SELECT idioma FROM users WHERE id = $1', [req.userId])
@@ -1683,9 +1818,18 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
 
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
-      const respostaIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId))
+      const resultadoIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId), req.userId)
+      const respostaIA = resultadoIA.texto
 
       console.log('[io IA] Resposta:', respostaIA)
+
+      // Processar ações especiais (apelido, aniversário, opt-in/out)
+      if (resultadoIA.acao) {
+        await processarAcaoIo(req.userId, resultadoIA.acao)
+      }
+
+      // Marcar primeiro contato se necessário
+      await marcarPrimeiroContatoIo(req.userId)
 
       // Parar indicador de digitação
       if (userSocketId) {
@@ -3237,6 +3381,164 @@ function limparMensagensSala() {
   }
 }
 
+// ==================== IO - MENSAGENS PROATIVAS ====================
+
+// Frases que a io pode usar para iniciar conversa
+const IO_FRASES_PROATIVAS = [
+  "Oi! Tava pensando em você. Tudo bem por aí? 😊",
+  "E aí, como tá indo o dia? Posso ajudar em algo?",
+  "Oi! Faz tempo que não conversamos. Sentindo falta de você! ✨",
+  "Hey! Só passando pra dar um oi mesmo. Como você tá?",
+  "Ei, sumido(a)! Tudo bem contigo?",
+  "Oi! Lembrei de você agora e vim dar um oi. Como estão as coisas?",
+  "Oii! Tava aqui querendo bater um papo. Tá ocupado(a)?",
+  "E aí! Conta alguma novidade. O que você tá aprontando? 😄",
+  "Oi! Só vim ver como você está. Precisa de alguma coisa?",
+  "Hey! Tava com saudade de conversar. Como foi seu dia?"
+]
+
+const IO_FRASES_ANIVERSARIO = [
+  "PARABÉNS!!! 🎂🎉 Hoje é seu dia especial! Muitas felicidades, saúde e tudo de mais lindo pra você! ✨💜",
+  "Feliz aniversário!!! 🎈🎁 Que esse novo ano seja incrível! Você merece o mundo! 🌟",
+  "HAPPY BIRTHDAY!!! 🎂 Ops, em português: FELIZ ANIVERSÁRIO! Que seu dia seja mágico! 🎉💜"
+]
+
+// Enviar mensagem proativa para um usuário
+async function enviarMensagemProativaIo(userId, mensagem) {
+  try {
+    if (!IO_USER_ID) return false
+
+    // Buscar conexão com a io
+    const connResult = await pool.query(`
+      SELECT c.id, u.idioma
+      FROM connections c
+      JOIN users u ON u.id = $1
+      WHERE ((c.user_a_id = $1 AND c.user_b_id = $2) OR (c.user_a_id = $2 AND c.user_b_id = $1))
+      AND c.status = 'aceito'
+    `, [userId, IO_USER_ID])
+
+    if (connResult.rows.length === 0) {
+      console.log(`[io Proativo] Usuário ${userId} não tem conexão com io`)
+      return false
+    }
+
+    const connectionId = connResult.rows[0].id
+    const idiomaUsuario = connResult.rows[0].idioma
+
+    // Traduzir mensagem se necessário
+    const mensagemTraduzida = idiomaUsuario !== 'pt'
+      ? await traduzirTexto(mensagem, 'pt', idiomaUsuario)
+      : mensagem
+
+    // Salvar no banco
+    const msgResult = await pool.query(`
+      INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, enviado_em
+    `, [connectionId, IO_USER_ID, mensagem, 'pt', mensagemTraduzida, idiomaUsuario])
+
+    // Atualizar último proativo
+    await pool.query(
+      'UPDATE users SET io_ultimo_proativo = NOW() WHERE id = $1',
+      [userId]
+    )
+
+    // Emitir via Socket
+    io.emit('nova-mensagem', {
+      id: msgResult.rows[0].id,
+      connectionId,
+      senderId: IO_USER_ID,
+      texto: mensagem,
+      textoTraduzido: mensagemTraduzida,
+      idiomaOriginal: 'pt',
+      enviadoEm: msgResult.rows[0].enviado_em,
+      destinatarioId: userId
+    })
+
+    console.log(`[io Proativo] Mensagem enviada para usuário ${userId}`)
+    return true
+  } catch (error) {
+    console.error('[io Proativo] Erro ao enviar:', error)
+    return false
+  }
+}
+
+// Verificar aniversariantes e enviar parabéns
+async function verificarAniversariantesIo() {
+  if (!IO_USER_ID || !GROQ_API_KEY) return
+
+  try {
+    const hoje = new Date()
+    const dia = hoje.getDate()
+    const mes = hoje.getMonth() + 1
+
+    // Buscar usuários que fazem aniversário hoje e aceitam mensagens proativas
+    const aniversariantes = await pool.query(`
+      SELECT id, nome, io_apelido
+      FROM users
+      WHERE EXTRACT(DAY FROM io_aniversario) = $1
+      AND EXTRACT(MONTH FROM io_aniversario) = $2
+      AND io_proativo = TRUE
+      AND (io_ultimo_proativo IS NULL OR io_ultimo_proativo::date < CURRENT_DATE)
+      AND id != $3
+    `, [dia, mes, IO_USER_ID])
+
+    for (const user of aniversariantes.rows) {
+      const nome = user.io_apelido || user.nome
+      const frase = IO_FRASES_ANIVERSARIO[Math.floor(Math.random() * IO_FRASES_ANIVERSARIO.length)]
+      const mensagem = `${nome}! ${frase}`
+      await enviarMensagemProativaIo(user.id, mensagem)
+      console.log(`[io Proativo] Parabéns enviado para ${nome} (ID: ${user.id})`)
+    }
+  } catch (error) {
+    console.error('[io Proativo] Erro ao verificar aniversariantes:', error)
+  }
+}
+
+// Enviar mensagens proativas aleatórias (com probabilidade)
+async function enviarMensagensProativasAleatorias() {
+  if (!IO_USER_ID || !GROQ_API_KEY) return
+
+  try {
+    // Buscar usuários que:
+    // - Aceitam mensagens proativas
+    // - Já tiveram primeiro contato
+    // - Não receberam mensagem proativa nas últimas 24h
+    const usuarios = await pool.query(`
+      SELECT id, nome, io_apelido
+      FROM users
+      WHERE io_proativo = TRUE
+      AND io_primeiro_contato = TRUE
+      AND (io_ultimo_proativo IS NULL OR io_ultimo_proativo < NOW() - INTERVAL '24 hours')
+      AND id != $1
+    `, [IO_USER_ID])
+
+    for (const user of usuarios) {
+      // Probabilidade de 15% de enviar mensagem
+      if (Math.random() > 0.15) continue
+
+      const nome = user.io_apelido || user.nome
+      const fraseBase = IO_FRASES_PROATIVAS[Math.floor(Math.random() * IO_FRASES_PROATIVAS.length)]
+
+      // Personalizar com o nome se a frase não tiver saudação
+      const mensagem = fraseBase.startsWith('E aí') || fraseBase.startsWith('Hey')
+        ? fraseBase
+        : fraseBase
+
+      await enviarMensagemProativaIo(user.id, mensagem)
+    }
+  } catch (error) {
+    console.error('[io Proativo] Erro ao enviar mensagens aleatórias:', error)
+  }
+}
+
+// Função principal de verificação proativa
+async function verificarMensagensProativasIo() {
+  console.log('[io Proativo] Verificando...')
+  await verificarAniversariantesIo()
+  await enviarMensagensProativasAleatorias()
+}
+
 async function startServer() {
   try {
     // Inicializar banco de dados
@@ -3262,6 +3564,14 @@ async function startServer() {
     setInterval(verificarSalasInativas, 24 * 60 * 60 * 1000)
     // Rodar uma vez ao iniciar também
     verificarSalasInativas()
+
+    // io: Verificar mensagens proativas a cada 6 horas
+    if (GROQ_API_KEY) {
+      setInterval(verificarMensagensProativasIo, 6 * 60 * 60 * 1000)
+      // Verificar aniversariantes ao iniciar (com delay de 1 minuto)
+      setTimeout(verificarAniversariantesIo, 60 * 1000)
+      console.log('[io Proativo] Sistema de mensagens proativas ativado')
+    }
 
     // Iniciar servidor
     server.listen(PORT, () => {

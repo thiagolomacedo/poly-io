@@ -71,6 +71,28 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB
     `)
 
+    // ==================== CAMPOS DA IO (ASSISTENTE) ====================
+    // Apelido que a io usa para chamar o usuário
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_apelido VARCHAR(50)
+    `)
+    // Data de aniversário do usuário
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_aniversario DATE
+    `)
+    // Se o usuário aceita mensagens proativas da io (default: true)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_proativo BOOLEAN DEFAULT TRUE
+    `)
+    // Se já teve o primeiro contato com a io (para mensagem de boas-vindas)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_primeiro_contato BOOLEAN DEFAULT FALSE
+    `)
+    // Última mensagem proativa enviada (para rate limiting)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_ultimo_proativo TIMESTAMP
+    `)
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários
