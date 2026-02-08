@@ -278,13 +278,20 @@ FORMATO: [IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
    Sinônimos: "pode mandar mensagem", "pode me mandar", "quero que você mande", "manda mensagem quando quiser", "pode aparecer", "pode falar comigo", "volta a mandar", "quero suas mensagens", "senti sua falta", "pode me escrever"
    → Responda: [IO_ACTION:{"tipo":"optin","valor":"true"}]Resposta animada dizendo que vai aparecer de vez em quando
 
-5. LEMBRETE - Quando o usuário pedir para você lembrar algo em uma data/hora específica:
-   Sinônimos: "me lembra", "me lembre", "lembra de me avisar", "me avisa", "não deixa eu esquecer", "me notifica", "agenda pra mim", "cria um lembrete"
+5. LEMBRETE - Quando o usuário pedir para você lembrar algo:
+   Sinônimos: "me lembra", "me lembre", "lembra de me avisar", "me avisa", "não deixa eu esquecer", "me notifica", "agenda pra mim", "cria um lembrete", "daqui X minutos"
    → Extraia: data, hora e o que lembrar
-   → Formato da data: DD/MM/AAAA HH:MM (use ano atual se não especificado, horário padrão 09:00 se não informado)
-   → Responda: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"o que lembrar"}]Confirme o lembrete de forma carinhosa
-   Exemplo: "me lembra dia 09 de fevereiro às 18h que tenho reunião importante"
-   → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 18:00","texto":"reunião importante"}]Pode deixar! Vou te lembrar no dia 09/02 às 18h sobre a reunião importante! 📝
+   → IMPORTANTE: A data/hora atual é fornecida no contexto. Use-a para calcular datas relativas!
+   → Formato OBRIGATÓRIO: DD/MM/AAAA HH:MM
+   → Para "daqui X minutos/horas": calcule a partir da hora atual
+   → Para datas sem ano: use o ano atual
+   → Para horário não especificado: use 09:00
+   → Responda: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"o que lembrar"}]Confirme o lembrete
+
+   Exemplos:
+   - "me lembra daqui 5 minutos do teste" (se agora são 14:30) → [IO_ACTION:{"tipo":"lembrete","data":"08/02/2026 14:35","texto":"teste"}]
+   - "me lembra amanhã às 10h da reunião" → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 10:00","texto":"reunião"}]
+   - "me lembra dia 15 às 18h do relatório" → [IO_ACTION:{"tipo":"lembrete","data":"15/02/2026 18:00","texto":"relatório"}]
 
 7. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
    → Pergunte naturalmente: "A propósito, como você gostaria que eu te chamasse?"
@@ -315,12 +322,18 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
         if (userResult.rows[0]) {
           const user = userResult.rows[0]
           const apelido = user.io_apelido || user.nome
+          const agora = new Date()
           contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
 - Nome cadastrado: ${user.nome}
 - Como chamar: ${apelido}
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
-- Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}`
+- Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
+
+[DATA/HORA ATUAL - USE PARA CALCULAR LEMBRETES]
+- Data: ${agora.toLocaleDateString('pt-BR')}
+- Hora: ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+- Ano: ${agora.getFullYear()}`
         }
       } catch (e) {
         console.error('[io IA] Erro ao buscar contexto:', e)
