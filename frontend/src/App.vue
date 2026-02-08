@@ -2045,10 +2045,26 @@ function openAvatarEditor() {
   showAvatarModal.value = true
 }
 
-// Salva o avatar editado
-function saveAvatar() {
+// Salva o avatar editado (local + backend)
+async function saveAvatar() {
   myAvatar.value = { ...editingAvatar.value }
   showAvatarModal.value = false
+
+  // Sincronizar com o banco de dados
+  if (currentUser.value?.id) {
+    try {
+      await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
+        method: 'PUT',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ avatarConfig: myAvatar.value })
+      })
+    } catch (error) {
+      console.error('Erro ao salvar avatar no servidor:', error)
+    }
+  }
 }
 
 // Cancela a edição do avatar
@@ -2226,6 +2242,12 @@ async function login() {
     token.value = data.token
     currentUser.value = data.user
     localStorage.setItem('poly_token', data.token)
+
+    // Carregar avatar do banco (se existir)
+    if (data.user.avatar_config) {
+      myAvatar.value = data.user.avatar_config
+      localStorage.setItem('poly_avatar', JSON.stringify(data.user.avatar_config))
+    }
 
     // Salvar ou limpar credenciais baseado no checkbox
     if (rememberMe.value) {

@@ -66,6 +66,11 @@ async function initDatabase() {
       `, [codigo, user.id])
     }
 
+    // Adicionar coluna avatar_config se não existir (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB
+    `)
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários

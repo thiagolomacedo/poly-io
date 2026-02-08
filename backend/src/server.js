@@ -734,7 +734,8 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         idioma: user.idioma,
         pais: user.pais,
-        codigo_amigo: user.codigo_amigo
+        codigo_amigo: user.codigo_amigo,
+        avatar_config: user.avatar_config
       },
       token
     })
@@ -1097,6 +1098,31 @@ app.put('/api/users/:id', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Users] Erro ao atualizar:', error.message)
     res.status(500).json({ error: 'Erro ao atualizar perfil' })
+  }
+})
+
+// Atualizar avatar
+app.put('/api/users/:id/avatar', authMiddleware, async (req, res) => {
+  if (parseInt(req.params.id) !== req.userId) {
+    return res.status(403).json({ error: 'Sem permissão' })
+  }
+
+  const { avatarConfig } = req.body
+
+  if (!avatarConfig) {
+    return res.status(400).json({ error: 'avatarConfig é obrigatório' })
+  }
+
+  try {
+    await pool.query(
+      'UPDATE users SET avatar_config = $1 WHERE id = $2',
+      [JSON.stringify(avatarConfig), req.userId]
+    )
+
+    res.json({ success: true, avatarConfig })
+  } catch (error) {
+    console.error('[Users] Erro ao atualizar avatar:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar avatar' })
   }
 })
 
