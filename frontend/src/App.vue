@@ -558,7 +558,7 @@
                 <label>Boca</label>
                 <div class="avatar-style-options wrap">
                   <button v-for="style in avatarOptions.mouthStyles" :key="'mouth-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.mouth === style }" @click="editingAvatar.mouth = style">
-                    {{ style === 'smile' ? '‿' : style === 'open' ? 'O' : style === 'cat' ? ':3' : style === 'tongue' ? ':P' : style === 'happy' ? ':D' : style === 'sad' ? ':(' : style === 'neutral' ? '—' : style === 'teeth' ? 'E' : style === 'o' ? 'o' : style === 'w' ? 'w' : style === 'd' ? 'u' : '3' }}
+                    {{ style === 'none' ? '🚫' : style === 'smile' ? '‿' : style === 'open' ? 'O' : style === 'cat' ? ':3' : style === 'tongue' ? ':P' : style === 'happy' ? ':D' : style === 'sad' ? ':(' : style === 'neutral' ? '—' : style === 'teeth' ? 'E' : style === 'o' ? 'o' : style === 'w' ? 'w' : style === 'd' ? 'u' : '3' }}
                   </button>
                 </div>
               </div>
@@ -1897,8 +1897,8 @@ function md5(string) {
 const avatarOptions = {
   // Cores de fundo
   backgrounds: [
-    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981',
-    '#06b6d4', '#3b82f6', '#fbbf24', '#f472b6', '#a78bfa', '#34d399'
+    '#ffffff', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b',
+    '#10b981', '#06b6d4', '#3b82f6', '#fbbf24', '#f472b6', '#a78bfa', '#34d399'
   ],
   // Estilos de olhos Kawaii
   eyeStyles: [
@@ -1907,7 +1907,7 @@ const avatarOptions = {
   ],
   // Estilos de boca
   mouthStyles: [
-    'smile', 'open', 'cat', 'tongue', 'happy', 'sad',
+    'none', 'smile', 'open', 'cat', 'tongue', 'happy', 'sad',
     'neutral', 'teeth', 'o', 'w', 'd', '3'
   ],
   // Estilos de bochechas/blush
@@ -2042,6 +2042,9 @@ function generateAvatarSvg(config, size = 80) {
   // ========== BOCA KAWAII ==========
   let mouthSvg = ''
   switch (c.mouth) {
+    case 'none':
+      mouthSvg = ''
+      break
     case 'open': // :O
       mouthSvg = `<ellipse cx="40" cy="52" rx="5" ry="6" fill="#1a1a1a"/>`
       break
