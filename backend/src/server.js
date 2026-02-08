@@ -933,6 +933,10 @@ app.get('/api/users/online', authMiddleware, (req, res) => {
       onlineUsers[userId] = status
     }
   }
+  // io sempre aparece como online
+  if (IO_USER_ID) {
+    onlineUsers[IO_USER_ID] = 'online'
+  }
   res.json(onlineUsers)
 })
 
