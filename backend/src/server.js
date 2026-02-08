@@ -3638,7 +3638,7 @@ async function enviarMensagemProativaIo(userId, mensagem) {
       FROM connections c
       JOIN users u ON u.id = $1
       WHERE ((c.user_a_id = $1 AND c.user_b_id = $2) OR (c.user_a_id = $2 AND c.user_b_id = $1))
-      AND c.status = 'aceito'
+      AND c.status = 'aceita'
     `, [userId, IO_USER_ID])
 
     if (connResult.rows.length === 0) {
