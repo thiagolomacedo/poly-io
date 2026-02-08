@@ -1034,7 +1034,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo, avatar_config, criado_em FROM users WHERE id = $1',
       [req.userId]
     )
 
