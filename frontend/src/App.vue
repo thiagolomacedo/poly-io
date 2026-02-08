@@ -1948,182 +1948,193 @@ watch(myAvatar, (newAvatar) => {
 function generateAvatarSvg(config, size = 80) {
   const c = { ...defaultAvatar, ...config }
 
-  // ========== OLHOS KAWAII ==========
+  // ========== OLHOS KAWAII (grandes e afastados) ==========
   let eyesSvg = ''
+  // Posições: olho esquerdo cx=22, olho direito cx=58 (bem afastados)
+  // Tamanho grande: raio 8-10
   switch (c.eyes) {
     case 'happy': // ^_^
       eyesSvg = `
-        <path d="M22 32 Q28 26 34 32" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M46 32 Q52 26 58 32" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M14 32 Q22 24 30 32" stroke="#3d2314" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M50 32 Q58 24 66 32" stroke="#3d2314" stroke-width="3" fill="none" stroke-linecap="round"/>
       `
       break
     case 'love': // ♥_♥
       eyesSvg = `
-        <path d="M24 30 L28 26 L32 30 L28 36 Z" fill="#ef4444"/>
-        <path d="M48 30 L52 26 L56 30 L52 36 Z" fill="#ef4444"/>
+        <path d="M18 28 L22 22 L26 28 L22 38 Z" fill="#ef4444"/>
+        <path d="M54 28 L58 22 L62 28 L58 38 Z" fill="#ef4444"/>
       `
       break
     case 'stars': // ★_★
       eyesSvg = `
-        <polygon points="28,26 29.5,31 35,31 30.5,34.5 32,40 28,36.5 24,40 25.5,34.5 21,31 26.5,31" fill="#fbbf24"/>
-        <polygon points="52,26 53.5,31 59,31 54.5,34.5 56,40 52,36.5 48,40 49.5,34.5 45,31 50.5,31" fill="#fbbf24"/>
+        <polygon points="22,22 24,28 30,28 25,32 27,38 22,35 17,38 19,32 14,28 20,28" fill="#fbbf24"/>
+        <polygon points="58,22 60,28 66,28 61,32 63,38 58,35 53,38 55,32 50,28 56,28" fill="#fbbf24"/>
       `
       break
-    case 'sparkle': // ✨_✨
+    case 'sparkle': // ✨_✨ (olhos grandes com brilhos)
       eyesSvg = `
-        <circle cx="28" cy="32" r="5" fill="#1a1a1a"/>
-        <circle cx="52" cy="32" r="5" fill="#1a1a1a"/>
-        <circle cx="30" cy="30" r="2" fill="#fff"/>
-        <circle cx="54" cy="30" r="2" fill="#fff"/>
-        <circle cx="26" cy="34" r="1" fill="#fff"/>
-        <circle cx="50" cy="34" r="1" fill="#fff"/>
+        <circle cx="22" cy="30" r="10" fill="#3d2314"/>
+        <circle cx="58" cy="30" r="10" fill="#3d2314"/>
+        <circle cx="25" cy="27" r="3" fill="#fff"/>
+        <circle cx="61" cy="27" r="3" fill="#fff"/>
+        <circle cx="19" cy="33" r="1.5" fill="#fff"/>
+        <circle cx="55" cy="33" r="1.5" fill="#fff"/>
       `
       break
     case 'wink': // •_~
       eyesSvg = `
-        <circle cx="28" cy="32" r="4" fill="#1a1a1a"/>
-        <circle cx="29" cy="31" r="1.5" fill="#fff"/>
-        <path d="M48 32 Q52 28 56 32" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="22" cy="30" r="9" fill="#3d2314"/>
+        <circle cx="25" cy="27" r="3" fill="#fff"/>
+        <circle cx="19" cy="33" r="1.5" fill="#fff"/>
+        <path d="M50 32 Q58 24 66 32" stroke="#3d2314" stroke-width="3" fill="none" stroke-linecap="round"/>
       `
       break
     case 'closed': // -_-
       eyesSvg = `
-        <line x1="22" y1="32" x2="34" y2="32" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="46" y1="32" x2="58" y2="32" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M14 30 Q22 34 30 30" stroke="#3d2314" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M50 30 Q58 34 66 30" stroke="#3d2314" stroke-width="3" fill="none" stroke-linecap="round"/>
       `
       break
     case 'surprised': // O_O
       eyesSvg = `
-        <circle cx="28" cy="32" r="7" stroke="#1a1a1a" stroke-width="2" fill="#fff"/>
-        <circle cx="28" cy="32" r="4" fill="#1a1a1a"/>
-        <circle cx="52" cy="32" r="7" stroke="#1a1a1a" stroke-width="2" fill="#fff"/>
-        <circle cx="52" cy="32" r="4" fill="#1a1a1a"/>
+        <circle cx="22" cy="30" r="11" stroke="#3d2314" stroke-width="2" fill="#fff"/>
+        <circle cx="22" cy="30" r="6" fill="#3d2314"/>
+        <circle cx="58" cy="30" r="11" stroke="#3d2314" stroke-width="2" fill="#fff"/>
+        <circle cx="58" cy="30" r="6" fill="#3d2314"/>
+        <circle cx="24" cy="28" r="2" fill="#fff"/>
+        <circle cx="60" cy="28" r="2" fill="#fff"/>
       `
       break
     case 'angry': // ><
       eyesSvg = `
-        <path d="M22 28 L34 36 M22 36 L34 28" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M46 28 L58 36 M46 36 L58 28" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M14 26 L30 34 M14 34 L30 26" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <path d="M50 26 L66 34 M50 34 L66 26" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
       `
       break
     case 'sad': // ;_;
       eyesSvg = `
-        <circle cx="28" cy="30" r="4" fill="#1a1a1a"/>
-        <circle cx="52" cy="30" r="4" fill="#1a1a1a"/>
-        <path d="M28 36 Q28 44 26 48" stroke="#6ee7ff" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <path d="M52 36 Q52 44 54 48" stroke="#6ee7ff" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="22" cy="28" r="8" fill="#3d2314"/>
+        <circle cx="58" cy="28" r="8" fill="#3d2314"/>
+        <circle cx="24" cy="26" r="2.5" fill="#fff"/>
+        <circle cx="60" cy="26" r="2.5" fill="#fff"/>
+        <path d="M22 38 Q20 50 22 58" stroke="#6ee7ff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M58 38 Q60 50 58 58" stroke="#6ee7ff" stroke-width="4" fill="none" stroke-linecap="round"/>
       `
       break
     case 'dead': // X_X
       eyesSvg = `
-        <path d="M24 28 L32 36 M24 36 L32 28" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
-        <path d="M48 28 L56 36 M48 36 L56 28" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+        <path d="M16 24 L28 36 M16 36 L28 24" stroke="#3d2314" stroke-width="4" stroke-linecap="round"/>
+        <path d="M52 24 L64 36 M52 36 L64 24" stroke="#3d2314" stroke-width="4" stroke-linecap="round"/>
       `
       break
     case 'crying': // T_T
       eyesSvg = `
-        <line x1="22" y1="28" x2="34" y2="28" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="28" y1="28" x2="28" y2="36" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="46" y1="28" x2="58" y2="28" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="52" y1="28" x2="52" y2="36" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M28 38 Q26 48 28 54" stroke="#6ee7ff" stroke-width="4" fill="none" stroke-linecap="round"/>
-        <path d="M52 38 Q54 48 52 54" stroke="#6ee7ff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <line x1="14" y1="26" x2="30" y2="26" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <line x1="22" y1="26" x2="22" y2="38" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <line x1="50" y1="26" x2="66" y2="26" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <line x1="58" y1="26" x2="58" y2="38" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <path d="M22 40 Q18 52 22 62" stroke="#6ee7ff" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M58 40 Q62 52 58 62" stroke="#6ee7ff" stroke-width="5" fill="none" stroke-linecap="round"/>
       `
       break
-    default: // dots •_•
+    default: // dots •_• (olhos grandes padrão)
       eyesSvg = `
-        <circle cx="28" cy="32" r="4" fill="#1a1a1a"/>
-        <circle cx="52" cy="32" r="4" fill="#1a1a1a"/>
-        <circle cx="29" cy="31" r="1.5" fill="#fff"/>
-        <circle cx="53" cy="31" r="1.5" fill="#fff"/>
+        <circle cx="22" cy="30" r="9" fill="#3d2314"/>
+        <circle cx="58" cy="30" r="9" fill="#3d2314"/>
+        <circle cx="25" cy="27" r="3" fill="#fff"/>
+        <circle cx="61" cy="27" r="3" fill="#fff"/>
+        <circle cx="19" cy="33" r="1.5" fill="#fff"/>
+        <circle cx="55" cy="33" r="1.5" fill="#fff"/>
       `
   }
 
-  // ========== BOCA KAWAII ==========
+  // ========== BOCA KAWAII (mais acima, entre os olhos) ==========
   let mouthSvg = ''
+  // Boca centrada em cy=44-48 (mais para cima)
   switch (c.mouth) {
     case 'none':
       mouthSvg = ''
       break
     case 'open': // :O
-      mouthSvg = `<ellipse cx="40" cy="52" rx="5" ry="6" fill="#1a1a1a"/>`
+      mouthSvg = `<ellipse cx="40" cy="46" rx="4" ry="5" fill="#3d2314"/>`
       break
     case 'cat': // :3
       mouthSvg = `
-        <circle cx="36" cy="50" r="4" stroke="#1a1a1a" stroke-width="2" fill="none"/>
-        <circle cx="44" cy="50" r="4" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <circle cx="36" cy="45" r="3" stroke="#3d2314" stroke-width="2" fill="none"/>
+        <circle cx="44" cy="45" r="3" stroke="#3d2314" stroke-width="2" fill="none"/>
       `
       break
     case 'tongue': // :P
       mouthSvg = `
-        <path d="M34 48 Q40 54 46 48" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <ellipse cx="40" cy="54" rx="4" ry="5" fill="#ff6b9d"/>
+        <path d="M34 44 Q40 50 46 44" stroke="#3d2314" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="40" cy="51" rx="4" ry="5" fill="#ff6b9d"/>
       `
       break
     case 'happy': // :D
       mouthSvg = `
-        <path d="M32 48 Q40 60 48 48" stroke="#1a1a1a" stroke-width="2" fill="#1a1a1a"/>
-        <path d="M34 48 Q40 52 46 48" fill="#ff6b9d"/>
+        <path d="M32 44 Q40 54 48 44" stroke="#3d2314" stroke-width="2" fill="#3d2314"/>
+        <path d="M34 44 Q40 48 46 44" fill="#ff6b9d"/>
       `
       break
     case 'sad': // :(
-      mouthSvg = `<path d="M34 54 Q40 48 46 54" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      mouthSvg = `<path d="M34 50 Q40 44 46 50" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
       break
     case 'neutral': // :|
-      mouthSvg = `<line x1="35" y1="50" x2="45" y2="50" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>`
+      mouthSvg = `<line x1="35" y1="46" x2="45" y2="46" stroke="#3d2314" stroke-width="2.5" stroke-linecap="round"/>`
       break
     case 'teeth': // grimace
       mouthSvg = `
-        <rect x="32" y="47" width="16" height="8" rx="2" fill="#1a1a1a"/>
-        <line x1="36" y1="47" x2="36" y2="55" stroke="#fff" stroke-width="1.5"/>
-        <line x1="40" y1="47" x2="40" y2="55" stroke="#fff" stroke-width="1.5"/>
-        <line x1="44" y1="47" x2="44" y2="55" stroke="#fff" stroke-width="1.5"/>
+        <rect x="33" y="43" width="14" height="7" rx="2" fill="#3d2314"/>
+        <line x1="36" y1="43" x2="36" y2="50" stroke="#fff" stroke-width="1.5"/>
+        <line x1="40" y1="43" x2="40" y2="50" stroke="#fff" stroke-width="1.5"/>
+        <line x1="44" y1="43" x2="44" y2="50" stroke="#fff" stroke-width="1.5"/>
       `
       break
     case 'o': // o
-      mouthSvg = `<circle cx="40" cy="51" r="4" stroke="#1a1a1a" stroke-width="2" fill="none"/>`
+      mouthSvg = `<circle cx="40" cy="46" r="3" stroke="#3d2314" stroke-width="2" fill="none"/>`
       break
     case 'w': // w
-      mouthSvg = `<path d="M32 50 L36 54 L40 50 L44 54 L48 50" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+      mouthSvg = `<path d="M33 45 L36 49 L40 45 L44 49 L47 45" stroke="#3d2314" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
       break
     case 'd': // :d small happy
-      mouthSvg = `<path d="M36 49 Q40 55 44 49" stroke="#1a1a1a" stroke-width="2" fill="#1a1a1a"/>`
+      mouthSvg = `<path d="M36 44 Q40 50 44 44" stroke="#3d2314" stroke-width="2" fill="#3d2314"/>`
       break
     case '3': // :3 pouty
-      mouthSvg = `<path d="M36 50 Q40 46 44 50 Q40 54 36 50" stroke="#1a1a1a" stroke-width="2" fill="none"/>`
+      mouthSvg = `<path d="M36 46 Q40 42 44 46 Q40 50 36 46" stroke="#3d2314" stroke-width="2" fill="none"/>`
       break
     default: // smile :)
-      mouthSvg = `<path d="M34 49 Q40 56 46 49" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      mouthSvg = `<path d="M34 44 Q40 52 46 44" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
   }
 
-  // ========== BLUSH/BOCHECHAS ==========
+  // ========== BLUSH/BOCHECHAS (abaixo dos olhos) ==========
   let blushSvg = ''
+  // Posição: abaixo e ao lado dos olhos (cx=12 e cx=68, cy=44)
   switch (c.blush) {
     case 'light':
       blushSvg = `
-        <ellipse cx="18" cy="42" rx="6" ry="4" fill="#ffb6c1" opacity="0.5"/>
-        <ellipse cx="62" cy="42" rx="6" ry="4" fill="#ffb6c1" opacity="0.5"/>
+        <ellipse cx="12" cy="44" rx="8" ry="5" fill="#ffb6c1" opacity="0.5"/>
+        <ellipse cx="68" cy="44" rx="8" ry="5" fill="#ffb6c1" opacity="0.5"/>
       `
       break
     case 'heavy':
       blushSvg = `
-        <ellipse cx="18" cy="42" rx="8" ry="5" fill="#ff9eb5" opacity="0.7"/>
-        <ellipse cx="62" cy="42" rx="8" ry="5" fill="#ff9eb5" opacity="0.7"/>
+        <ellipse cx="12" cy="44" rx="10" ry="6" fill="#ff9eb5" opacity="0.7"/>
+        <ellipse cx="68" cy="44" rx="10" ry="6" fill="#ff9eb5" opacity="0.7"/>
       `
       break
     case 'hearts':
       blushSvg = `
-        <path d="M14 40 L18 36 L22 40 L18 46 Z" fill="#ff6b9d" opacity="0.6"/>
-        <path d="M58 40 L62 36 L66 40 L62 46 Z" fill="#ff6b9d" opacity="0.6"/>
+        <path d="M8 42 L12 38 L16 42 L12 48 Z" fill="#ff6b9d" opacity="0.7"/>
+        <path d="M64 42 L68 38 L72 42 L68 48 Z" fill="#ff6b9d" opacity="0.7"/>
       `
       break
     case 'lines':
       blushSvg = `
-        <g stroke="#ff9eb5" stroke-width="1.5" opacity="0.7">
-          <line x1="14" y1="40" x2="22" y2="40"/>
-          <line x1="14" y1="43" x2="22" y2="43"/>
-          <line x1="58" y1="40" x2="66" y2="40"/>
-          <line x1="58" y1="43" x2="66" y2="43"/>
+        <g stroke="#ff9eb5" stroke-width="2" opacity="0.7">
+          <line x1="6" y1="42" x2="18" y2="42"/>
+          <line x1="6" y1="46" x2="18" y2="46"/>
+          <line x1="62" y1="42" x2="74" y2="42"/>
+          <line x1="62" y1="46" x2="74" y2="46"/>
         </g>
       `
       break
@@ -2131,29 +2142,30 @@ function generateAvatarSvg(config, size = 80) {
 
   // ========== SOBRANCELHAS (opcional) ==========
   let eyebrowsSvg = ''
+  // Posição: acima dos olhos (cy=18-20)
   switch (c.eyebrows) {
     case 'normal':
       eyebrowsSvg = `
-        <path d="M22 24 Q28 22 34 24" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M46 24 Q52 22 58 24" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M14 18 Q22 14 30 18" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M50 18 Q58 14 66 18" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       `
       break
     case 'worried':
       eyebrowsSvg = `
-        <path d="M22 26 Q28 22 34 24" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <path d="M46 24 Q52 22 58 26" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M14 22 Q22 16 30 18" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M50 18 Q58 16 66 22" stroke="#3d2314" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       `
       break
     case 'angry':
       eyebrowsSvg = `
-        <path d="M22 22 L34 26" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M46 26 L58 22" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M14 16 L30 22" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
+        <path d="M50 22 L66 16" stroke="#3d2314" stroke-width="3" stroke-linecap="round"/>
       `
       break
     case 'sad':
       eyebrowsSvg = `
-        <path d="M22 26 L34 22" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
-        <path d="M46 22 L58 26" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+        <path d="M14 22 L30 16" stroke="#3d2314" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M50 16 L66 22" stroke="#3d2314" stroke-width="2.5" stroke-linecap="round"/>
       `
       break
   }
