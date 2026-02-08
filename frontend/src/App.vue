@@ -4943,7 +4943,7 @@ async function transcreverAudio(msg) {
     const idiomaOrigem = selectedConnection.value?.idioma || 'pt'
     const idiomaDestino = currentUser.value?.idioma || 'pt'
 
-    const response = await fetch(`${API_URL}/api/transcribe-audio`, {
+    const response = await fetch(`${API_URL}/transcribe-audio`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
