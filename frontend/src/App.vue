@@ -3202,7 +3202,7 @@ async function exportChat() {
     y += 10
 
     // ========== MENSAGENS ==========
-    const meuNome = user.value.nome
+    const meuNome = currentUser.value.nome
 
     for (const msg of messages.value) {
       // Pular mensagens de arquivo/áudio sem texto
@@ -3215,7 +3215,7 @@ async function exportChat() {
         minute: '2-digit'
       })
       const data = new Date(msg.enviadoEm || msg.enviado_em).toLocaleDateString('pt-BR')
-      const euEnviei = msg.senderId === user.value.id || msg.sender_id === user.value.id
+      const euEnviei = msg.senderId === currentUser.value.id || msg.sender_id === currentUser.value.id
       const nomeRemetente = euEnviei ? meuNome : selectedConnection.value.nome
 
       // Calcular altura necessária
