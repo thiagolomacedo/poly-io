@@ -1109,14 +1109,13 @@ app.put('/api/users/:id/avatar', authMiddleware, async (req, res) => {
 
   const { avatarConfig } = req.body
 
-  if (!avatarConfig) {
-    return res.status(400).json({ error: 'avatarConfig é obrigatório' })
-  }
-
   try {
+    // null = usar Gravatar, objeto = usar Kawaii
+    const dbValue = avatarConfig ? JSON.stringify(avatarConfig) : null
+
     await pool.query(
       'UPDATE users SET avatar_config = $1 WHERE id = $2',
-      [JSON.stringify(avatarConfig), req.userId]
+      [dbValue, req.userId]
     )
 
     res.json({ success: true, avatarConfig })
