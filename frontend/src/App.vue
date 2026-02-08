@@ -518,6 +518,111 @@
         </div>
       </div>
 
+      <!-- Modal: Avatar Builder -->
+      <div v-if="showAvatarModal" class="modal-overlay" @click="cancelAvatarEdit">
+        <div class="modal-content avatar-modal" @click.stop>
+          <div class="avatar-modal-header">
+            <h3>Personalize seu Avatar</h3>
+            <button class="btn-close-modal" @click="cancelAvatarEdit">✕</button>
+          </div>
+
+          <!-- Preview do Avatar -->
+          <div class="avatar-preview-container">
+            <img
+              v-if="editingAvatar"
+              :src="generateAvatarSvg(editingAvatar, 120)"
+              class="avatar-preview-large"
+            />
+          </div>
+
+          <!-- Opções de Personalização -->
+          <div class="avatar-options" v-if="editingAvatar">
+            <!-- Cor de Fundo -->
+            <div class="avatar-option-group">
+              <label>Fundo</label>
+              <div class="avatar-color-options">
+                <button
+                  v-for="color in avatarOptions.backgrounds"
+                  :key="'bg-' + color"
+                  class="avatar-color-btn"
+                  :class="{ active: editingAvatar.background === color }"
+                  :style="{ backgroundColor: color }"
+                  @click="editingAvatar.background = color"
+                />
+              </div>
+            </div>
+
+            <!-- Tom de Pele -->
+            <div class="avatar-option-group">
+              <label>Pele</label>
+              <div class="avatar-color-options">
+                <button
+                  v-for="color in avatarOptions.skinTones"
+                  :key="'skin-' + color"
+                  class="avatar-color-btn"
+                  :class="{ active: editingAvatar.skin === color }"
+                  :style="{ backgroundColor: color }"
+                  @click="editingAvatar.skin = color"
+                />
+              </div>
+            </div>
+
+            <!-- Estilo dos Olhos -->
+            <div class="avatar-option-group">
+              <label>Olhos</label>
+              <div class="avatar-style-options">
+                <button
+                  v-for="style in avatarOptions.eyeStyles"
+                  :key="'eyes-' + style"
+                  class="avatar-style-btn"
+                  :class="{ active: editingAvatar.eyes === style }"
+                  @click="editingAvatar.eyes = style"
+                >
+                  {{ style === 'normal' ? '👁️' : style === 'happy' ? '😊' : style === 'surprised' ? '😮' : '😉' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Estilo do Cabelo -->
+            <div class="avatar-option-group">
+              <label>Cabelo</label>
+              <div class="avatar-style-options">
+                <button
+                  v-for="style in avatarOptions.hairStyles"
+                  :key="'hair-' + style"
+                  class="avatar-style-btn"
+                  :class="{ active: editingAvatar.hair === style }"
+                  @click="editingAvatar.hair = style"
+                >
+                  {{ style === 'none' ? '🚫' : style === 'short' ? '💇' : style === 'medium' ? '💇‍♂️' : style === 'long' ? '💇‍♀️' : style === 'curly' ? '🌀' : '⚡' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Cor do Cabelo -->
+            <div class="avatar-option-group" v-if="editingAvatar.hair !== 'none'">
+              <label>Cor do Cabelo</label>
+              <div class="avatar-color-options">
+                <button
+                  v-for="color in avatarOptions.hairColors"
+                  :key="'haircolor-' + color"
+                  class="avatar-color-btn"
+                  :class="{ active: editingAvatar.hairColor === color }"
+                  :style="{ backgroundColor: color }"
+                  @click="editingAvatar.hairColor = color"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Botões -->
+          <div class="avatar-modal-footer">
+            <button class="btn-secondary" @click="cancelAvatarEdit">Cancelar</button>
+            <button class="btn-primary" @click="saveAvatar">Salvar Avatar</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal: Chamada Recebida -->
       <div v-if="incomingCall" class="call-modal-overlay">
         <div class="call-modal">
@@ -615,17 +720,15 @@
             </div>
             <button class="btn-close-sidebar" @click="sidebarOpen = false">✕</button>
           </div>
-          <div class="current-user" @click="openProfile(currentUser)" style="cursor: pointer;">
-            <div class="current-user-avatar">
+          <div class="current-user">
+            <div class="current-user-avatar" @click.stop="openAvatarEditor" title="Editar avatar">
               <img
-                v-if="currentUser?.email"
-                :src="getGravatarUrl(currentUser.email, 80)"
-                class="gravatar-small"
-                @error="$event.target.style.display='none'"
+                :src="generateAvatarSvg(myAvatar, 80)"
+                class="custom-avatar-small"
               />
-              <span class="avatar-letter-small">{{ currentUser?.nome?.charAt(0).toUpperCase() }}</span>
+              <span class="avatar-edit-badge">✏️</span>
             </div>
-            <div class="current-user-info">
+            <div class="current-user-info" @click="openProfile(currentUser)" style="cursor: pointer;">
               <span class="user-name">{{ currentUser?.nome }}</span>
               <span class="user-lang">{{ getIdiomaLabel(currentUser?.idioma) }}</span>
             </div>
@@ -1795,6 +1898,163 @@ function md5(string) {
     a = addUnsigned(a, AA); b = addUnsigned(b, BB); c = addUnsigned(c, CC); d = addUnsigned(d, DD)
   }
   return (wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d)).toLowerCase()
+}
+
+// ==================== AVATAR BUILDER ====================
+
+// Opções de personalização do avatar
+const avatarOptions = {
+  backgrounds: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
+  skinTones: ['#fde7d4', '#f5d0b5', '#d4a574', '#a67c52', '#8b5a2b', '#4a3728'],
+  eyeStyles: ['normal', 'happy', 'surprised', 'wink'],
+  hairStyles: ['none', 'short', 'medium', 'long', 'curly', 'spiky'],
+  hairColors: ['#1a1a1a', '#4a3728', '#8b5a2b', '#d4a574', '#ef4444', '#f59e0b']
+}
+
+// Configuração do avatar do usuário (carrega do localStorage)
+const savedAvatar = localStorage.getItem('poly_avatar')
+const myAvatar = ref(savedAvatar ? JSON.parse(savedAvatar) : {
+  background: '#6366f1',
+  skin: '#f5d0b5',
+  eyes: 'normal',
+  hair: 'short',
+  hairColor: '#1a1a1a'
+})
+
+const showAvatarModal = ref(false)
+const editingAvatar = ref(null)
+
+// Watch para salvar avatar quando muda
+watch(myAvatar, (newAvatar) => {
+  localStorage.setItem('poly_avatar', JSON.stringify(newAvatar))
+}, { deep: true })
+
+// Gera o SVG do avatar como data URL
+function generateAvatarSvg(config, size = 80) {
+  const { background, skin, eyes, hair, hairColor } = config
+
+  // Desenhar olhos baseado no estilo
+  let eyesSvg = ''
+  switch (eyes) {
+    case 'happy':
+      eyesSvg = `
+        <path d="M28 38 Q32 34 36 38" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <path d="M44 38 Q48 34 52 38" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+      `
+      break
+    case 'surprised':
+      eyesSvg = `
+        <circle cx="32" cy="36" r="5" fill="#1a1a1a"/>
+        <circle cx="48" cy="36" r="5" fill="#1a1a1a"/>
+        <circle cx="33" cy="35" r="2" fill="#fff"/>
+        <circle cx="49" cy="35" r="2" fill="#fff"/>
+      `
+      break
+    case 'wink':
+      eyesSvg = `
+        <circle cx="32" cy="36" r="4" fill="#1a1a1a"/>
+        <circle cx="33" cy="35" r="1.5" fill="#fff"/>
+        <path d="M44 36 Q48 32 52 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+      `
+      break
+    default: // normal
+      eyesSvg = `
+        <circle cx="32" cy="36" r="4" fill="#1a1a1a"/>
+        <circle cx="48" cy="36" r="4" fill="#1a1a1a"/>
+        <circle cx="33" cy="35" r="1.5" fill="#fff"/>
+        <circle cx="49" cy="35" r="1.5" fill="#fff"/>
+      `
+  }
+
+  // Desenhar cabelo baseado no estilo
+  let hairSvg = ''
+  switch (hair) {
+    case 'short':
+      hairSvg = `<path d="M25 28 Q40 15 55 28 Q55 20 40 18 Q25 20 25 28" fill="${hairColor}"/>`
+      break
+    case 'medium':
+      hairSvg = `
+        <path d="M22 30 Q40 10 58 30 Q58 18 40 14 Q22 18 22 30" fill="${hairColor}"/>
+        <path d="M22 30 Q20 40 22 50" stroke="${hairColor}" stroke-width="6" fill="none"/>
+        <path d="M58 30 Q60 40 58 50" stroke="${hairColor}" stroke-width="6" fill="none"/>
+      `
+      break
+    case 'long':
+      hairSvg = `
+        <path d="M20 32 Q40 8 60 32 Q60 15 40 10 Q20 15 20 32" fill="${hairColor}"/>
+        <path d="M20 32 Q18 50 22 68" stroke="${hairColor}" stroke-width="8" fill="none"/>
+        <path d="M60 32 Q62 50 58 68" stroke="${hairColor}" stroke-width="8" fill="none"/>
+      `
+      break
+    case 'curly':
+      hairSvg = `
+        <circle cx="28" cy="22" r="8" fill="${hairColor}"/>
+        <circle cx="40" cy="18" r="8" fill="${hairColor}"/>
+        <circle cx="52" cy="22" r="8" fill="${hairColor}"/>
+        <circle cx="22" cy="32" r="6" fill="${hairColor}"/>
+        <circle cx="58" cy="32" r="6" fill="${hairColor}"/>
+      `
+      break
+    case 'spiky':
+      hairSvg = `
+        <polygon points="30,28 32,12 34,28" fill="${hairColor}"/>
+        <polygon points="38,26 40,8 42,26" fill="${hairColor}"/>
+        <polygon points="46,28 48,12 50,28" fill="${hairColor}"/>
+        <polygon points="24,32 22,18 28,30" fill="${hairColor}"/>
+        <polygon points="56,32 58,18 52,30" fill="${hairColor}"/>
+      `
+      break
+  }
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="${size}" height="${size}">
+      <!-- Fundo -->
+      <rect width="80" height="80" rx="40" fill="${background}"/>
+
+      <!-- Rosto -->
+      <ellipse cx="40" cy="42" rx="22" ry="24" fill="${skin}"/>
+
+      <!-- Orelhas -->
+      <ellipse cx="18" cy="42" rx="5" ry="7" fill="${skin}"/>
+      <ellipse cx="62" cy="42" rx="5" ry="7" fill="${skin}"/>
+
+      <!-- Cabelo -->
+      ${hairSvg}
+
+      <!-- Olhos -->
+      ${eyesSvg}
+
+      <!-- Nariz -->
+      <ellipse cx="40" cy="46" rx="2" ry="3" fill="${skin}" stroke="#00000020" stroke-width="0.5"/>
+
+      <!-- Boca -->
+      <path d="M34 54 Q40 58 46 54" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+      <!-- Bochechas -->
+      <circle cx="26" cy="48" r="4" fill="#ffb6c180"/>
+      <circle cx="54" cy="48" r="4" fill="#ffb6c180"/>
+    </svg>
+  `
+
+  return 'data:image/svg+xml,' + encodeURIComponent(svg.trim())
+}
+
+// Abre o modal de edição de avatar
+function openAvatarEditor() {
+  editingAvatar.value = { ...myAvatar.value }
+  showAvatarModal.value = true
+}
+
+// Salva o avatar editado
+function saveAvatar() {
+  myAvatar.value = { ...editingAvatar.value }
+  showAvatarModal.value = false
+}
+
+// Cancela a edição do avatar
+function cancelAvatarEdit() {
+  editingAvatar.value = null
+  showAvatarModal.value = false
 }
 
 // Abrir modal de perfil
@@ -7598,6 +7858,186 @@ body {
 
 .btn-forward-msg:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== AVATAR BUILDER ==================== */
+
+.avatar-modal {
+  max-width: 400px;
+  padding: 0;
+}
+
+.avatar-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.avatar-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.btn-close-modal:hover {
+  color: #fff;
+}
+
+.avatar-preview-container {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  background: #0d1b2a;
+}
+
+.avatar-preview-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 3px solid #6366f1;
+}
+
+.avatar-options {
+  padding: 16px 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.avatar-option-group {
+  margin-bottom: 16px;
+}
+
+.avatar-option-group label {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.avatar-color-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.avatar-color-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-color-btn:hover {
+  transform: scale(1.1);
+}
+
+.avatar-color-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+.avatar-style-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.avatar-style-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 2px solid #333;
+  background: #1a1a2e;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.avatar-style-btn:hover {
+  border-color: #6366f1;
+  background: #252545;
+}
+
+.avatar-style-btn.active {
+  border-color: #6366f1;
+  background: #6366f1;
+}
+
+.avatar-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #333;
+}
+
+.avatar-modal-footer .btn-secondary,
+.avatar-modal-footer .btn-primary {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.avatar-modal-footer .btn-secondary {
+  background: #333;
+  color: #fff;
+}
+
+.avatar-modal-footer .btn-primary {
+  background: #6366f1;
+  color: #fff;
+}
+
+.avatar-modal-footer .btn-primary:hover {
+  background: #5558e3;
+}
+
+/* Avatar customizado no sidebar */
+.custom-avatar-small {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.current-user-avatar {
+  position: relative;
+}
+
+.current-user-avatar:hover .custom-avatar-small {
+  transform: scale(1.05);
+}
+
+.avatar-edit-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #6366f1;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  border: 2px solid #16213e;
 }
 
 .visibility-hint {
