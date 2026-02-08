@@ -7803,7 +7803,7 @@ body {
 
   /* Área de mensagens da SALA no mobile */
   .room-wrapper {
-    padding-top: 70px; /* Compensar header fixo */
+    padding-top: 85px; /* Compensar header fixo */
   }
 
   .messages-area {
