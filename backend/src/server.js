@@ -7,6 +7,8 @@ const jwt = require('jsonwebtoken')
 const webpush = require('web-push')
 const crypto = require('crypto')
 const nodemailer = require('nodemailer')
+const FormData = require('form-data')
+const nodeFetch = require('node-fetch')
 const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -1723,18 +1725,21 @@ app.post('/api/transcribe-audio', authMiddleware, async (req, res) => {
     const audioBuffer = Buffer.from(base64Data, 'base64')
     console.log('[Transcrição] Áudio recebido:', audioBuffer.length, 'bytes, tipo:', mimeType)
 
-    // Criar Blob e FormData nativos (Node 18+)
-    const audioBlob = new Blob([audioBuffer], { type: mimeType })
+    // Criar FormData usando form-data package (compatível com node-fetch)
     const formData = new FormData()
-    formData.append('file', audioBlob, `audio.${ext}`)
+    formData.append('file', audioBuffer, {
+      filename: `audio.${ext}`,
+      contentType: mimeType
+    })
     formData.append('model', 'whisper-large-v3')
     formData.append('response_format', 'text')
 
-    // Chamar Groq Whisper API
-    const whisperResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    // Chamar Groq Whisper API usando node-fetch
+    const whisperResponse = await nodeFetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + GROQ_API_KEY
+        'Authorization': 'Bearer ' + GROQ_API_KEY,
+        ...formData.getHeaders()
       },
       body: formData
     })
