@@ -1506,7 +1506,7 @@
               >
                 📞
               </button>
-              <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording">
+              <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording || isSendingMessage">
                 Enviar
               </button>
             </div>
@@ -1592,6 +1592,7 @@ const selectedConnection = ref(null)
 const idiomaRecepcao = ref(null) // null = usar idioma do perfil (padrão)
 const messages = ref([])
 const newMessage = ref('')
+const isSendingMessage = ref(false) // Previne cliques duplos
 const messageBubbleColor = ref(localStorage.getItem('poly_bubble_color') || '#6366f1')
 const messagesContainer = ref(null)
 const myStatus = ref('online')
@@ -3903,19 +3904,27 @@ async function loadMessages() {
 
 async function sendMessage() {
   if (!newMessage.value.trim() || !selectedConnection.value) return
+  if (isSendingMessage.value) return // Previne cliques duplos
+
+  isSendingMessage.value = true
 
   // Parar indicador de digitação
   emitStoppedTyping()
+
+  const texto = newMessage.value
+  newMessage.value = '' // Limpa imediatamente para UX
 
   try {
     await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ texto: newMessage.value })
+      body: JSON.stringify({ texto })
     })
-    newMessage.value = ''
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
+    newMessage.value = texto // Restaura se falhou
+  } finally {
+    isSendingMessage.value = false
   }
 }
 
