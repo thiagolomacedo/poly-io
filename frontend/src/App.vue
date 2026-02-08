@@ -518,11 +518,11 @@
         </div>
       </div>
 
-      <!-- Modal: Avatar Builder -->
+      <!-- Modal: Poly Avatar Builder -->
       <div v-if="showAvatarModal" class="modal-overlay" @click="cancelAvatarEdit">
         <div class="modal-content avatar-modal" @click.stop>
           <div class="avatar-modal-header">
-            <h3>Personalize seu Avatar</h3>
+            <h3>🎨 Poly Avatar</h3>
             <button class="btn-close-modal" @click="cancelAvatarEdit">✕</button>
           </div>
 
@@ -530,95 +530,166 @@
           <div class="avatar-preview-container">
             <img
               v-if="editingAvatar"
-              :src="generateAvatarSvg(editingAvatar, 120)"
+              :src="generateAvatarSvg(editingAvatar, 140)"
               class="avatar-preview-large"
             />
           </div>
 
+          <!-- Tabs de Navegação -->
+          <div class="avatar-tabs">
+            <button :class="{ active: avatarEditorTab === 'face' }" @click="avatarEditorTab = 'face'">👤 Rosto</button>
+            <button :class="{ active: avatarEditorTab === 'hair' }" @click="avatarEditorTab = 'hair'">💇 Cabelo</button>
+            <button :class="{ active: avatarEditorTab === 'accessories' }" @click="avatarEditorTab = 'accessories'">👓 Acessórios</button>
+            <button :class="{ active: avatarEditorTab === 'style' }" @click="avatarEditorTab = 'style'">👕 Estilo</button>
+          </div>
+
           <!-- Opções de Personalização -->
           <div class="avatar-options" v-if="editingAvatar">
-            <!-- Cor de Fundo -->
-            <div class="avatar-option-group">
-              <label>Fundo</label>
-              <div class="avatar-color-options">
-                <button
-                  v-for="color in avatarOptions.backgrounds"
-                  :key="'bg-' + color"
-                  class="avatar-color-btn"
-                  :class="{ active: editingAvatar.background === color }"
-                  :style="{ backgroundColor: color }"
-                  @click="editingAvatar.background = color"
-                />
-              </div>
-            </div>
 
-            <!-- Tom de Pele -->
-            <div class="avatar-option-group">
-              <label>Pele</label>
-              <div class="avatar-color-options">
-                <button
-                  v-for="color in avatarOptions.skinTones"
-                  :key="'skin-' + color"
-                  class="avatar-color-btn"
-                  :class="{ active: editingAvatar.skin === color }"
-                  :style="{ backgroundColor: color }"
-                  @click="editingAvatar.skin = color"
-                />
+            <!-- TAB: ROSTO -->
+            <template v-if="avatarEditorTab === 'face'">
+              <div class="avatar-option-group">
+                <label>Formato do Rosto</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.faceTypes" :key="'face-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.faceType === style }" @click="editingAvatar.faceType = style">
+                    {{ style === 'round' ? '🔵' : style === 'oval' ? '🥚' : '⬛' }}
+                  </button>
+                </div>
               </div>
-            </div>
+              <div class="avatar-option-group">
+                <label>Tom de Pele</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.skinTones" :key="'skin-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.skin === color }" :style="{ backgroundColor: color }" @click="editingAvatar.skin = color"/>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Olhos</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.eyeStyles" :key="'eyes-'+style" class="avatar-style-btn small" :class="{ active: editingAvatar.eyes === style }" @click="editingAvatar.eyes = style">
+                    {{ style === 'normal' ? '👁️' : style === 'happy' ? '😊' : style === 'sad' ? '😢' : style === 'surprised' ? '😮' : style === 'wink' ? '😉' : style === 'sleepy' ? '😴' : '😠' }}
+                  </button>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Cor dos Olhos</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.eyeColors" :key="'eyecolor-'+color" class="avatar-color-btn small" :class="{ active: editingAvatar.eyeColor === color }" :style="{ backgroundColor: color }" @click="editingAvatar.eyeColor = color"/>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Sobrancelhas</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.eyebrowStyles" :key="'brow-'+style" class="avatar-style-btn small" :class="{ active: editingAvatar.eyebrows === style }" @click="editingAvatar.eyebrows = style">
+                    {{ style === 'normal' ? '〰️' : style === 'thick' ? '➖' : style === 'thin' ? '—' : style === 'arched' ? '⌒' : style === 'angry' ? '😠' : '😢' }}
+                  </button>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Nariz</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.noseStyles" :key="'nose-'+style" class="avatar-style-btn small" :class="{ active: editingAvatar.nose === style }" @click="editingAvatar.nose = style">
+                    {{ style === 'small' ? '·' : style === 'medium' ? '•' : style === 'large' ? '●' : style === 'pointed' ? '▼' : '◉' }}
+                  </button>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Boca</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.mouthStyles" :key="'mouth-'+style" class="avatar-style-btn small" :class="{ active: editingAvatar.mouth === style }" @click="editingAvatar.mouth = style">
+                    {{ style === 'smile' ? '😊' : style === 'happy' ? '😄' : style === 'neutral' ? '😐' : style === 'sad' ? '😞' : style === 'open' ? '😮' : '😏' }}
+                  </button>
+                </div>
+              </div>
+            </template>
 
-            <!-- Estilo dos Olhos -->
-            <div class="avatar-option-group">
-              <label>Olhos</label>
-              <div class="avatar-style-options">
-                <button
-                  v-for="style in avatarOptions.eyeStyles"
-                  :key="'eyes-' + style"
-                  class="avatar-style-btn"
-                  :class="{ active: editingAvatar.eyes === style }"
-                  @click="editingAvatar.eyes = style"
-                >
-                  {{ style === 'normal' ? '👁️' : style === 'happy' ? '😊' : style === 'surprised' ? '😮' : '😉' }}
-                </button>
+            <!-- TAB: CABELO -->
+            <template v-if="avatarEditorTab === 'hair'">
+              <div class="avatar-option-group">
+                <label>Estilo do Cabelo</label>
+                <div class="avatar-style-options wrap">
+                  <button v-for="style in avatarOptions.hairStyles" :key="'hair-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.hair === style }" @click="editingAvatar.hair = style">
+                    {{ style === 'none' ? '🚫' : style === 'buzz' ? '👨‍🦲' : style === 'short' ? '💇‍♂️' : style === 'medium' ? '🧑' : style === 'long' ? '💇‍♀️' : style === 'curly' ? '🌀' : style === 'wavy' ? '〰️' : style === 'spiky' ? '⚡' : style === 'ponytail' ? '🎀' : style === 'bun' ? '🍡' : style === 'braids' ? '🪢' : style === 'afro' ? '🟤' : style === 'mohawk' ? '🦔' : style === 'sidePart' ? '↗️' : '✂️' }}
+                  </button>
+                </div>
               </div>
-            </div>
+              <div class="avatar-option-group" v-if="editingAvatar.hair !== 'none'">
+                <label>Cor do Cabelo</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.hairColors" :key="'haircolor-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.hairColor === color }" :style="{ backgroundColor: color }" @click="editingAvatar.hairColor = color"/>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Barba</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.beardStyles" :key="'beard-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.beard === style }" @click="editingAvatar.beard = style">
+                    {{ style === 'none' ? '🚫' : style === 'stubble' ? '🌫️' : style === 'short' ? '🧔‍♂️' : style === 'full' ? '🧔' : style === 'goatee' ? '🔻' : '🥸' }}
+                  </button>
+                </div>
+              </div>
+            </template>
 
-            <!-- Estilo do Cabelo -->
-            <div class="avatar-option-group">
-              <label>Cabelo</label>
-              <div class="avatar-style-options">
-                <button
-                  v-for="style in avatarOptions.hairStyles"
-                  :key="'hair-' + style"
-                  class="avatar-style-btn"
-                  :class="{ active: editingAvatar.hair === style }"
-                  @click="editingAvatar.hair = style"
-                >
-                  {{ style === 'none' ? '🚫' : style === 'short' ? '💇' : style === 'medium' ? '💇‍♂️' : style === 'long' ? '💇‍♀️' : style === 'curly' ? '🌀' : '⚡' }}
-                </button>
+            <!-- TAB: ACESSÓRIOS -->
+            <template v-if="avatarEditorTab === 'accessories'">
+              <div class="avatar-option-group">
+                <label>Óculos</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.glassesStyles" :key="'glasses-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.glasses === style }" @click="editingAvatar.glasses = style">
+                    {{ style === 'none' ? '🚫' : style === 'round' ? '👓' : style === 'square' ? '🤓' : style === 'aviator' ? '🕶️' : style === 'cat' ? '😎' : '🥽' }}
+                  </button>
+                </div>
               </div>
-            </div>
+              <div class="avatar-option-group" v-if="editingAvatar.glasses !== 'none'">
+                <label>Cor dos Óculos</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.glassesColors" :key="'glassescolor-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.glassesColor === color }" :style="{ backgroundColor: color }" @click="editingAvatar.glassesColor = color"/>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Acessório de Cabeça</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.headAccessories" :key="'acc-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.headAccessory === style }" @click="editingAvatar.headAccessory = style">
+                    {{ style === 'none' ? '🚫' : style === 'cap' ? '🧢' : style === 'beanie' ? '🎿' : style === 'headband' ? '🩹' : style === 'bow' ? '🎀' : '💎' }}
+                  </button>
+                </div>
+              </div>
+              <div class="avatar-option-group" v-if="editingAvatar.headAccessory !== 'none'">
+                <label>Cor do Acessório</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.accessoryColors" :key="'acccolor-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.accessoryColor === color }" :style="{ backgroundColor: color }" @click="editingAvatar.accessoryColor = color"/>
+                </div>
+              </div>
+            </template>
 
-            <!-- Cor do Cabelo -->
-            <div class="avatar-option-group" v-if="editingAvatar.hair !== 'none'">
-              <label>Cor do Cabelo</label>
-              <div class="avatar-color-options">
-                <button
-                  v-for="color in avatarOptions.hairColors"
-                  :key="'haircolor-' + color"
-                  class="avatar-color-btn"
-                  :class="{ active: editingAvatar.hairColor === color }"
-                  :style="{ backgroundColor: color }"
-                  @click="editingAvatar.hairColor = color"
-                />
+            <!-- TAB: ESTILO -->
+            <template v-if="avatarEditorTab === 'style'">
+              <div class="avatar-option-group">
+                <label>Cor de Fundo</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.backgrounds" :key="'bg-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.background === color }" :style="{ backgroundColor: color }" @click="editingAvatar.background = color"/>
+                </div>
               </div>
-            </div>
+              <div class="avatar-option-group">
+                <label>Roupa</label>
+                <div class="avatar-style-options">
+                  <button v-for="style in avatarOptions.clothingStyles" :key="'cloth-'+style" class="avatar-style-btn" :class="{ active: editingAvatar.clothing === style }" @click="editingAvatar.clothing = style">
+                    {{ style === 'tshirt' ? '👕' : style === 'vneck' ? '🔻' : style === 'hoodie' ? '🧥' : style === 'collar' ? '👔' : style === 'tank' ? '🎽' : '🧶' }}
+                  </button>
+                </div>
+              </div>
+              <div class="avatar-option-group">
+                <label>Cor da Roupa</label>
+                <div class="avatar-color-options">
+                  <button v-for="color in avatarOptions.clothingColors" :key="'clothcolor-'+color" class="avatar-color-btn" :class="{ active: editingAvatar.clothingColor === color }" :style="{ backgroundColor: color }" @click="editingAvatar.clothingColor = color"/>
+                </div>
+              </div>
+            </template>
+
           </div>
 
           <!-- Botões -->
           <div class="avatar-modal-footer">
             <button class="btn-secondary" @click="cancelAvatarEdit">Cancelar</button>
-            <button class="btn-primary" @click="saveAvatar">Salvar Avatar</button>
+            <button class="btn-primary" @click="saveAvatar">💾 Salvar</button>
           </div>
         </div>
       </div>
@@ -1900,26 +1971,87 @@ function md5(string) {
   return (wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d)).toLowerCase()
 }
 
-// ==================== AVATAR BUILDER ====================
+// ==================== POLY AVATAR (Bitmoji do Poly.io) ====================
 
-// Opções de personalização do avatar
+// Opções expandidas de personalização
 const avatarOptions = {
-  backgrounds: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
-  skinTones: ['#fde7d4', '#f5d0b5', '#d4a574', '#a67c52', '#8b5a2b', '#4a3728'],
-  eyeStyles: ['normal', 'happy', 'surprised', 'wink'],
-  hairStyles: ['none', 'short', 'medium', 'long', 'curly', 'spiky'],
-  hairColors: ['#1a1a1a', '#4a3728', '#8b5a2b', '#d4a574', '#ef4444', '#f59e0b']
+  // Fundos
+  backgrounds: [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981',
+    '#06b6d4', '#3b82f6', '#1e1e2e', '#2d2d44', '#4a1942', '#1a4a1a'
+  ],
+  // Tipos de rosto
+  faceTypes: ['round', 'oval', 'square'],
+  // Tons de pele
+  skinTones: [
+    '#ffead0', '#fde7d4', '#f5d0b5', '#e8b98f', '#d4a574', '#c68c53',
+    '#a67c52', '#8b5a2b', '#6b4423', '#4a3728', '#3d2314', '#2d1810'
+  ],
+  // Estilos de olhos
+  eyeStyles: ['normal', 'happy', 'sad', 'surprised', 'wink', 'sleepy', 'angry'],
+  // Cores dos olhos
+  eyeColors: ['#1a1a1a', '#4a3728', '#1e90ff', '#228b22', '#8b4513', '#4169e1'],
+  // Sobrancelhas
+  eyebrowStyles: ['normal', 'thick', 'thin', 'arched', 'angry', 'sad'],
+  // Narizes
+  noseStyles: ['small', 'medium', 'large', 'pointed', 'round'],
+  // Bocas
+  mouthStyles: ['smile', 'happy', 'neutral', 'sad', 'open', 'smirk'],
+  // Cabelos
+  hairStyles: [
+    'none', 'buzz', 'short', 'medium', 'long', 'curly', 'wavy', 'spiky',
+    'ponytail', 'bun', 'braids', 'afro', 'mohawk', 'sidePart', 'bangs'
+  ],
+  // Cores de cabelo
+  hairColors: [
+    '#1a1a1a', '#2d2d2d', '#4a3728', '#6b4423', '#8b5a2b', '#a67c52',
+    '#d4a574', '#e8c07a', '#ef4444', '#f97316', '#eab308', '#a855f7',
+    '#3b82f6', '#10b981', '#ec4899', '#f5f5f5'
+  ],
+  // Barbas (para rosto masculino)
+  beardStyles: ['none', 'stubble', 'short', 'full', 'goatee', 'mustache'],
+  // Óculos
+  glassesStyles: ['none', 'round', 'square', 'aviator', 'cat', 'sport'],
+  // Cores dos óculos
+  glassesColors: ['#1a1a1a', '#4a3728', '#6366f1', '#ef4444', '#f59e0b', '#ffffff'],
+  // Acessórios de cabeça
+  headAccessories: ['none', 'cap', 'beanie', 'headband', 'bow', 'earrings'],
+  // Cores de acessórios
+  accessoryColors: ['#1a1a1a', '#ffffff', '#6366f1', '#ef4444', '#f59e0b', '#ec4899'],
+  // Roupas/gola
+  clothingStyles: ['tshirt', 'vneck', 'hoodie', 'collar', 'tank', 'sweater'],
+  // Cores de roupa
+  clothingColors: [
+    '#1a1a1a', '#2d2d44', '#6366f1', '#ef4444', '#10b981', '#f59e0b',
+    '#ec4899', '#8b5cf6', '#ffffff', '#3b82f6', '#14b8a6', '#f97316'
+  ]
 }
+
+// Tab atual do editor
+const avatarEditorTab = ref('face')
 
 // Configuração do avatar do usuário (carrega do localStorage)
 const savedAvatar = localStorage.getItem('poly_avatar')
-const myAvatar = ref(savedAvatar ? JSON.parse(savedAvatar) : {
+const defaultAvatar = {
   background: '#6366f1',
+  faceType: 'round',
   skin: '#f5d0b5',
   eyes: 'normal',
+  eyeColor: '#1a1a1a',
+  eyebrows: 'normal',
+  nose: 'medium',
+  mouth: 'smile',
   hair: 'short',
-  hairColor: '#1a1a1a'
-})
+  hairColor: '#1a1a1a',
+  beard: 'none',
+  glasses: 'none',
+  glassesColor: '#1a1a1a',
+  headAccessory: 'none',
+  accessoryColor: '#6366f1',
+  clothing: 'tshirt',
+  clothingColor: '#6366f1'
+}
+const myAvatar = ref(savedAvatar ? { ...defaultAvatar, ...JSON.parse(savedAvatar) } : defaultAvatar)
 
 const showAvatarModal = ref(false)
 const editingAvatar = ref(null)
@@ -1929,110 +2061,414 @@ watch(myAvatar, (newAvatar) => {
   localStorage.setItem('poly_avatar', JSON.stringify(newAvatar))
 }, { deep: true })
 
-// Gera o SVG do avatar como data URL
+// Gera o SVG do avatar como data URL (Poly Avatar - versão expandida)
 function generateAvatarSvg(config, size = 80) {
-  const { background, skin, eyes, hair, hairColor } = config
+  const c = { ...defaultAvatar, ...config }
 
-  // Desenhar olhos baseado no estilo
+  // ========== ROSTO ==========
+  let facePath = ''
+  switch (c.faceType) {
+    case 'oval':
+      facePath = `<ellipse cx="40" cy="44" rx="20" ry="26" fill="${c.skin}"/>`
+      break
+    case 'square':
+      facePath = `<rect x="20" y="20" width="40" height="48" rx="8" fill="${c.skin}"/>`
+      break
+    default: // round
+      facePath = `<ellipse cx="40" cy="42" rx="22" ry="24" fill="${c.skin}"/>`
+  }
+
+  // ========== ORELHAS ==========
+  const earsSvg = `
+    <ellipse cx="18" cy="42" rx="4" ry="6" fill="${c.skin}"/>
+    <ellipse cx="62" cy="42" rx="4" ry="6" fill="${c.skin}"/>
+  `
+
+  // ========== SOBRANCELHAS ==========
+  let eyebrowsSvg = ''
+  switch (c.eyebrows) {
+    case 'thick':
+      eyebrowsSvg = `
+        <path d="M26 30 Q32 27 38 30" stroke="#1a1a1a" stroke-width="3" fill="none"/>
+        <path d="M42 30 Q48 27 54 30" stroke="#1a1a1a" stroke-width="3" fill="none"/>
+      `
+      break
+    case 'thin':
+      eyebrowsSvg = `
+        <path d="M27 30 Q32 29 37 30" stroke="#1a1a1a" stroke-width="1" fill="none"/>
+        <path d="M43 30 Q48 29 53 30" stroke="#1a1a1a" stroke-width="1" fill="none"/>
+      `
+      break
+    case 'arched':
+      eyebrowsSvg = `
+        <path d="M26 32 Q32 26 38 30" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <path d="M42 30 Q48 26 54 32" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+      `
+      break
+    case 'angry':
+      eyebrowsSvg = `
+        <path d="M26 28 L38 32" stroke="#1a1a1a" stroke-width="2"/>
+        <path d="M42 32 L54 28" stroke="#1a1a1a" stroke-width="2"/>
+      `
+      break
+    case 'sad':
+      eyebrowsSvg = `
+        <path d="M26 32 L38 28" stroke="#1a1a1a" stroke-width="2"/>
+        <path d="M42 28 L54 32" stroke="#1a1a1a" stroke-width="2"/>
+      `
+      break
+    default: // normal
+      eyebrowsSvg = `
+        <path d="M26 30 Q32 28 38 30" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <path d="M42 30 Q48 28 54 30" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+      `
+  }
+
+  // ========== OLHOS ==========
   let eyesSvg = ''
-  switch (eyes) {
+  const ec = c.eyeColor || '#1a1a1a'
+  switch (c.eyes) {
     case 'happy':
       eyesSvg = `
-        <path d="M28 38 Q32 34 36 38" stroke="#1a1a1a" stroke-width="2" fill="none"/>
-        <path d="M44 38 Q48 34 52 38" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <path d="M28 38 Q32 34 36 38" stroke="${ec}" stroke-width="2" fill="none"/>
+        <path d="M44 38 Q48 34 52 38" stroke="${ec}" stroke-width="2" fill="none"/>
+      `
+      break
+    case 'sad':
+      eyesSvg = `
+        <path d="M28 36 Q32 40 36 36" stroke="${ec}" stroke-width="2" fill="none"/>
+        <path d="M44 36 Q48 40 52 36" stroke="${ec}" stroke-width="2" fill="none"/>
       `
       break
     case 'surprised':
       eyesSvg = `
-        <circle cx="32" cy="36" r="5" fill="#1a1a1a"/>
-        <circle cx="48" cy="36" r="5" fill="#1a1a1a"/>
-        <circle cx="33" cy="35" r="2" fill="#fff"/>
-        <circle cx="49" cy="35" r="2" fill="#fff"/>
+        <circle cx="32" cy="37" r="5" fill="${ec}"/>
+        <circle cx="48" cy="37" r="5" fill="${ec}"/>
+        <circle cx="33" cy="36" r="2" fill="#fff"/>
+        <circle cx="49" cy="36" r="2" fill="#fff"/>
       `
       break
     case 'wink':
       eyesSvg = `
-        <circle cx="32" cy="36" r="4" fill="#1a1a1a"/>
-        <circle cx="33" cy="35" r="1.5" fill="#fff"/>
-        <path d="M44 36 Q48 32 52 36" stroke="#1a1a1a" stroke-width="2" fill="none"/>
+        <circle cx="32" cy="37" r="4" fill="${ec}"/>
+        <circle cx="33" cy="36" r="1.5" fill="#fff"/>
+        <path d="M44 37 Q48 33 52 37" stroke="${ec}" stroke-width="2" fill="none"/>
+      `
+      break
+    case 'sleepy':
+      eyesSvg = `
+        <path d="M28 38 L36 38" stroke="${ec}" stroke-width="2"/>
+        <path d="M44 38 L52 38" stroke="${ec}" stroke-width="2"/>
+      `
+      break
+    case 'angry':
+      eyesSvg = `
+        <circle cx="32" cy="38" r="3" fill="${ec}"/>
+        <circle cx="48" cy="38" r="3" fill="${ec}"/>
       `
       break
     default: // normal
       eyesSvg = `
-        <circle cx="32" cy="36" r="4" fill="#1a1a1a"/>
-        <circle cx="48" cy="36" r="4" fill="#1a1a1a"/>
-        <circle cx="33" cy="35" r="1.5" fill="#fff"/>
-        <circle cx="49" cy="35" r="1.5" fill="#fff"/>
+        <circle cx="32" cy="37" r="4" fill="${ec}"/>
+        <circle cx="48" cy="37" r="4" fill="${ec}"/>
+        <circle cx="33" cy="36" r="1.5" fill="#fff"/>
+        <circle cx="49" cy="36" r="1.5" fill="#fff"/>
       `
   }
 
-  // Desenhar cabelo baseado no estilo
+  // ========== NARIZ ==========
+  let noseSvg = ''
+  switch (c.nose) {
+    case 'small':
+      noseSvg = `<ellipse cx="40" cy="46" rx="1.5" ry="2" fill="${c.skin}" stroke="#00000015" stroke-width="0.5"/>`
+      break
+    case 'large':
+      noseSvg = `<ellipse cx="40" cy="47" rx="4" ry="5" fill="${c.skin}" stroke="#00000020" stroke-width="0.5"/>`
+      break
+    case 'pointed':
+      noseSvg = `<polygon points="40,42 37,50 43,50" fill="${c.skin}" stroke="#00000015" stroke-width="0.5"/>`
+      break
+    case 'round':
+      noseSvg = `<circle cx="40" cy="47" r="3" fill="${c.skin}" stroke="#00000020" stroke-width="0.5"/>`
+      break
+    default: // medium
+      noseSvg = `<ellipse cx="40" cy="46" rx="2.5" ry="3.5" fill="${c.skin}" stroke="#00000015" stroke-width="0.5"/>`
+  }
+
+  // ========== BOCA ==========
+  let mouthSvg = ''
+  switch (c.mouth) {
+    case 'happy':
+      mouthSvg = `<path d="M32 54 Q40 62 48 54" stroke="#1a1a1a" stroke-width="2" fill="#ff6b6b40"/>`
+      break
+    case 'neutral':
+      mouthSvg = `<line x1="34" y1="55" x2="46" y2="55" stroke="#1a1a1a" stroke-width="2"/>`
+      break
+    case 'sad':
+      mouthSvg = `<path d="M34 58 Q40 52 46 58" stroke="#1a1a1a" stroke-width="2" fill="none"/>`
+      break
+    case 'open':
+      mouthSvg = `<ellipse cx="40" cy="56" rx="6" ry="4" fill="#1a1a1a"/><ellipse cx="40" cy="55" rx="4" ry="2" fill="#ff6b6b"/>`
+      break
+    case 'smirk':
+      mouthSvg = `<path d="M34 54 Q38 56 42 54 Q46 56 48 52" stroke="#1a1a1a" stroke-width="2" fill="none"/>`
+      break
+    default: // smile
+      mouthSvg = `<path d="M34 54 Q40 60 46 54" stroke="#1a1a1a" stroke-width="2" fill="none"/>`
+  }
+
+  // ========== CABELO ==========
   let hairSvg = ''
-  switch (hair) {
+  const hc = c.hairColor || '#1a1a1a'
+  switch (c.hair) {
+    case 'buzz':
+      hairSvg = `<path d="M22 35 Q22 20 40 18 Q58 20 58 35" fill="${hc}" opacity="0.7"/>`
+      break
     case 'short':
-      hairSvg = `<path d="M25 28 Q40 15 55 28 Q55 20 40 18 Q25 20 25 28" fill="${hairColor}"/>`
+      hairSvg = `<path d="M22 32 Q40 12 58 32 Q58 22 40 18 Q22 22 22 32" fill="${hc}"/>`
       break
     case 'medium':
       hairSvg = `
-        <path d="M22 30 Q40 10 58 30 Q58 18 40 14 Q22 18 22 30" fill="${hairColor}"/>
-        <path d="M22 30 Q20 40 22 50" stroke="${hairColor}" stroke-width="6" fill="none"/>
-        <path d="M58 30 Q60 40 58 50" stroke="${hairColor}" stroke-width="6" fill="none"/>
+        <path d="M20 34 Q40 8 60 34 Q60 18 40 12 Q20 18 20 34" fill="${hc}"/>
+        <path d="M20 34 Q18 44 20 54" stroke="${hc}" stroke-width="6" fill="none"/>
+        <path d="M60 34 Q62 44 60 54" stroke="${hc}" stroke-width="6" fill="none"/>
       `
       break
     case 'long':
       hairSvg = `
-        <path d="M20 32 Q40 8 60 32 Q60 15 40 10 Q20 15 20 32" fill="${hairColor}"/>
-        <path d="M20 32 Q18 50 22 68" stroke="${hairColor}" stroke-width="8" fill="none"/>
-        <path d="M60 32 Q62 50 58 68" stroke="${hairColor}" stroke-width="8" fill="none"/>
+        <path d="M18 36 Q40 4 62 36 Q62 14 40 8 Q18 14 18 36" fill="${hc}"/>
+        <path d="M18 36 Q14 52 18 72" stroke="${hc}" stroke-width="10" fill="none"/>
+        <path d="M62 36 Q66 52 62 72" stroke="${hc}" stroke-width="10" fill="none"/>
       `
       break
     case 'curly':
       hairSvg = `
-        <circle cx="28" cy="22" r="8" fill="${hairColor}"/>
-        <circle cx="40" cy="18" r="8" fill="${hairColor}"/>
-        <circle cx="52" cy="22" r="8" fill="${hairColor}"/>
-        <circle cx="22" cy="32" r="6" fill="${hairColor}"/>
-        <circle cx="58" cy="32" r="6" fill="${hairColor}"/>
+        <circle cx="26" cy="24" r="8" fill="${hc}"/>
+        <circle cx="40" cy="18" r="9" fill="${hc}"/>
+        <circle cx="54" cy="24" r="8" fill="${hc}"/>
+        <circle cx="20" cy="36" r="6" fill="${hc}"/>
+        <circle cx="60" cy="36" r="6" fill="${hc}"/>
+        <circle cx="32" cy="20" r="6" fill="${hc}"/>
+        <circle cx="48" cy="20" r="6" fill="${hc}"/>
+      `
+      break
+    case 'wavy':
+      hairSvg = `
+        <path d="M20 34 Q40 6 60 34 Q60 16 40 10 Q20 16 20 34" fill="${hc}"/>
+        <path d="M20 34 Q16 42 20 50 Q16 58 20 66" stroke="${hc}" stroke-width="8" fill="none"/>
+        <path d="M60 34 Q64 42 60 50 Q64 58 60 66" stroke="${hc}" stroke-width="8" fill="none"/>
       `
       break
     case 'spiky':
       hairSvg = `
-        <polygon points="30,28 32,12 34,28" fill="${hairColor}"/>
-        <polygon points="38,26 40,8 42,26" fill="${hairColor}"/>
-        <polygon points="46,28 48,12 50,28" fill="${hairColor}"/>
-        <polygon points="24,32 22,18 28,30" fill="${hairColor}"/>
-        <polygon points="56,32 58,18 52,30" fill="${hairColor}"/>
+        <polygon points="28,30 30,10 32,30" fill="${hc}"/>
+        <polygon points="36,28 38,6 40,28" fill="${hc}"/>
+        <polygon points="40,28 42,6 44,28" fill="${hc}"/>
+        <polygon points="48,30 50,10 52,30" fill="${hc}"/>
+        <polygon points="22,34 18,18 26,32" fill="${hc}"/>
+        <polygon points="58,34 62,18 54,32" fill="${hc}"/>
+      `
+      break
+    case 'ponytail':
+      hairSvg = `
+        <path d="M22 32 Q40 14 58 32 Q58 22 40 18 Q22 22 22 32" fill="${hc}"/>
+        <ellipse cx="40" cy="12" rx="6" ry="4" fill="${hc}"/>
+        <path d="M40 16 Q42 8 40 2 Q38 8 40 16" stroke="${hc}" stroke-width="6" fill="none"/>
+      `
+      break
+    case 'bun':
+      hairSvg = `
+        <path d="M22 32 Q40 14 58 32 Q58 22 40 18 Q22 22 22 32" fill="${hc}"/>
+        <circle cx="40" cy="10" r="10" fill="${hc}"/>
+      `
+      break
+    case 'braids':
+      hairSvg = `
+        <path d="M22 32 Q40 14 58 32 Q58 22 40 18 Q22 22 22 32" fill="${hc}"/>
+        <path d="M24 32 Q20 45 24 58 Q20 65 24 72" stroke="${hc}" stroke-width="6" fill="none"/>
+        <path d="M56 32 Q60 45 56 58 Q60 65 56 72" stroke="${hc}" stroke-width="6" fill="none"/>
+      `
+      break
+    case 'afro':
+      hairSvg = `
+        <circle cx="40" cy="30" r="26" fill="${hc}"/>
+        <circle cx="18" cy="40" r="8" fill="${hc}"/>
+        <circle cx="62" cy="40" r="8" fill="${hc}"/>
+      `
+      break
+    case 'mohawk':
+      hairSvg = `
+        <path d="M36 32 L38 4 L40 32 L42 4 L44 32" stroke="${hc}" stroke-width="4" fill="${hc}"/>
+      `
+      break
+    case 'sidePart':
+      hairSvg = `
+        <path d="M20 34 Q30 12 60 28 Q60 18 40 14 Q20 18 20 34" fill="${hc}"/>
+        <path d="M20 34 Q18 44 20 50" stroke="${hc}" stroke-width="5" fill="none"/>
+      `
+      break
+    case 'bangs':
+      hairSvg = `
+        <path d="M20 34 Q40 10 60 34 Q60 18 40 12 Q20 18 20 34" fill="${hc}"/>
+        <path d="M24 32 L24 42 M30 30 L30 44 M36 28 L36 42 M42 28 L42 40" stroke="${hc}" stroke-width="4"/>
       `
       break
   }
 
+  // ========== BARBA ==========
+  let beardSvg = ''
+  switch (c.beard) {
+    case 'stubble':
+      beardSvg = `<rect x="28" y="52" width="24" height="14" rx="4" fill="${hc}" opacity="0.3"/>`
+      break
+    case 'short':
+      beardSvg = `<path d="M26 54 Q26 66 40 68 Q54 66 54 54" fill="${hc}" opacity="0.8"/>`
+      break
+    case 'full':
+      beardSvg = `<path d="M22 48 Q22 72 40 76 Q58 72 58 48" fill="${hc}"/>`
+      break
+    case 'goatee':
+      beardSvg = `<ellipse cx="40" cy="62" rx="6" ry="8" fill="${hc}"/>`
+      break
+    case 'mustache':
+      beardSvg = `<path d="M30 52 Q35 56 40 52 Q45 56 50 52" stroke="${hc}" stroke-width="3" fill="none"/>`
+      break
+  }
+
+  // ========== ÓCULOS ==========
+  let glassesSvg = ''
+  const gc = c.glassesColor || '#1a1a1a'
+  switch (c.glasses) {
+    case 'round':
+      glassesSvg = `
+        <circle cx="32" cy="37" r="8" stroke="${gc}" stroke-width="2" fill="none"/>
+        <circle cx="48" cy="37" r="8" stroke="${gc}" stroke-width="2" fill="none"/>
+        <line x1="40" y1="37" x2="40" y2="37" stroke="${gc}" stroke-width="2"/>
+        <line x1="24" y1="37" x2="18" y2="35" stroke="${gc}" stroke-width="2"/>
+        <line x1="56" y1="37" x2="62" y2="35" stroke="${gc}" stroke-width="2"/>
+      `
+      break
+    case 'square':
+      glassesSvg = `
+        <rect x="24" y="31" width="14" height="12" rx="2" stroke="${gc}" stroke-width="2" fill="none"/>
+        <rect x="42" y="31" width="14" height="12" rx="2" stroke="${gc}" stroke-width="2" fill="none"/>
+        <line x1="38" y1="37" x2="42" y2="37" stroke="${gc}" stroke-width="2"/>
+        <line x1="24" y1="35" x2="18" y2="33" stroke="${gc}" stroke-width="2"/>
+        <line x1="56" y1="35" x2="62" y2="33" stroke="${gc}" stroke-width="2"/>
+      `
+      break
+    case 'aviator':
+      glassesSvg = `
+        <path d="M24 33 Q24 44 32 44 Q40 44 40 37 Q40 44 48 44 Q56 44 56 33 Q56 30 48 30 Q40 30 40 33 Q40 30 32 30 Q24 30 24 33" stroke="${gc}" stroke-width="2" fill="none"/>
+        <line x1="24" y1="33" x2="18" y2="31" stroke="${gc}" stroke-width="2"/>
+        <line x1="56" y1="33" x2="62" y2="31" stroke="${gc}" stroke-width="2"/>
+      `
+      break
+    case 'cat':
+      glassesSvg = `
+        <path d="M24 40 Q24 32 32 30 Q40 32 40 37 Q40 32 48 30 Q56 32 56 40 Q56 44 48 44 Q40 44 40 40 Q40 44 32 44 Q24 44 24 40" stroke="${gc}" stroke-width="2" fill="none"/>
+        <line x1="24" y1="34" x2="18" y2="32" stroke="${gc}" stroke-width="2"/>
+        <line x1="56" y1="34" x2="62" y2="32" stroke="${gc}" stroke-width="2"/>
+      `
+      break
+    case 'sport':
+      glassesSvg = `
+        <path d="M18 37 Q18 30 32 30 Q40 30 40 37 Q40 30 48 30 Q62 30 62 37 Q62 44 48 44 Q40 44 40 40 Q40 44 32 44 Q18 44 18 37" stroke="${gc}" stroke-width="2" fill="${gc}20"/>
+      `
+      break
+  }
+
+  // ========== ACESSÓRIOS DE CABEÇA ==========
+  let accessorySvg = ''
+  const ac = c.accessoryColor || '#6366f1'
+  switch (c.headAccessory) {
+    case 'cap':
+      accessorySvg = `
+        <path d="M16 30 Q40 10 64 30 L64 36 L16 36 Z" fill="${ac}"/>
+        <rect x="14" y="34" width="52" height="4" rx="1" fill="${ac}" stroke="#00000030" stroke-width="0.5"/>
+        <ellipse cx="40" cy="24" rx="4" ry="2" fill="${ac}"/>
+      `
+      break
+    case 'beanie':
+      accessorySvg = `
+        <path d="M18 36 Q18 14 40 10 Q62 14 62 36" fill="${ac}"/>
+        <rect x="16" y="32" width="48" height="6" rx="2" fill="${ac}" stroke="#00000020" stroke-width="1"/>
+        <circle cx="40" cy="8" r="4" fill="${ac}"/>
+      `
+      break
+    case 'headband':
+      accessorySvg = `<rect x="18" y="26" width="44" height="6" rx="2" fill="${ac}"/>`
+      break
+    case 'bow':
+      accessorySvg = `
+        <circle cx="24" cy="22" r="6" fill="${ac}"/>
+        <circle cx="24" cy="22" rx="3" ry="5" fill="${ac}"/>
+        <path d="M18 22 Q14 18 18 14 M30 22 Q34 18 30 14" stroke="${ac}" stroke-width="4" fill="${ac}"/>
+      `
+      break
+    case 'earrings':
+      accessorySvg = `
+        <circle cx="18" cy="50" r="3" fill="${ac}"/>
+        <circle cx="62" cy="50" r="3" fill="${ac}"/>
+      `
+      break
+  }
+
+  // ========== ROUPA ==========
+  let clothingSvg = ''
+  const cc = c.clothingColor || '#6366f1'
+  switch (c.clothing) {
+    case 'vneck':
+      clothingSvg = `<path d="M16 80 L16 66 Q24 64 40 72 Q56 64 64 66 L64 80 Z" fill="${cc}"/>`
+      break
+    case 'hoodie':
+      clothingSvg = `
+        <path d="M14 80 L14 64 Q26 60 40 66 Q54 60 66 64 L66 80 Z" fill="${cc}"/>
+        <path d="M26 66 Q30 72 40 70 Q50 72 54 66" stroke="${cc}" stroke-width="3" fill="none"/>
+      `
+      break
+    case 'collar':
+      clothingSvg = `
+        <path d="M16 80 L16 68 L28 62 L40 70 L52 62 L64 68 L64 80 Z" fill="${cc}"/>
+        <path d="M28 62 L36 68 M52 62 L44 68" stroke="#fff" stroke-width="1"/>
+      `
+      break
+    case 'tank':
+      clothingSvg = `<path d="M24 80 L24 66 Q32 64 40 66 Q48 64 56 66 L56 80 Z" fill="${cc}"/>`
+      break
+    case 'sweater':
+      clothingSvg = `
+        <path d="M12 80 L12 64 Q26 58 40 64 Q54 58 68 64 L68 80 Z" fill="${cc}"/>
+        <path d="M20 66 Q40 72 60 66" stroke="#00000020" stroke-width="2" fill="none"/>
+      `
+      break
+    default: // tshirt
+      clothingSvg = `<path d="M16 80 L16 66 Q28 62 40 66 Q52 62 64 66 L64 80 Z" fill="${cc}"/>`
+  }
+
+  // ========== BOCHECHAS ==========
+  const cheeksSvg = `
+    <circle cx="24" cy="48" r="4" fill="#ffb6c160"/>
+    <circle cx="56" cy="48" r="4" fill="#ffb6c160"/>
+  `
+
+  // ========== MONTAR SVG ==========
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="${size}" height="${size}">
-      <!-- Fundo -->
-      <rect width="80" height="80" rx="40" fill="${background}"/>
-
-      <!-- Rosto -->
-      <ellipse cx="40" cy="42" rx="22" ry="24" fill="${skin}"/>
-
-      <!-- Orelhas -->
-      <ellipse cx="18" cy="42" rx="5" ry="7" fill="${skin}"/>
-      <ellipse cx="62" cy="42" rx="5" ry="7" fill="${skin}"/>
-
-      <!-- Cabelo -->
-      ${hairSvg}
-
-      <!-- Olhos -->
+      <rect width="80" height="80" rx="40" fill="${c.background}"/>
+      ${clothingSvg}
+      ${earsSvg}
+      ${facePath}
+      ${c.hair === 'afro' ? '' : hairSvg}
+      ${eyebrowsSvg}
       ${eyesSvg}
-
-      <!-- Nariz -->
-      <ellipse cx="40" cy="46" rx="2" ry="3" fill="${skin}" stroke="#00000020" stroke-width="0.5"/>
-
-      <!-- Boca -->
-      <path d="M34 54 Q40 58 46 54" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-
-      <!-- Bochechas -->
-      <circle cx="26" cy="48" r="4" fill="#ffb6c180"/>
-      <circle cx="54" cy="48" r="4" fill="#ffb6c180"/>
+      ${noseSvg}
+      ${mouthSvg}
+      ${cheeksSvg}
+      ${beardSvg}
+      ${c.hair === 'afro' ? hairSvg : ''}
+      ${glassesSvg}
+      ${accessorySvg}
     </svg>
   `
 
@@ -2042,6 +2478,7 @@ function generateAvatarSvg(config, size = 80) {
 // Abre o modal de edição de avatar
 function openAvatarEditor() {
   editingAvatar.value = { ...myAvatar.value }
+  avatarEditorTab.value = 'face'
   showAvatarModal.value = true
 }
 
@@ -7885,7 +8322,7 @@ body {
 /* ==================== AVATAR BUILDER ==================== */
 
 .avatar-modal {
-  max-width: 400px;
+  max-width: 440px;
   padding: 0;
 }
 
@@ -7922,15 +8359,15 @@ body {
 }
 
 .avatar-preview-large {
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   border: 3px solid #6366f1;
 }
 
 .avatar-options {
   padding: 16px 20px;
-  max-height: 300px;
+  max-height: 340px;
   overflow-y: auto;
 }
 
@@ -8028,6 +8465,52 @@ body {
 
 .avatar-modal-footer .btn-primary:hover {
   background: #5558e3;
+}
+
+/* Tabs de navegação do Avatar */
+.avatar-tabs {
+  display: flex;
+  border-bottom: 1px solid #333;
+  background: #0d1b2a;
+}
+
+.avatar-tabs button {
+  flex: 1;
+  padding: 12px 8px;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.avatar-tabs button:hover {
+  color: #fff;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.avatar-tabs button.active {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+/* Opções de estilo com wrap */
+.avatar-style-options.wrap {
+  flex-wrap: wrap;
+}
+
+/* Botões pequenos */
+.avatar-style-btn.small {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+}
+
+.avatar-color-btn.small {
+  width: 28px;
+  height: 28px;
 }
 
 /* Avatar customizado no sidebar */
