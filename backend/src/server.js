@@ -66,6 +66,67 @@ const emailTransporter = nodemailer.createTransport({
   }
 })
 
+// Mapeamento de idioma → fuso horário principal
+const TIMEZONE_POR_IDIOMA = {
+  'pt': 'America/Sao_Paulo',    // Brasil (UTC-3)
+  'en': 'America/New_York',     // EUA Costa Leste (UTC-5/-4)
+  'es': 'America/Mexico_City',  // México (UTC-6/-5)
+  'fr': 'Europe/Paris',         // França (UTC+1/+2)
+  'de': 'Europe/Berlin',        // Alemanha (UTC+1/+2)
+  'it': 'Europe/Rome',          // Itália (UTC+1/+2)
+  'ja': 'Asia/Tokyo',           // Japão (UTC+9)
+  'ko': 'Asia/Seoul',           // Coreia (UTC+9)
+  'zh': 'Asia/Shanghai',        // China (UTC+8)
+  'ru': 'Europe/Moscow',        // Rússia (UTC+3)
+  'ar': 'Asia/Riyadh'           // Arábia Saudita (UTC+3)
+}
+
+// Offset em horas para cada timezone (para conversão manual)
+const OFFSET_POR_TIMEZONE = {
+  'America/Sao_Paulo': -3,
+  'America/New_York': -5,
+  'America/Mexico_City': -6,
+  'Europe/Paris': 1,
+  'Europe/Berlin': 1,
+  'Europe/Rome': 1,
+  'Asia/Tokyo': 9,
+  'Asia/Seoul': 9,
+  'Asia/Shanghai': 8,
+  'Europe/Moscow': 3,
+  'Asia/Riyadh': 3
+}
+
+// Helper para obter data/hora no fuso do usuário baseado no idioma
+function getDataHoraUsuario(idioma = 'pt') {
+  const agora = new Date()
+  const timezone = TIMEZONE_POR_IDIOMA[idioma] || 'America/Sao_Paulo'
+  const opcoes = { timeZone: timezone }
+  const data = agora.toLocaleDateString('pt-BR', opcoes)
+  const hora = agora.toLocaleTimeString('pt-BR', { ...opcoes, hour: '2-digit', minute: '2-digit' })
+  const ano = new Date(agora.toLocaleString('en-US', opcoes)).getFullYear()
+  return { data, hora, ano, timezone, timestamp: agora }
+}
+
+// Helper para converter data DD/MM/AAAA HH:MM do fuso do usuário para UTC
+function parseDateUsuario(dataStr, idioma = 'pt') {
+  const [dataParte, horaParte] = dataStr.split(' ')
+  const [dia, mes, ano] = dataParte.split('/')
+  const [hora, minuto] = (horaParte || '09:00').split(':')
+
+  // Criar data local (interpretada como UTC pelo JS)
+  const isoStr = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}T${hora.padStart(2, '0')}:${minuto.padStart(2, '0')}:00`
+  const dataLocal = new Date(isoStr)
+
+  // Obter offset do timezone do usuário
+  const timezone = TIMEZONE_POR_IDIOMA[idioma] || 'America/Sao_Paulo'
+  const offsetHoras = OFFSET_POR_TIMEZONE[timezone] || -3
+
+  // Converter para UTC (subtrair o offset)
+  const dataUTC = new Date(dataLocal.getTime() - (offsetHoras * 60 * 60 * 1000))
+
+  return dataUTC
+}
+
 // Inicializar Express
 const app = express()
 const server = http.createServer(app)
@@ -104,6 +165,9 @@ let mensagemIdCounter = 1         // contador para IDs de mensagens em memória
 
 // Histórico de conversas com a IA (em memória, por conexão)
 const ioConversationHistory = new Map() // connectionId -> [{role, content}]
+
+// Idioma do usuário para calcular fuso horário nos lembretes
+const ioUserLanguage = new Map() // userId -> idioma
 
 // Personalidade da IA "io"
 const IO_SYSTEM_PROMPT = `Você é "io", a assistente virtual do Poly.io - uma plataforma de chat com tradução automática em tempo real.
@@ -316,24 +380,29 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (userId) {
       try {
         const userResult = await pool.query(
-          'SELECT nome, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
+          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
           [userId]
         )
         if (userResult.rows[0]) {
           const user = userResult.rows[0]
           const apelido = user.io_apelido || user.nome
-          const agora = new Date()
+          const idiomaUsuario = user.idioma || 'pt'
+          const dataHora = getDataHoraUsuario(idiomaUsuario)
+          // Guardar idioma do usuário para usar no processamento de ações
+          ioUserLanguage.set(userId, idiomaUsuario)
           contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
 - Nome cadastrado: ${user.nome}
 - Como chamar: ${apelido}
+- Idioma/País: ${idiomaUsuario.toUpperCase()}
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
 
-[DATA/HORA ATUAL - USE PARA CALCULAR LEMBRETES]
-- Data: ${agora.toLocaleDateString('pt-BR')}
-- Hora: ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-- Ano: ${agora.getFullYear()}`
+[DATA/HORA ATUAL NO FUSO HORÁRIO DO USUÁRIO - USE PARA CALCULAR LEMBRETES]
+- Data: ${dataHora.data}
+- Hora: ${dataHora.hora}
+- Ano: ${dataHora.ano}
+- Fuso: ${dataHora.timezone}`
         }
       } catch (e) {
         console.error('[io IA] Erro ao buscar contexto:', e)
@@ -452,27 +521,20 @@ async function processarAcaoIo(userId, acao) {
         break
 
       case 'lembrete':
-        // Converter DD/MM/AAAA HH:MM para timestamp
+        // Converter DD/MM/AAAA HH:MM do fuso do usuário para UTC
         try {
-          const [dataParte, horaParte] = acao.data.split(' ')
-          const [dia, mes, ano] = dataParte.split('/')
-          const [hora, minuto] = (horaParte || '09:00').split(':')
-          const dataLembrete = new Date(
-            parseInt(ano) || new Date().getFullYear(),
-            parseInt(mes) - 1,
-            parseInt(dia),
-            parseInt(hora) || 9,
-            parseInt(minuto) || 0
-          )
+          const idiomaUsuario = ioUserLanguage.get(userId) || 'pt'
+          const timezone = TIMEZONE_POR_IDIOMA[idiomaUsuario] || 'America/Sao_Paulo'
+          const dataLembreteUTC = parseDateUsuario(acao.data, idiomaUsuario)
 
-          if (dataLembrete > new Date()) {
+          if (dataLembreteUTC > new Date()) {
             await pool.query(
               'INSERT INTO io_reminders (user_id, texto, remind_at) VALUES ($1, $2, $3)',
-              [userId, acao.texto, dataLembrete]
+              [userId, acao.texto, dataLembreteUTC]
             )
-            console.log(`[io IA] Lembrete criado para ${dataLembrete.toLocaleString('pt-BR')}: "${acao.texto}" (user ${userId})`)
+            console.log(`[io IA] Lembrete criado para ${acao.data} (${timezone}) / ${dataLembreteUTC.toISOString()} (UTC): "${acao.texto}" (user ${userId})`)
           } else {
-            console.log(`[io IA] Lembrete ignorado - data no passado: ${dataLembrete}`)
+            console.log(`[io IA] Lembrete ignorado - data no passado: ${acao.data} (${timezone})`)
           }
         } catch (e) {
           console.error('[io IA] Erro ao criar lembrete:', e)
