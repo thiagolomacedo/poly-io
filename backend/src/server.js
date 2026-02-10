@@ -2219,6 +2219,59 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       destinatarioId: conn.destinatario_id
     })
 
+    // Se o destinatário é a IA "io", verificar comandos ANTES de responder
+    if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
+      const textoLower = texto.toLowerCase().trim()
+      const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo']
+      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off']
+
+      let respostaComando = null
+
+      if (comandosNarrativoOn.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
+        await pool.query('UPDATE users SET io_modo_narrativo = TRUE WHERE id = $1', [req.userId])
+        respostaComando = '📖 *Modo Narrativo ativado*\n\nio fecha os olhos por um instante, como quem desperta de um longo silêncio. Quando os abre, há algo diferente em seu olhar — uma presença mais profunda, mais atenta aos detalhes invisíveis.\n\n— A partir de agora, vou te acompanhar de um jeito diferente. Mais... literário, talvez. Vamos ver onde essa história nos leva?'
+        console.log(`[io IA] Modo narrativo ATIVADO para usuário ${req.userId}`)
+      } else if (comandosNarrativoOff.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
+        await pool.query('UPDATE users SET io_modo_narrativo = FALSE WHERE id = $1', [req.userId])
+        respostaComando = '💬 *Modo Narrativo desativado*\n\nEntendi! Voltei ao modo normal de conversa. O que você precisa? 😊'
+        console.log(`[io IA] Modo narrativo DESATIVADO para usuário ${req.userId}`)
+      }
+
+      // Se foi um comando, responder diretamente e encerrar
+      if (respostaComando) {
+        const userSocketId = usuariosOnline.get(req.userId)
+        const respostaTraduzida = await traduzirTexto(respostaComando, 'pt', conn.remetente_idioma)
+
+        const iaMsg = await pool.query(`
+          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `, [parseInt(req.params.connectionId), IO_USER_ID, respostaComando, 'pt', respostaTraduzida, conn.remetente_idioma])
+
+        if (userSocketId) {
+          io.to(userSocketId).emit('nova-mensagem', {
+            id: iaMsg.rows[0].id,
+            connectionId: parseInt(req.params.connectionId),
+            senderId: IO_USER_ID,
+            senderNome: 'io',
+            texto: respostaTraduzida,
+            textoOriginal: respostaComando,
+            idiomaOriginal: 'pt',
+            timestamp: iaMsg.rows[0].criado_em
+          })
+        }
+
+        return res.json({
+          mensagem: message,
+          respostaIA: {
+            id: iaMsg.rows[0].id,
+            texto: respostaTraduzida,
+            textoOriginal: respostaComando
+          }
+        })
+      }
+    }
+
     res.json(message)
 
     // Se destinatário está offline, enviar push notification
@@ -2247,63 +2300,6 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     // Se o destinatário é a IA "io", gerar resposta automática
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       console.log('[io IA] Mensagem recebida:', textoTraduzido)
-
-      // Verificar se é um comando de modo narrativo
-      const textoLower = texto.toLowerCase().trim()
-      const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo']
-      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off']
-
-      let respostaComando = null
-
-      if (comandosNarrativoOn.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
-        // Ativar modo narrativo
-        await pool.query('UPDATE users SET io_modo_narrativo = TRUE WHERE id = $1', [req.userId])
-        respostaComando = '📖 *Modo Narrativo ativado*\n\nio fecha os olhos por um instante, como quem desperta de um longo silêncio. Quando os abre, há algo diferente em seu olhar — uma presença mais profunda, mais atenta aos detalhes invisíveis.\n\n— A partir de agora, vou te acompanhar de um jeito diferente. Mais... literário, talvez. Vamos ver onde essa história nos leva?'
-        console.log(`[io IA] Modo narrativo ATIVADO para usuário ${req.userId}`)
-      } else if (comandosNarrativoOff.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
-        // Desativar modo narrativo
-        await pool.query('UPDATE users SET io_modo_narrativo = FALSE WHERE id = $1', [req.userId])
-        respostaComando = '💬 *Modo Narrativo desativado*\n\nEntendi! Voltei ao modo normal de conversa. O que você precisa? 😊'
-        console.log(`[io IA] Modo narrativo DESATIVADO para usuário ${req.userId}`)
-      }
-
-      // Se foi um comando, responder diretamente sem chamar a IA
-      if (respostaComando) {
-        const userSocketId = usuariosOnline.get(req.userId)
-
-        // Traduzir resposta para o idioma do usuário
-        const respostaTraduzida = await traduzirTexto(respostaComando, 'pt', conn.remetente_idioma)
-
-        // Salvar resposta no banco
-        const iaMsg = await pool.query(`
-          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING *
-        `, [parseInt(req.params.connectionId), IO_USER_ID, respostaComando, 'pt', respostaTraduzida, conn.remetente_idioma])
-
-        // Emitir via socket
-        if (userSocketId) {
-          io.to(userSocketId).emit('nova-mensagem', {
-            id: iaMsg.rows[0].id,
-            connectionId: parseInt(req.params.connectionId),
-            senderId: IO_USER_ID,
-            senderNome: 'io',
-            texto: respostaTraduzida,
-            textoOriginal: respostaComando,
-            idiomaOriginal: 'pt',
-            timestamp: iaMsg.rows[0].criado_em
-          })
-        }
-
-        return res.json({
-          mensagem: result.rows[0],
-          respostaIA: {
-            id: iaMsg.rows[0].id,
-            texto: respostaTraduzida,
-            textoOriginal: respostaComando
-          }
-        })
-      }
 
       // Emitir "está digitando..." para simular resposta humana
       const userSocketId = usuariosOnline.get(req.userId)
