@@ -2265,6 +2265,9 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         }, 3000)
       }
 
+      // Aguardar tempo mínimo de digitação (3 segundos) para parecer natural
+      await new Promise(resolve => setTimeout(resolve, 3000))
+
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
       const resultadoIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId), req.userId)
