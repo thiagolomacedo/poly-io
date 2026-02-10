@@ -2265,8 +2265,8 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         }, 3000)
       }
 
-      // Aguardar tempo mínimo de digitação (3 segundos) para parecer natural
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      // Aguardar 5 segundos simulando digitação
+      await new Promise(resolve => setTimeout(resolve, 5000))
 
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
