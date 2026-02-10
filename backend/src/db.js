@@ -71,6 +71,14 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB
     `)
 
+    // Migração: usuários antigos sem avatar_config usavam Gravatar
+    // Definir type: gravatar para manter comportamento anterior
+    await client.query(`
+      UPDATE users
+      SET avatar_config = '{"type":"gravatar"}'
+      WHERE avatar_config IS NULL AND nome != 'io'
+    `)
+
     // ==================== CAMPOS DA IO (ASSISTENTE) ====================
     // Apelido que a io usa para chamar o usuário
     await client.query(`
