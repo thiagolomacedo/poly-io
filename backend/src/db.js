@@ -71,6 +71,11 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_config JSONB
     `)
 
+    // Adicionar coluna contacts_config para ordem e fixados (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS contacts_config JSONB
+    `)
+
     // ==================== CAMPOS DA IO (ASSISTENTE) ====================
     // Apelido que a io usa para chamar o usuário
     await client.query(`

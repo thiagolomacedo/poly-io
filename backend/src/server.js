@@ -1614,6 +1614,41 @@ app.put('/api/users/:id/avatar', authMiddleware, async (req, res) => {
   }
 })
 
+// Salvar configuração de contatos (ordem e fixados)
+app.put('/api/profile/contacts-config', authMiddleware, async (req, res) => {
+  const { pinnedContacts, contactsOrder } = req.body
+
+  try {
+    const config = { pinnedContacts: pinnedContacts || [], contactsOrder: contactsOrder || [] }
+
+    await pool.query(
+      'UPDATE users SET contacts_config = $1 WHERE id = $2',
+      [JSON.stringify(config), req.userId]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('[Users] Erro ao salvar config de contatos:', error.message)
+    res.status(500).json({ error: 'Erro ao salvar configuração' })
+  }
+})
+
+// Carregar configuração de contatos
+app.get('/api/profile/contacts-config', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT contacts_config FROM users WHERE id = $1',
+      [req.userId]
+    )
+
+    const config = result.rows[0]?.contacts_config || { pinnedContacts: [], contactsOrder: [] }
+    res.json(config)
+  } catch (error) {
+    console.error('[Users] Erro ao carregar config de contatos:', error.message)
+    res.status(500).json({ error: 'Erro ao carregar configuração' })
+  }
+})
+
 // ==================== ROTAS DE CONEXÕES ====================
 
 // Listar minhas conexões (aceitas)

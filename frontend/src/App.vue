@@ -1710,24 +1710,47 @@ const resetPasswordSuccess = ref('')
 const sidebarOpen = ref(true)
 const currentTab = ref('connections')
 const connections = ref([])
-// Sistema de fixar e ordenar contatos (usa localStorage + cookie para PWA)
-function loadContactsConfig(key) {
-  const fromLS = localStorage.getItem(key)
-  const fromCookie = getCookie(key)
-  const data = fromLS || fromCookie || '[]'
+// Sistema de fixar e ordenar contatos (salva no backend)
+const pinnedContacts = ref([])
+const contactsOrder = ref([])
+
+// Carregar configuração de contatos do backend
+async function loadContactsConfigFromServer() {
+  if (!token.value) return
   try {
-    return JSON.parse(data)
-  } catch {
-    return []
+    const res = await fetch(`${API_URL}/profile/contacts-config`, {
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+    if (res.ok) {
+      const config = await res.json()
+      pinnedContacts.value = config.pinnedContacts || []
+      contactsOrder.value = config.contactsOrder || []
+    }
+  } catch (e) {
+    console.error('Erro ao carregar config de contatos:', e)
   }
 }
-function saveContactsConfig(key, value) {
-  const json = JSON.stringify(value)
-  localStorage.setItem(key, json)
-  setCookie(key, json)
+
+// Salvar configuração de contatos no backend
+async function saveContactsConfigToServer() {
+  if (!token.value) return
+  try {
+    await fetch(`${API_URL}/profile/contacts-config`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pinnedContacts: pinnedContacts.value,
+        contactsOrder: contactsOrder.value
+      })
+    })
+  } catch (e) {
+    console.error('Erro ao salvar config de contatos:', e)
+  }
 }
-const pinnedContacts = ref(loadContactsConfig('poly_pinned_contacts'))
-const contactsOrder = ref(loadContactsConfig('poly_contacts_order'))
+
 const pendingRequests = ref([])
 const sentRequests = ref([])
 const searchQuery = ref('')
@@ -3909,6 +3932,9 @@ function handleServiceWorkerMessage(event) {
 // ==================== INICIALIZAÇÃO ====================
 
 async function initializeApp() {
+  // Carregar configuração de contatos do servidor
+  await loadContactsConfigFromServer()
+
   // Inicializar IndexedDB para arquivos pendentes
   try {
     await initIndexedDB()
@@ -5516,7 +5542,7 @@ function togglePinContact(contactId) {
     // Desafixar
     pinnedContacts.value.splice(index, 1)
   }
-  saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
+  saveContactsConfigToServer()
 }
 
 function moveContact(contactId, direction) {
@@ -5535,7 +5561,7 @@ function moveContact(contactId, direction) {
     pinnedContacts.value[newIndex] = pinnedContacts.value[index]
     pinnedContacts.value[index] = temp
 
-    saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
+    saveContactsConfigToServer()
   } else {
     // Mover dentro dos não fixados
     // Garantir que todos os contatos não fixados estão na lista de ordem
@@ -5560,7 +5586,7 @@ function moveContact(contactId, direction) {
     contactsOrder.value[newIndex] = contactsOrder.value[index]
     contactsOrder.value[index] = temp
 
-    saveContactsConfig('poly_contacts_order', contactsOrder.value)
+    saveContactsConfigToServer()
   }
 }
 
@@ -5578,7 +5604,7 @@ function syncContactsOrder() {
   pinnedContacts.value = pinnedContacts.value.filter(id =>
     connections.value.some(c => c.id === id)
   )
-  saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
+  saveContactsConfigToServer()
 
   // Sincronizar contactsOrder: manter ordem existente + novos no final
   const notPinnedIds = connections.value
@@ -5588,7 +5614,7 @@ function syncContactsOrder() {
   const existingOrder = contactsOrder.value.filter(id => notPinnedIds.includes(id))
   const newIds = notPinnedIds.filter(id => !contactsOrder.value.includes(id))
   contactsOrder.value = [...existingOrder, ...newIds]
-  saveContactsConfig('poly_contacts_order', contactsOrder.value)
+  saveContactsConfigToServer()
 }
 
 // ==================== MODO NARRATIVO DA IO ====================
