@@ -1581,7 +1581,7 @@ const loginForm = ref({
   email: localStorage.getItem('poly_saved_email') || '',
   senha: localStorage.getItem('poly_saved_senha') || ''
 })
-const rememberMe = ref(!!localStorage.getItem('poly_saved_email'))
+const rememberMe = ref(true) // Sempre marcado por padrão
 
 const registerForm = ref({
   nome: '',
