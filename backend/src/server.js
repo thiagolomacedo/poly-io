@@ -550,6 +550,13 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 
           if (retryData.choices && retryData.choices[0]?.message?.content) {
             let resposta = retryData.choices[0].message.content
+            // Limpar IO_ACTION da resposta do retry também
+            resposta = resposta
+              .replace(/\[IO_ACTION:\{[^\]]*\}\]?/gi, '')
+              .replace(/\[IO_ACTION:[^\]]*\]?/gi, '')
+              .replace(/IO_ACTION:\{[^}]*\}/gi, '')
+              .replace(/IO_ACTION:[^\s]*/gi, '')
+              .trim()
             historico.push({ role: 'assistant', content: resposta })
             ioConversationHistory.set(connectionId, historico)
             return { texto: resposta, acao: null }
@@ -578,11 +585,14 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
         }
       }
 
-      // Limpeza robusta: remover QUALQUER menção de IO_ACTION e texto relacionado
-      // Remove padrões como: [IO_ACTION:{...}], (E, também, O IO_ACTION:{...}), etc.
+      // Limpeza robusta: remover QUALQUER menção de IO_ACTION
+      // Captura padrões como: [IO_ACTION:{...}], mesmo com JSON complexo
       resposta = resposta
-        .replace(/[\[\(\{]?\s*(?:E,?\s*(?:também,?)?\s*[oO]?\s*)?IO_ACTION\s*:\s*\{[^}]+\}\s*[\]\)\}]?\s*/gi, '')
-        .replace(/\s*para\s+eu\s+(?:chamar\s+você|não\s+enviar|aparecer)[^!.]*[!.]?/gi, '') // Remove explicações sobre a ação
+        .replace(/\[IO_ACTION:\{[^\]]*\}\]?/gi, '') // Remove [IO_ACTION:{...}] com qualquer conteúdo
+        .replace(/\[IO_ACTION:[^\]]*\]?/gi, '') // Remove qualquer [IO_ACTION:...] restante
+        .replace(/IO_ACTION:\{[^}]*\}/gi, '') // Remove IO_ACTION:{...} sem colchetes
+        .replace(/IO_ACTION:[^\s]*/gi, '') // Remove qualquer IO_ACTION: restante
+        .replace(/\s*para\s+eu\s+(?:chamar\s+você|não\s+enviar|aparecer)[^!.]*[!.]?/gi, '')
         .trim()
 
       // Salvar resposta no histórico (sem o marcador)
