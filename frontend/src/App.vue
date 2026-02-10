@@ -3052,7 +3052,11 @@ async function register() {
 }
 
 async function checkAuth() {
-  if (!token.value) return
+  // Se não tem token, tenta autologin com credenciais salvas
+  if (!token.value) {
+    await tryAutoLogin()
+    return
+  }
 
   try {
     const res = await fetch(`${API_URL}/auth/me`, {
@@ -3066,7 +3070,22 @@ async function checkAuth() {
     currentUser.value = await res.json()
     initializeApp()
   } catch (error) {
+    // Token inválido - tenta autologin
     logout()
+    await tryAutoLogin()
+  }
+}
+
+// Autologin com credenciais salvas
+async function tryAutoLogin() {
+  const savedEmail = localStorage.getItem('poly_saved_email')
+  const savedSenha = localStorage.getItem('poly_saved_senha')
+
+  if (savedEmail && savedSenha) {
+    loginForm.value.email = savedEmail
+    loginForm.value.senha = savedSenha
+    rememberMe.value = true
+    await login()
   }
 }
 
