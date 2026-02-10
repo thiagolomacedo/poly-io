@@ -1,6 +1,6 @@
 // Poly.io Service Worker - PWA + Push Notifications
 
-const CACHE_NAME = 'poly-io-v3.55';
+const CACHE_NAME = 'poly-io-v3.56';
 
 // Arquivos para cache offline
 const urlsToCache = [

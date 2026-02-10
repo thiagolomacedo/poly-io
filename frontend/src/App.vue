@@ -894,17 +894,23 @@
           <!-- Tab: Conexões -->
           <div v-if="currentTab === 'connections'" class="tab-content">
             <div
-              v-for="conn in connections"
+              v-for="(conn, index) in sortedConnections"
               :key="conn.id"
               class="user-item"
-              :class="{ active: selectedConnection?.id === conn.id }"
+              :class="{
+                active: selectedConnection?.id === conn.id,
+                pinned: isContactPinned(conn.id)
+              }"
               @click="selectConnection(conn)"
             >
               <div class="user-avatar" :class="[conn.status || 'offline']">
                 <img :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
-                <span class="name">{{ conn.nome }}</span>
+                <span class="name">
+                  <span v-if="isContactPinned(conn.id)" class="pin-icon">📌</span>
+                  {{ conn.nome }}
+                </span>
                 <span class="lang">{{ getIdiomaLabel(conn.idioma) }} · {{ getPaisLabel(conn.pais, conn.idioma) }}</span>
               </div>
               <span
@@ -913,14 +919,35 @@
               >
                 {{ unreadCounts[conn.connectionId] > 99 ? '99+' : unreadCounts[conn.connectionId] }}
               </span>
-              <button
-                class="btn-mute-connection"
-                :class="{ muted: isConnectionMuted(conn.connectionId) }"
-                @click.stop="toggleMuteConnection(conn.connectionId)"
-                :title="isConnectionMuted(conn.connectionId) ? 'Ativar som' : 'Silenciar'"
-              >
-                {{ isConnectionMuted(conn.connectionId) ? '🔇' : '🔔' }}
-              </button>
+              <!-- Botões de organização -->
+              <div class="contact-actions" @click.stop>
+                <button
+                  class="btn-move"
+                  @click="moveContactUp(conn.id)"
+                  :disabled="index === 0 || (isContactPinned(conn.id) && index === 0) || (!isContactPinned(conn.id) && index === pinnedContacts.length)"
+                  title="Mover para cima"
+                >↑</button>
+                <button
+                  class="btn-move"
+                  @click="moveContactDown(conn.id)"
+                  :disabled="(isContactPinned(conn.id) && index === pinnedContacts.length - 1) || (!isContactPinned(conn.id) && index === sortedConnections.length - 1)"
+                  title="Mover para baixo"
+                >↓</button>
+                <button
+                  class="btn-pin"
+                  :class="{ pinned: isContactPinned(conn.id) }"
+                  @click="togglePinContact(conn.id)"
+                  :title="isContactPinned(conn.id) ? 'Desafixar' : 'Fixar (máx 5)'"
+                >📌</button>
+                <button
+                  class="btn-mute-connection"
+                  :class="{ muted: isConnectionMuted(conn.connectionId) }"
+                  @click="toggleMuteConnection(conn.connectionId)"
+                  :title="isConnectionMuted(conn.connectionId) ? 'Ativar som' : 'Silenciar'"
+                >
+                  {{ isConnectionMuted(conn.connectionId) ? '🔇' : '🔔' }}
+                </button>
+              </div>
             </div>
             <p v-if="connections.length === 0" class="empty-state">
               Nenhuma conexão ainda.<br>
@@ -1683,6 +1710,9 @@ const resetPasswordSuccess = ref('')
 const sidebarOpen = ref(true)
 const currentTab = ref('connections')
 const connections = ref([])
+// Sistema de fixar e ordenar contatos
+const pinnedContacts = ref(JSON.parse(localStorage.getItem('poly_pinned_contacts') || '[]'))
+const contactsOrder = ref(JSON.parse(localStorage.getItem('poly_contacts_order') || '[]'))
 const pendingRequests = ref([])
 const sentRequests = ref([])
 const searchQuery = ref('')
@@ -1819,6 +1849,33 @@ const createRoomForm = reactive({
 // Computed
 const isLoggedIn = computed(() => !!token.value && !!currentUser.value)
 const isOwnProfile = computed(() => profileUser.value?.id === currentUser.value?.id)
+
+// Contatos ordenados (fixados primeiro, depois ordem customizada)
+const sortedConnections = computed(() => {
+  const conns = [...connections.value]
+
+  // Separar fixados e não fixados
+  const pinned = conns.filter(c => pinnedContacts.value.includes(c.id))
+  const notPinned = conns.filter(c => !pinnedContacts.value.includes(c.id))
+
+  // Ordenar fixados pela ordem em pinnedContacts
+  pinned.sort((a, b) => {
+    return pinnedContacts.value.indexOf(a.id) - pinnedContacts.value.indexOf(b.id)
+  })
+
+  // Ordenar não fixados pela ordem customizada (se existir)
+  notPinned.sort((a, b) => {
+    const orderA = contactsOrder.value.indexOf(a.id)
+    const orderB = contactsOrder.value.indexOf(b.id)
+    // Se não está na ordem customizada, vai pro final
+    if (orderA === -1 && orderB === -1) return 0
+    if (orderA === -1) return 1
+    if (orderB === -1) return -1
+    return orderA - orderB
+  })
+
+  return [...pinned, ...notPinned]
+})
 
 // Emojis filtrados para o picker
 const filteredEmojis = computed(() => {
@@ -5422,6 +5479,69 @@ function isConnectionMuted(connectionId) {
   return conexoesMudas.value.includes(connectionId)
 }
 
+// ==================== FIXAR E ORDENAR CONTATOS ====================
+
+function isContactPinned(contactId) {
+  return pinnedContacts.value.includes(contactId)
+}
+
+function togglePinContact(contactId) {
+  const index = pinnedContacts.value.indexOf(contactId)
+  if (index === -1) {
+    // Fixar (máximo 5)
+    if (pinnedContacts.value.length >= 5) {
+      alert('Você pode fixar no máximo 5 contatos!')
+      return
+    }
+    pinnedContacts.value.push(contactId)
+  } else {
+    // Desafixar
+    pinnedContacts.value.splice(index, 1)
+  }
+  localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+}
+
+function moveContact(contactId, direction) {
+  const isPinned = pinnedContacts.value.includes(contactId)
+  const list = isPinned ? pinnedContacts : contactsOrder
+
+  // Se não está na lista de ordem, adicionar todos os contatos primeiro
+  if (!isPinned && !list.value.includes(contactId)) {
+    // Inicializar ordem com todos os contatos atuais
+    list.value = sortedConnections.value
+      .filter(c => !pinnedContacts.value.includes(c.id))
+      .map(c => c.id)
+  }
+
+  const index = list.value.indexOf(contactId)
+  if (index === -1) return
+
+  const newIndex = direction === 'up' ? index - 1 : index + 1
+
+  // Verificar limites
+  if (newIndex < 0 || newIndex >= list.value.length) return
+
+  // Trocar posições
+  const temp = list.value[newIndex]
+  list.value[newIndex] = list.value[index]
+  list.value[index] = temp
+
+  // Salvar
+  if (isPinned) {
+    localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+  } else {
+    localStorage.setItem('poly_contacts_order', JSON.stringify(contactsOrder.value))
+  }
+}
+
+function moveContactUp(contactId) {
+  moveContact(contactId, 'up')
+}
+
+function moveContactDown(contactId) {
+  moveContact(contactId, 'down')
+}
+
 // ==================== MODO NARRATIVO DA IO ====================
 
 async function loadNarrativeMode() {
@@ -6198,6 +6318,84 @@ body {
 .btn-mute-connection.muted {
   opacity: 1;
   background: #333;
+}
+
+/* Contatos fixados */
+.user-item.pinned {
+  background: rgba(99, 102, 241, 0.15);
+  border-left: 3px solid #6366f1;
+}
+
+.user-item.pinned:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.pin-icon {
+  font-size: 0.7rem;
+  margin-right: 4px;
+}
+
+/* Container de ações do contato */
+.contact-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.user-item:hover .contact-actions {
+  opacity: 1;
+}
+
+/* Botões de mover */
+.btn-move {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-move:hover:not(:disabled) {
+  background: #333;
+  color: #fff;
+}
+
+.btn-move:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Botão fixar */
+.btn-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  opacity: 0.4;
+  transition: all 0.2s;
+}
+
+.btn-pin:hover {
+  opacity: 1;
+  background: #333;
+}
+
+.btn-pin.pinned {
+  opacity: 1;
+  background: rgba(99, 102, 241, 0.3);
 }
 
 /* Botão modo narrativo da io */

@@ -375,7 +375,7 @@
       <div class="logo">🐾</div>
       <h1>Poly Pets</h1>
       <p class="subtitle">Sistema de Pets Virtuais para o Poly.io</p>
-      <span class="version">FASE 2 - Conceito</span>
+      <span class="version">FASE 2 - Conceito v3.0</span>
     </div>
 
     <!-- VISÃO GERAL -->
@@ -542,34 +542,51 @@
       </div>
     </div>
 
-    <!-- SISTEMA DE BATALHA -->
+    <!-- SISTEMA DE BATALHA: POLY BATTLE -->
     <div class="section">
-      <h2 class="section-title">Sistema de Batalha</h2>
+      <h2 class="section-title">Sistema de Batalha: Poly Battle</h2>
       <div class="content">
-        <p>Batalhas são <strong>turn-based</strong> (por turnos), simples e rápidas:</p>
+        <p>Sistema híbrido que equilibra <strong>50% Sorte</strong> + <strong>50% Estratégia</strong>. Um pet comum bem jogado + sorte pode vencer um lendário mal jogado!</p>
 
+        <!-- Diagrama Sorte vs Estratégia -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+          <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1)); border: 2px solid #a855f7; border-radius: 12px; padding: 20px;">
+            <div style="font-size: 1.3rem; font-weight: bold; color: #a855f7; margin-bottom: 15px; text-align: center;">🎲 SORTE (50%)</div>
+            <ul style="padding-left: 0; margin: 0;">
+              <li>🎲 Dados de dano</li>
+              <li>⭐ Críticos aleatórios</li>
+              <li>💨 Chance de esquiva</li>
+              <li>🌪️ Eventos climáticos</li>
+              <li>🎴 Cartas aleatórias</li>
+            </ul>
+          </div>
+          <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1)); border: 2px solid #3b82f6; border-radius: 12px; padding: 20px;">
+            <div style="font-size: 1.3rem; font-weight: bold; color: #3b82f6; margin-bottom: 15px; text-align: center;">🧠 ESTRATÉGIA (50%)</div>
+            <ul style="padding-left: 0; margin: 0;">
+              <li>⚔️ Escolha de ação</li>
+              <li>🔥 Tipo do pet (vantagem)</li>
+              <li>⏰ Timing de habilidades</li>
+              <li>🛡️ Prever ação do oponente</li>
+              <li>📊 Conhecer stats</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Visual de Batalha -->
         <div class="battle-visual">
           <div class="battle-pet">
             <span class="emoji">🦊</span>
             <span class="name">Foxfire (Lv.12)</span>
-            <span class="hp">HP: 85/100</span>
+            <span class="hp">❤️ 100/100</span>
+            <span style="font-size: 0.8rem; color: #ef4444;">🔥 Fogo</span>
           </div>
-          <span class="battle-vs">VS</span>
+          <span class="battle-vs">⚔️</span>
           <div class="battle-pet">
             <span class="emoji">🐼</span>
             <span class="name">Bamboo (Lv.10)</span>
-            <span class="hp">HP: 62/90</span>
+            <span class="hp">❤️ 90/90</span>
+            <span style="font-size: 0.8rem; color: #22c55e;">🌿 Planta</span>
           </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-title">🎮 Ações por Turno</div>
-          <ul style="padding-left: 0;">
-            <li><strong>Atacar</strong> - Dano baseado em ATK vs DEF do oponente</li>
-            <li><strong>Defender</strong> - Reduz dano recebido no próximo turno</li>
-            <li><strong>Habilidade</strong> - Poder especial (cooldown de 3 turnos)</li>
-            <li><strong>Fugir</strong> - Desiste da batalha (perde o pet)</li>
-          </ul>
         </div>
 
         <div class="warning">
@@ -578,6 +595,405 @@
           <p style="margin-top: 10px; font-size: 0.9rem; color: #888;">
             Isso incentiva treinar bem antes de batalhar e cria valor real para pets raros.
           </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE DADOS -->
+    <div class="section">
+      <h2 class="section-title">Sistema de Dados</h2>
+      <div class="content">
+        <p>O dano não é fixo! A cada ataque, um <strong>dado é rolado</strong> para adicionar variação:</p>
+
+        <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0;">
+          <div style="font-size: 1.1rem; color: #fcd34d; margin-bottom: 15px;">⚔️ FÓRMULA DE DANO</div>
+          <div style="font-size: 1.8rem; font-family: monospace; color: #fff; background: rgba(245, 158, 11, 0.2); padding: 15px; border-radius: 8px; display: inline-block;">
+            Dano = ATK + 🎲(1-6) - (DEF ÷ 2)
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">📊 Exemplo de Cálculo</div>
+          <div style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; line-height: 1.8;">
+            <span style="color: #22c55e;">Seu ATK:</span> 50<br>
+            <span style="color: #a855f7;">Dado rolou:</span> 🎲 4<br>
+            <span style="color: #ef4444;">DEF inimigo:</span> 30<br>
+            <span style="color: #888;">─────────────────</span><br>
+            <span style="color: #fcd34d;">Dano final:</span> 50 + 4 - 15 = <strong style="color: #f59e0b; font-size: 1.3rem;">39 HP</strong>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Evento</th>
+            <th>Chance Base</th>
+            <th>Efeito</th>
+            <th>Modificador</th>
+          </tr>
+          <tr>
+            <td>⭐ Crítico</td>
+            <td>10%</td>
+            <td style="color: #f59e0b;">Dano x2!</td>
+            <td>+SPD aumenta chance</td>
+          </tr>
+          <tr>
+            <td>💨 Esquiva</td>
+            <td>8%</td>
+            <td style="color: #22c55e;">Dano = 0!</td>
+            <td>+SPD aumenta chance</td>
+          </tr>
+          <tr>
+            <td>💥 Falha Crítica</td>
+            <td>5%</td>
+            <td style="color: #ef4444;">Perde o turno!</td>
+            <td>-SPD aumenta chance</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE CARTAS -->
+    <div class="section">
+      <h2 class="section-title">Sistema de Cartas</h2>
+      <div class="content">
+        <p>Cada turno você <strong>compra 3 cartas aleatórias</strong> do seu deck e escolhe 1 para jogar. Isso adiciona sorte (quais cartas vêm) + estratégia (qual escolher).</p>
+
+        <div style="display: flex; justify-content: center; gap: 15px; margin: 25px 0; flex-wrap: wrap;">
+          <!-- Carta Ataque -->
+          <div style="background: linear-gradient(180deg, #1a1a2e, #0f0f1a); border: 3px solid #ef4444; border-radius: 12px; padding: 15px 20px; width: 120px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="font-size: 2.5rem;">🗡️</div>
+            <div style="font-weight: bold; color: #fff; margin: 8px 0;">Ataque</div>
+            <div style="font-size: 0.8rem; color: #888;">Dano normal</div>
+            <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">COMUM</div>
+          </div>
+          <!-- Carta Defesa -->
+          <div style="background: linear-gradient(180deg, #1a1a2e, #0f0f1a); border: 3px solid #3b82f6; border-radius: 12px; padding: 15px 20px; width: 120px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="font-size: 2.5rem;">🛡️</div>
+            <div style="font-weight: bold; color: #fff; margin: 8px 0;">Defesa</div>
+            <div style="font-size: 0.8rem; color: #888;">-50% dano</div>
+            <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">COMUM</div>
+          </div>
+          <!-- Carta Habilidade -->
+          <div style="background: linear-gradient(180deg, #1a1a2e, #0f0f1a); border: 3px solid #a855f7; border-radius: 12px; padding: 15px 20px; width: 120px; text-align: center; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="font-size: 2.5rem;">⚡</div>
+            <div style="font-weight: bold; color: #fff; margin: 8px 0;">Habilidade</div>
+            <div style="font-size: 0.8rem; color: #888;">Poder especial</div>
+            <div style="font-size: 0.7rem; color: #a855f7; margin-top: 8px; padding-top: 8px; border-top: 1px solid #333;">RARO</div>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">🎴 Cartas Especiais (Raras)</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+              <strong style="color: #f59e0b;">🎰 Golpe de Sorte</strong><br>
+              <span style="font-size: 0.85rem; color: #888;">15% chance | Dano = 🎲 x 20</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 3px solid #22c55e;">
+              <strong style="color: #22c55e;">🔄 Reverter</strong><br>
+              <span style="font-size: 0.85rem; color: #888;">10% chance | Reflete próximo ataque</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 3px solid #ef4444;">
+              <strong style="color: #ef4444;">💫 All-in</strong><br>
+              <span style="font-size: 0.85rem; color: #888;">5% chance | Dano x3 OU falha total</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; border-left: 3px solid #06b6d4;">
+              <strong style="color: #06b6d4;">💚 Cura</strong><br>
+              <span style="font-size: 0.85rem; color: #888;">12% chance | Recupera 20% HP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PEDRA-PAPEL-TESOURA -->
+    <div class="section">
+      <h2 class="section-title">Pedra-Papel-Tesoura de Ações</h2>
+      <div class="content">
+        <p>Ambos jogadores escolhem ação <strong>simultaneamente</strong>. Há vantagens e desvantagens:</p>
+
+        <div style="display: flex; justify-content: center; align-items: center; margin: 30px 0;">
+          <div style="position: relative; width: 280px; height: 280px;">
+            <!-- Triângulo visual -->
+            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); text-align: center;">
+              <div style="font-size: 3rem;">🗡️</div>
+              <div style="color: #ef4444; font-weight: bold;">ATACAR</div>
+            </div>
+            <div style="position: absolute; bottom: 20px; left: 0; text-align: center;">
+              <div style="font-size: 3rem;">🛡️</div>
+              <div style="color: #3b82f6; font-weight: bold;">DEFENDER</div>
+            </div>
+            <div style="position: absolute; bottom: 20px; right: 0; text-align: center;">
+              <div style="font-size: 3rem;">⚡</div>
+              <div style="color: #a855f7; font-weight: bold;">HABILIDADE</div>
+            </div>
+            <!-- Setas -->
+            <div style="position: absolute; top: 80px; left: 30px; color: #22c55e; font-size: 1.5rem; transform: rotate(-30deg);">→ vence</div>
+            <div style="position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); color: #22c55e; font-size: 1.5rem;">→ vence</div>
+            <div style="position: absolute; top: 80px; right: 30px; color: #22c55e; font-size: 1.5rem; transform: rotate(30deg);">vence ←</div>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Você</th>
+            <th>Oponente</th>
+            <th>Resultado</th>
+          </tr>
+          <tr>
+            <td>🗡️ Atacar</td>
+            <td>🛡️ Defender</td>
+            <td style="color: #f59e0b;">Dano reduzido 50%</td>
+          </tr>
+          <tr>
+            <td>🛡️ Defender</td>
+            <td>⚡ Habilidade</td>
+            <td style="color: #22c55e;">Habilidade CANCELADA!</td>
+          </tr>
+          <tr>
+            <td>⚡ Habilidade</td>
+            <td>🗡️ Atacar</td>
+            <td style="color: #a855f7;">Habilidade + CONTRA-ATAQUE!</td>
+          </tr>
+          <tr>
+            <td>🗡️ Atacar</td>
+            <td>🗡️ Atacar</td>
+            <td style="color: #888;">Ambos causam dano normal</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- TIPOS ELEMENTAIS -->
+    <div class="section">
+      <h2 class="section-title">Tipos Elementais</h2>
+      <div class="content">
+        <p>Cada pet tem um <strong>tipo elemental</strong>. Conhecer as vantagens é estratégico!</p>
+
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin: 25px 0; flex-wrap: wrap;">
+          <div style="background: #ef4444; color: white; padding: 15px 20px; border-radius: 50%; font-size: 1.5rem;">🔥</div>
+          <div style="color: #22c55e; font-size: 1.5rem;">→</div>
+          <div style="background: #22c55e; color: white; padding: 15px 20px; border-radius: 50%; font-size: 1.5rem;">🌿</div>
+          <div style="color: #22c55e; font-size: 1.5rem;">→</div>
+          <div style="background: #3b82f6; color: white; padding: 15px 20px; border-radius: 50%; font-size: 1.5rem;">💧</div>
+          <div style="color: #22c55e; font-size: 1.5rem;">→</div>
+          <div style="background: #ef4444; color: white; padding: 15px 20px; border-radius: 50%; font-size: 1.5rem;">🔥</div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Tipo</th>
+            <th>Forte contra</th>
+            <th>Fraco contra</th>
+            <th>Bônus</th>
+          </tr>
+          <tr>
+            <td>🔥 Fogo</td>
+            <td style="color: #22c55e;">🌿 Planta</td>
+            <td style="color: #ef4444;">💧 Água</td>
+            <td>+25% dano</td>
+          </tr>
+          <tr>
+            <td>💧 Água</td>
+            <td style="color: #22c55e;">🔥 Fogo</td>
+            <td style="color: #ef4444;">⚡ Elétrico</td>
+            <td>+25% dano</td>
+          </tr>
+          <tr>
+            <td>🌿 Planta</td>
+            <td style="color: #22c55e;">💧 Água</td>
+            <td style="color: #ef4444;">🔥 Fogo</td>
+            <td>+25% dano</td>
+          </tr>
+          <tr>
+            <td>⚡ Elétrico</td>
+            <td style="color: #22c55e;">💧 Água</td>
+            <td style="color: #ef4444;">🌿 Planta</td>
+            <td>+25% dano</td>
+          </tr>
+          <tr>
+            <td>🌙 Sombra</td>
+            <td style="color: #22c55e;">✨ Luz</td>
+            <td style="color: #ef4444;">✨ Luz</td>
+            <td>+50% mútuo!</td>
+          </tr>
+          <tr>
+            <td>✨ Luz</td>
+            <td style="color: #22c55e;">🌙 Sombra</td>
+            <td style="color: #ef4444;">🌙 Sombra</td>
+            <td>+50% mútuo!</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- EVENTOS CLIMÁTICOS -->
+    <div class="section">
+      <h2 class="section-title">Eventos Climáticos Aleatórios</h2>
+      <div class="content">
+        <p>A cada <strong>3 turnos</strong>, um evento climático aleatório acontece e afeta <strong>AMBOS</strong> os jogadores!</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0;">
+          <div style="background: rgba(59, 130, 246, 0.2); border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">🌧️</div>
+            <div style="font-weight: bold; color: #3b82f6;">Chuva</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">💧 +20%<br>🔥 -20%</div>
+          </div>
+          <div style="background: rgba(245, 158, 11, 0.2); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">☀️</div>
+            <div style="font-weight: bold; color: #f59e0b;">Sol Forte</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">🔥 +20%<br>🌿 -10%</div>
+          </div>
+          <div style="background: rgba(156, 163, 175, 0.2); border: 2px solid #9ca3af; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">🌪️</div>
+            <div style="font-weight: bold; color: #9ca3af;">Tempestade</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">SPD -30%<br>para todos</div>
+          </div>
+          <div style="background: rgba(168, 85, 247, 0.2); border: 2px solid #a855f7; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">🌙</div>
+            <div style="font-weight: bold; color: #a855f7;">Eclipse</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">🌙✨ +30%<br>ambos!</div>
+          </div>
+          <div style="background: rgba(234, 179, 8, 0.2); border: 2px solid #eab308; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">⚡</div>
+            <div style="font-weight: bold; color: #eab308;">Raios</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Dano aleatório<br>10-30 HP</div>
+          </div>
+          <div style="background: rgba(34, 197, 94, 0.2); border: 2px solid #22c55e; border-radius: 12px; padding: 15px; text-align: center;">
+            <div style="font-size: 2rem;">🍀</div>
+            <div style="font-weight: bold; color: #22c55e;">Sorte</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">Próximo hit<br>= CRÍTICO!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLUXO DE BATALHA -->
+    <div class="section">
+      <h2 class="section-title">Fluxo de Batalha</h2>
+      <div class="content">
+        <div class="flow-diagram">
+┌─────────────────────────────────────────────────┐
+│              🎮 TURNO DE BATALHA                │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  1. 🌪️ Evento climático (turnos 3, 6, 9...)    │
+│           ↓                                     │
+│  2. 🎴 Comprar 3 cartas aleatórias             │
+│           ↓                                     │
+│  3. ⏱️ Ambos escolhem ação (5 segundos)        │
+│           ↓                                     │
+│  4. ⚔️ Revelar ações SIMULTANEAMENTE           │
+│           ↓                                     │
+│  5. 📊 Calcular vantagens (tipo + ação)        │
+│           ↓                                     │
+│  6. 🎲 Rolar dado de dano (1-6)                │
+│           ↓                                     │
+│  7. ⭐ Checar crítico / esquiva                │
+│           ↓                                     │
+│  8. 💔 Aplicar dano final                      │
+│           ↓                                     │
+│  9. 🔄 Próximo turno (ou fim se HP = 0)        │
+│                                                 │
+└─────────────────────────────────────────────────┘
+        </div>
+      </div>
+    </div>
+
+    <!-- EXEMPLO DE BATALHA -->
+    <div class="section">
+      <h2 class="section-title">Exemplo de Batalha</h2>
+      <div class="content">
+        <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 0.9rem; line-height: 1.8;">
+          <div style="text-align: center; color: #f59e0b; font-size: 1.1rem; margin-bottom: 15px;">
+            ═══════════════════════════════════════════<br>
+            🦊 <strong>Foxfire</strong> (Lv.12) &nbsp;⚔️&nbsp; 🐼 <strong>Bamboo</strong> (Lv.10)<br>
+            ❤️ 100/100 🔥 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ❤️ 90/90 🌿<br>
+            ═══════════════════════════════════════════
+          </div>
+
+          <div style="color: #a855f7; font-weight: bold;">📍 TURNO 1:</div>
+          <div style="color: #3b82f6;">🌧️ Evento: Chuva! (Fogo -20%)</div>
+          <br>
+          <div style="color: #888;">Suas cartas: [🗡️ Ataque] [⚡ Chama] [🛡️ Defesa]</div>
+          <div style="color: #22c55e;">Você escolhe: ⚡ Chama (40 dano fogo)</div>
+          <div style="color: #ef4444;">Oponente escolhe: 🗡️ Ataque</div>
+          <br>
+          <div style="color: #fcd34d;">
+            → Habilidade vs Ataque = <span style="color: #a855f7;">CONTRA-ATAQUE!</span><br>
+            → Tipo: 🔥 vs 🌿 = <span style="color: #22c55e;">+25% dano</span><br>
+            → Clima: 🌧️ Chuva = <span style="color: #ef4444;">-20% fogo</span><br>
+            → Dano base: 40 + 25% - 20% = 42<br>
+            → 🎲 Dado: <strong>5</strong> → +5 dano<br>
+            → ⭐ Crítico? 12% chance... <span style="color: #888;">NÃO</span><br>
+          </div>
+          <div style="color: #f59e0b; font-size: 1.1rem; margin-top: 10px;">
+            💥 Dano final: <strong>47!</strong>
+          </div>
+          <div style="color: #ef4444; margin-top: 5px;">
+            Bamboo HP: 90 → <strong>43</strong>
+          </div>
+
+          <div style="border-top: 1px solid #333; margin: 20px 0; padding-top: 15px;">
+            <div style="color: #a855f7; font-weight: bold;">📍 TURNO 2:</div>
+            <div style="color: #888;">Suas cartas: [🎰 <span style="color: #f59e0b;">Golpe de Sorte!</span>] [🗡️ Ataque] [🗡️ Ataque]</div>
+            <div style="color: #22c55e;">Você escolhe: 🎰 Golpe de Sorte</div>
+            <div style="color: #ef4444;">Oponente escolhe: 🛡️ Defesa</div>
+            <br>
+            <div style="color: #fcd34d;">
+              → Golpe de Sorte: Dano = 🎲 x 20<br>
+              → 🎲 Dado: <strong>6</strong> → 6 x 20 = 120!<br>
+              → Defesa reduz: -50%<br>
+            </div>
+            <div style="color: #f59e0b; font-size: 1.1rem; margin-top: 10px;">
+              💥 Dano final: <strong>60!</strong>
+            </div>
+            <div style="color: #ef4444; margin-top: 5px;">
+              Bamboo HP: 43 → <strong>0</strong> ☠️
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-top: 20px; padding: 15px; background: linear-gradient(90deg, rgba(245, 158, 11, 0.3), rgba(34, 197, 94, 0.3)); border-radius: 8px;">
+            <div style="font-size: 1.5rem;">🏆 VITÓRIA!</div>
+            <div style="color: #22c55e; margin-top: 5px;">Você ganhou o pet <strong>Bamboo</strong>!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POR QUE É EQUILIBRADO -->
+    <div class="section">
+      <h2 class="section-title">Por que é Equilibrado?</h2>
+      <div class="content">
+        <table>
+          <tr>
+            <th>Situação</th>
+            <th>Resultado</th>
+          </tr>
+          <tr>
+            <td>Pet forte vs Pet fraco</td>
+            <td>Forte tem vantagem <strong>MAS</strong> fraco pode ter sorte nos dados</td>
+          </tr>
+          <tr>
+            <td>Jogador skilled vs Noob</td>
+            <td>Skilled escolhe melhor <strong>MAS</strong> eventos aleatórios equalizam</td>
+          </tr>
+          <tr>
+            <td>Pet comum vs Pet lendário</td>
+            <td>Lendário tem stats melhores <strong>MAS</strong> críticos/esquivas são iguais</td>
+          </tr>
+          <tr>
+            <td>Tipo desfavorável</td>
+            <td>-25% dano <strong>MAS</strong> carta rara pode virar o jogo</td>
+          </tr>
+        </table>
+
+        <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(245, 158, 11, 0.2)); border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center; margin-top: 20px;">
+          <div style="font-size: 1.3rem; color: #22c55e; font-weight: bold;">💡 A IDEIA CENTRAL</div>
+          <div style="color: #fff; margin-top: 10px; font-size: 1.1rem;">
+            Um pet <span style="color: #9ca3af;">comum</span> bem jogado + sorte<br>
+            pode vencer um pet <span style="color: #f59e0b;">lendário</span> mal jogado!
+          </div>
         </div>
       </div>
     </div>
@@ -619,6 +1035,462 @@
         <p style="margin-top: 15px;">
           <span class="highlight">Pet 100% cuidado = Bônus de +5% em todos os stats!</span>
         </p>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE PARQUE -->
+    <div class="section">
+      <h2 class="section-title">Pet Ativo vs Parque</h2>
+      <div class="content">
+        <p>Você pode ter <strong>muitos pets</strong>, mas só <strong>1 pet ativo</strong> por vez. Os outros ficam no <strong>Parque</strong> (coleção) em modo hibernação!</p>
+
+        <!-- Diagrama Visual -->
+        <div style="display: grid; grid-template-columns: 1fr 80px 1fr; gap: 15px; margin: 25px 0; align-items: center;">
+          <!-- Pet Ativo -->
+          <div style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)); border: 3px solid #22c55e; border-radius: 16px; padding: 25px; text-align: center;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: #22c55e; margin-bottom: 15px;">🎮 PET ATIVO</div>
+            <div style="font-size: 4rem; margin: 15px 0;">🦊</div>
+            <div style="color: #fff; font-weight: bold;">Foxfire</div>
+            <div style="color: #888; font-size: 0.9rem;">Lv. 12 • 🔥 Fogo</div>
+            <div style="margin-top: 15px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.8rem;">
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+                <div style="color: #22c55e;">🍖 85%</div>
+                <div style="color: #666;">Fome</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+                <div style="color: #f59e0b;">😊 72%</div>
+                <div style="color: #666;">Feliz</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+                <div style="color: #3b82f6;">💤 90%</div>
+                <div style="color: #666;">Energia</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+                <div style="color: #a855f7;">✨ 100%</div>
+                <div style="color: #666;">Higiene</div>
+              </div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: #22c55e;">
+              ⚠️ Precisa de cuidados diários!
+            </div>
+          </div>
+
+          <!-- Seta de Troca -->
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; color: #f59e0b;">⇄</div>
+            <div style="font-size: 0.7rem; color: #888; margin-top: 5px;">TROCAR<br>(24h)</div>
+          </div>
+
+          <!-- Parque -->
+          <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1)); border: 3px solid #a855f7; border-radius: 16px; padding: 25px; text-align: center;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: #a855f7; margin-bottom: 15px;">🏡 PARQUE</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;">
+              <div style="background: rgba(0,0,0,0.3); padding: 12px 8px; border-radius: 8px; border: 2px solid #3b82f6;">
+                <div style="font-size: 1.8rem;">🐼</div>
+                <div style="font-size: 0.7rem; color: #888;">Bamboo</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 12px 8px; border-radius: 8px; border: 2px solid #9ca3af;">
+                <div style="font-size: 1.8rem;">🐱</div>
+                <div style="font-size: 0.7rem; color: #888;">Mewling</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 12px 8px; border-radius: 8px; border: 2px solid #9ca3af;">
+                <div style="font-size: 1.8rem;">🐶</div>
+                <div style="font-size: 0.7rem; color: #888;">Pupper</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 12px 8px; border-radius: 8px; border: 2px solid #f59e0b;">
+                <div style="font-size: 1.8rem;">🦄</div>
+                <div style="font-size: 0.7rem; color: #888;">Mythic</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.3); padding: 12px 8px; border-radius: 8px; border: 2px solid #a855f7;">
+                <div style="font-size: 1.8rem;">🐉</div>
+                <div style="font-size: 0.7rem; color: #888;">Dragonet</div>
+              </div>
+              <div style="background: rgba(0,0,0,0.2); padding: 12px 8px; border-radius: 8px; border: 2px dashed #444;">
+                <div style="font-size: 1.8rem; opacity: 0.3;">➕</div>
+                <div style="font-size: 0.7rem; color: #555;">vazio</div>
+              </div>
+            </div>
+            <div style="color: #888; font-size: 0.85rem;">5 pets • 💤 Hibernando</div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.85rem; color: #a855f7;">
+              ✅ Sem cuidados necessários!
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela Comparativa -->
+        <table>
+          <tr>
+            <th>Característica</th>
+            <th style="color: #22c55e;">🎮 Pet Ativo</th>
+            <th style="color: #a855f7;">🏡 Parque</th>
+          </tr>
+          <tr>
+            <td>Pode batalhar?</td>
+            <td style="color: #22c55e;">✅ Sim</td>
+            <td style="color: #ef4444;">❌ Não</td>
+          </tr>
+          <tr>
+            <td>Ganha XP?</td>
+            <td style="color: #22c55e;">✅ Sim</td>
+            <td style="color: #ef4444;">❌ Não</td>
+          </tr>
+          <tr>
+            <td>Pode evoluir?</td>
+            <td style="color: #22c55e;">✅ Sim</td>
+            <td style="color: #ef4444;">❌ Não</td>
+          </tr>
+          <tr>
+            <td>Precisa cuidar?</td>
+            <td style="color: #f59e0b;">⚠️ SIM (diário)</td>
+            <td style="color: #22c55e;">✅ Não (congelado)</td>
+          </tr>
+          <tr>
+            <td>Pode ser perdido em batalha?</td>
+            <td style="color: #ef4444;">⚠️ SIM</td>
+            <td style="color: #22c55e;">✅ Não (protegido)</td>
+          </tr>
+          <tr>
+            <td>Stats</td>
+            <td>Variam com cuidados</td>
+            <td style="color: #3b82f6;">🧊 Congelados</td>
+          </tr>
+          <tr>
+            <td>Limite</td>
+            <td><strong>1 pet</strong></td>
+            <td><strong>Ilimitado</strong></td>
+          </tr>
+        </table>
+
+        <!-- Sistema de Troca -->
+        <div class="feature-card">
+          <div class="feature-title">🔄 Sistema de Troca</div>
+          <p>Trocar o pet ativo tem um <strong>cooldown de 24 horas</strong> para evitar abusos (ex: trocar só para batalhar e voltar).</p>
+          <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-top: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+              <div style="text-align: center;">
+                <div style="font-size: 2rem;">🦊</div>
+                <div style="font-size: 0.8rem; color: #888;">Ativo</div>
+              </div>
+              <div style="font-size: 1.5rem; color: #f59e0b;">→</div>
+              <div style="text-align: center;">
+                <div style="font-size: 2rem;">🏡</div>
+                <div style="font-size: 0.8rem; color: #888;">Parque</div>
+              </div>
+              <div style="flex-grow: 1;"></div>
+              <div style="background: rgba(245, 158, 11, 0.2); padding: 10px 15px; border-radius: 8px; border: 1px solid #f59e0b;">
+                <div style="font-size: 0.8rem; color: #888;">Próxima troca em:</div>
+                <div style="font-size: 1.2rem; color: #f59e0b; font-weight: bold;">⏰ 23:45:12</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bônus de Coleção -->
+        <div class="feature-card">
+          <div class="feature-title">🏆 Bônus de Coleção</div>
+          <p>Quanto mais pets no parque, mais bônus você ganha!</p>
+          <table style="margin-top: 15px;">
+            <tr>
+              <th>Pets no Parque</th>
+              <th>Bônus</th>
+            </tr>
+            <tr>
+              <td>5 pets</td>
+              <td style="color: #22c55e;">+1% ATK para pet ativo</td>
+            </tr>
+            <tr>
+              <td>10 pets</td>
+              <td style="color: #22c55e;">+2% ATK, +1% DEF</td>
+            </tr>
+            <tr>
+              <td>20 pets</td>
+              <td style="color: #22c55e;">+3% ATK, +2% DEF, +1% SPD</td>
+            </tr>
+            <tr>
+              <td>50 pets</td>
+              <td style="color: #f59e0b;">+5% TODOS os stats + Título "Mestre Colecionador"</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Pets Favoritos -->
+        <div class="feature-card">
+          <div class="feature-title">⭐ Pets Favoritos (Troca Rápida)</div>
+          <p>Marque até <strong>3 pets como favoritos</strong>. Eles ficam "prontos" para troca rápida e aparecem destacados no parque.</p>
+          <div style="display: flex; gap: 15px; margin-top: 15px; justify-content: center;">
+            <div style="background: rgba(245, 158, 11, 0.2); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; text-align: center; position: relative;">
+              <div style="position: absolute; top: -8px; right: -8px; background: #f59e0b; color: #000; font-size: 0.8rem; padding: 2px 6px; border-radius: 10px;">⭐</div>
+              <div style="font-size: 2.5rem;">🦄</div>
+              <div style="font-size: 0.85rem; color: #fff;">Mythic</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.2); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; text-align: center; position: relative;">
+              <div style="position: absolute; top: -8px; right: -8px; background: #f59e0b; color: #000; font-size: 0.8rem; padding: 2px 6px; border-radius: 10px;">⭐</div>
+              <div style="font-size: 2.5rem;">🐉</div>
+              <div style="font-size: 0.85rem; color: #fff;">Dragonet</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.2); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; text-align: center; position: relative;">
+              <div style="position: absolute; top: -8px; right: -8px; background: #f59e0b; color: #000; font-size: 0.8rem; padding: 2px 6px; border-radius: 10px;">⭐</div>
+              <div style="font-size: 2.5rem;">🦁</div>
+              <div style="font-size: 0.85rem; color: #fff;">Lionheart</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quando Pet Volta ao Parque -->
+        <div class="warning">
+          <div class="warning-title">🧊 O que acontece quando um Pet vai para o Parque?</div>
+          <ul style="margin-top: 10px; padding-left: 0;">
+            <li><strong>Stats de cuidado CONGELAM</strong> - Se estava com 80% fome, fica 80%</li>
+            <li><strong>Nível e XP mantidos</strong> - Não perde progresso</li>
+            <li><strong>Não decai com o tempo</strong> - Pode ficar anos no parque</li>
+            <li><strong>Ao ativar novamente</strong> - Volta exatamente como estava</li>
+          </ul>
+        </div>
+
+        <!-- Visual do Parque -->
+        <div class="feature-card">
+          <div class="feature-title">🎨 Customização do Parque (Futuro)</div>
+          <p>Desbloqueie temas visuais para seu parque conforme coleciona pets!</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;">
+            <div style="background: linear-gradient(180deg, #22c55e 0%, #166534 100%); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem;">🌳</div>
+              <div style="font-size: 0.8rem; color: #fff;">Floresta</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6);">Padrão</div>
+            </div>
+            <div style="background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem;">🏖️</div>
+              <div style="font-size: 0.8rem; color: #fff;">Praia</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6);">10 pets</div>
+            </div>
+            <div style="background: linear-gradient(180deg, #a855f7 0%, #6b21a8 100%); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem;">🏰</div>
+              <div style="font-size: 0.8rem; color: #fff;">Castelo</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6);">25 pets</div>
+            </div>
+            <div style="background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 1.5rem;">🌌</div>
+              <div style="font-size: 0.8rem; color: #fff;">Galáxia</div>
+              <div style="font-size: 0.7rem; color: rgba(255,255,255,0.6);">50 pets</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE EVOLUÇÃO -->
+    <div class="section">
+      <h2 class="section-title">Sistema de Evolução</h2>
+      <div class="content">
+        <p>Pets podem <strong>evoluir de raridade</strong> baseado em vitórias e dedicação! Um pet comum pode se tornar lendário!</p>
+
+        <!-- Cadeia de Evolução Visual -->
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin: 30px 0; flex-wrap: wrap;">
+          <div style="text-align: center; padding: 20px; background: rgba(156, 163, 175, 0.2); border: 3px solid #9ca3af; border-radius: 16px;">
+            <div style="font-size: 3rem;">🐱</div>
+            <div style="font-weight: bold; color: #9ca3af;">COMUM</div>
+            <div style="font-size: 0.8rem; color: #666;">Stats: 50-70</div>
+          </div>
+          <div style="font-size: 2rem; color: #22c55e;">→</div>
+          <div style="text-align: center; padding: 20px; background: rgba(59, 130, 246, 0.2); border: 3px solid #3b82f6; border-radius: 16px;">
+            <div style="font-size: 3rem;">🐱<span style="font-size: 1rem;">✨</span></div>
+            <div style="font-weight: bold; color: #3b82f6;">RARO</div>
+            <div style="font-size: 0.8rem; color: #666;">Stats: 70-90</div>
+          </div>
+          <div style="font-size: 2rem; color: #22c55e;">→</div>
+          <div style="text-align: center; padding: 20px; background: rgba(168, 85, 247, 0.2); border: 3px solid #a855f7; border-radius: 16px;">
+            <div style="font-size: 3rem;">🐱<span style="font-size: 1rem;">💎</span></div>
+            <div style="font-weight: bold; color: #a855f7;">ÉPICO</div>
+            <div style="font-size: 0.8rem; color: #666;">Stats: 90-110</div>
+          </div>
+          <div style="font-size: 2rem; color: #22c55e;">→</div>
+          <div style="text-align: center; padding: 20px; background: rgba(245, 158, 11, 0.2); border: 3px solid #f59e0b; border-radius: 16px;">
+            <div style="font-size: 3rem;">🐱<span style="font-size: 1rem;">👑</span></div>
+            <div style="font-weight: bold; color: #f59e0b;">LENDÁRIO</div>
+            <div style="font-size: 0.8rem; color: #666;">Stats: 110-130</div>
+          </div>
+        </div>
+
+        <!-- Requisitos de Evolução -->
+        <div class="feature-card">
+          <div class="feature-title">📋 Requisitos para Evoluir</div>
+          <table style="margin-top: 15px;">
+            <tr>
+              <th>Evolução</th>
+              <th>🏆 Vitórias</th>
+              <th>📊 Nível Mín.</th>
+              <th>⬆️ Aumento de Stats</th>
+            </tr>
+            <tr>
+              <td><span style="color: #9ca3af;">Comum</span> → <span style="color: #3b82f6;">Raro</span></td>
+              <td><strong>10 vitórias</strong></td>
+              <td>Nível 5</td>
+              <td style="color: #22c55e;">+15 em todos os stats</td>
+            </tr>
+            <tr>
+              <td><span style="color: #3b82f6;">Raro</span> → <span style="color: #a855f7;">Épico</span></td>
+              <td><strong>25 vitórias</strong></td>
+              <td>Nível 15</td>
+              <td style="color: #22c55e;">+20 em todos os stats</td>
+            </tr>
+            <tr>
+              <td><span style="color: #a855f7;">Épico</span> → <span style="color: #f59e0b;">Lendário</span></td>
+              <td><strong>50 vitórias</strong></td>
+              <td>Nível 30</td>
+              <td style="color: #22c55e;">+25 em todos os stats</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Barra de Progresso Visual -->
+        <div class="feature-card">
+          <div class="feature-title">📊 Progresso de Evolução</div>
+          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin-top: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+              <div style="font-size: 2.5rem;">🦊</div>
+              <div>
+                <div style="color: #fff; font-weight: bold;">Foxfire</div>
+                <div style="color: #3b82f6; font-size: 0.9rem;">Raro • Nível 18</div>
+              </div>
+            </div>
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="color: #888;">Progresso para <span style="color: #a855f7;">Épico</span></span>
+              <span style="color: #f59e0b;">18/25 vitórias</span>
+            </div>
+            <div style="background: rgba(0,0,0,0.4); border-radius: 10px; height: 24px; overflow: hidden;">
+              <div style="background: linear-gradient(90deg, #3b82f6, #a855f7); height: 100%; width: 72%; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 0.8rem; font-weight: bold; color: #fff;">72%</span>
+              </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #888; text-align: center;">
+              Faltam <strong style="color: #f59e0b;">7 vitórias</strong> e <strong style="color: #22c55e;">+12 níveis</strong> para evoluir!
+            </div>
+          </div>
+        </div>
+
+        <!-- Bônus de Progresso -->
+        <div class="feature-card">
+          <div class="feature-title">⚡ Aceleradores de Evolução</div>
+          <p>Ganhe progresso extra com estas condições:</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+            <div style="background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; border-radius: 12px; padding: 15px;">
+              <div style="font-size: 1.5rem; margin-bottom: 8px;">🔥</div>
+              <div style="font-weight: bold; color: #ef4444;">Win Streak</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">5 vitórias seguidas</div>
+              <div style="font-size: 0.9rem; color: #22c55e; margin-top: 8px;">+1 vitória bônus</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px;">
+              <div style="font-size: 1.5rem; margin-bottom: 8px;">👑</div>
+              <div style="font-weight: bold; color: #f59e0b;">Derrotar Superior</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">Vencer raridade maior</div>
+              <div style="font-size: 0.9rem; color: #22c55e; margin-top: 8px;">Vitória conta 2x</div>
+            </div>
+            <div style="background: rgba(34, 197, 94, 0.15); border: 2px solid #22c55e; border-radius: 12px; padding: 15px;">
+              <div style="font-size: 1.5rem; margin-bottom: 8px;">💯</div>
+              <div style="font-weight: bold; color: #22c55e;">Cuidado Perfeito</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">7 dias com 100% stats</div>
+              <div style="font-size: 0.9rem; color: #22c55e; margin-top: 8px;">-20% requisito</div>
+            </div>
+            <div style="background: rgba(168, 85, 247, 0.15); border: 2px solid #a855f7; border-radius: 12px; padding: 15px;">
+              <div style="font-size: 1.5rem; margin-bottom: 8px;">⭐</div>
+              <div style="font-weight: bold; color: #a855f7;">Primeira Vitória do Dia</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">Uma vez por dia</div>
+              <div style="font-size: 0.9rem; color: #22c55e; margin-top: 8px;">+0.5 vitória bônus</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evoluções Especiais -->
+        <div class="feature-card">
+          <div class="feature-title">🌙 Evoluções Especiais (Formas Alternativas)</div>
+          <p>Alguns pets têm <strong>evoluções secretas</strong> com condições especiais!</p>
+          <table style="margin-top: 15px;">
+            <tr>
+              <th>Pet Base</th>
+              <th>Forma Especial</th>
+              <th>Condição Secreta</th>
+            </tr>
+            <tr>
+              <td>🐱 Mewling</td>
+              <td style="color: #a855f7;">😺 Mewling Sombrio</td>
+              <td>Vencer 10 batalhas durante a noite (após 22h)</td>
+            </tr>
+            <tr>
+              <td>🦊 Foxfire</td>
+              <td style="color: #3b82f6;">🦊 Foxfire Glacial</td>
+              <td>Derrotar 5 pets do tipo Água</td>
+            </tr>
+            <tr>
+              <td>🐉 Dragonet</td>
+              <td style="color: #f59e0b;">🐲 Dragonet Ancestral</td>
+              <td>Atingir 50 vitórias sem nunca perder o pet</td>
+            </tr>
+            <tr>
+              <td>🦄 Mythic</td>
+              <td style="color: #ec4899;">🦄 Mythic Celestial</td>
+              <td>Manter cuidado 100% por 30 dias seguidos</td>
+            </tr>
+          </table>
+          <div style="margin-top: 15px; padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 8px; font-size: 0.9rem; color: #a855f7;">
+            💡 <strong>Dica:</strong> Formas especiais têm visuais únicos e +10% em um stat específico!
+          </div>
+        </div>
+
+        <!-- Animação de Evolução -->
+        <div class="feature-card">
+          <div class="feature-title">✨ Momento da Evolução</div>
+          <p>Quando seu pet evolui, uma animação especial acontece!</p>
+          <div style="background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(168, 85, 247, 0.2)); border-radius: 16px; padding: 30px; text-align: center; margin-top: 15px;">
+            <div style="font-size: 1rem; color: #888; margin-bottom: 10px;">Seu pet está evoluindo!</div>
+            <div style="position: relative; display: inline-block;">
+              <div style="font-size: 5rem; animation: pulse 1s infinite;">🦊</div>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 6rem; opacity: 0.3;">✨</div>
+            </div>
+            <div style="margin-top: 15px;">
+              <span style="color: #3b82f6; font-size: 1.2rem;">Raro</span>
+              <span style="color: #f59e0b; margin: 0 15px;">→→→</span>
+              <span style="color: #a855f7; font-size: 1.4rem; font-weight: bold;">ÉPICO!</span>
+            </div>
+            <div style="margin-top: 20px; display: inline-block; background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; padding: 10px 20px; border-radius: 8px;">
+              <div style="color: #22c55e; font-weight: bold;">Stats aumentaram!</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">HP +20 • ATK +20 • DEF +20 • SPD +20</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- O que acontece ao evoluir -->
+        <div class="warning">
+          <div class="warning-title">🔄 O que acontece quando o Pet evolui?</div>
+          <ul style="margin-top: 10px; padding-left: 0;">
+            <li><strong>Stats base aumentam</strong> - Conforme tabela de raridade</li>
+            <li><strong>Visual muda</strong> - Ganha efeitos (brilho, aura, coroa)</li>
+            <li><strong>Nível mantido</strong> - Não reseta o nível</li>
+            <li><strong>Habilidade nova</strong> - Desbloqueia skill especial da nova raridade</li>
+            <li><strong>Contador zera</strong> - Vitórias para próxima evolução recomeçam do zero</li>
+          </ul>
+        </div>
+
+        <!-- Pets já lendários -->
+        <div class="feature-card">
+          <div class="feature-title">👑 E os Pets que já nascem Lendários?</div>
+          <p>Pets que já são lendários ao serem obtidos têm uma vantagem:</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem;">🦄</div>
+              <div style="color: #f59e0b; font-weight: bold;">Lendário de Nascença</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 8px;">Stats base: 110-130</div>
+              <div style="font-size: 0.85rem; color: #a855f7; margin-top: 5px;">Já começa forte!</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem;">🐱→👑</div>
+              <div style="color: #22c55e; font-weight: bold;">Lendário Evoluído</div>
+              <div style="font-size: 0.85rem; color: #888; margin-top: 8px;">Stats: 50 + 15 + 20 + 25 = 110-130</div>
+              <div style="font-size: 0.85rem; color: #f59e0b; margin-top: 5px;">+Título "Veterano"</div>
+            </div>
+          </div>
+          <div style="margin-top: 15px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; font-size: 0.9rem; color: #f59e0b; text-align: center;">
+            🏅 Pets evoluídos ganham o título <strong>"Veterano"</strong> que aparece no perfil!
+          </div>
+        </div>
       </div>
     </div>
 
