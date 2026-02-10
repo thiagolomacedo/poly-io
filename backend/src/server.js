@@ -465,6 +465,10 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
       historico = historico.slice(-10)
     }
 
+    // Timeout de 30 segundos para evitar travamentos
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -479,15 +483,24 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
         ],
         max_tokens: 500,
         temperature: 0.7
-      })
+      }),
+      signal: controller.signal
     })
 
+    clearTimeout(timeoutId)
     const data = await response.json()
 
     console.log('[io IA] Resposta Groq:', JSON.stringify(data).substring(0, 500))
 
     if (data.error) {
       console.error('[io IA] Erro da API:', data.error)
+      // Mostrar erro específico se for rate limit ou contexto muito grande
+      if (data.error.code === 'rate_limit_exceeded') {
+        return { texto: 'Estou um pouco sobrecarregada agora. Me dá uns segundinhos? 😊', acao: null }
+      }
+      if (data.error.code === 'context_length_exceeded') {
+        return { texto: 'Nossa conversa ficou longa! Vou recomeçar do zero. O que você queria me dizer? 💬', acao: null }
+      }
       return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
     }
 
@@ -524,7 +537,11 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     console.error('[io IA] Resposta inesperada:', JSON.stringify(data))
     return { texto: 'Hmm, não consegui processar isso. Pode reformular? 🤔', acao: null }
   } catch (error) {
-    console.error('[io IA] Erro catch:', error.message)
+    console.error('[io IA] Erro catch:', error.name, error.message)
+    // Erro de timeout
+    if (error.name === 'AbortError') {
+      return { texto: 'Demorei demais pensando! Pode repetir? 🤔', acao: null }
+    }
     return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
   }
 }
