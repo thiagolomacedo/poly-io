@@ -5559,56 +5559,74 @@ async function initAuthDB() {
 }
 
 async function saveRememberToken(token) {
-  // Método 1: Service Worker Cache (mais persistente em PWA)
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  // Método 1: Cache API direto (funciona sem SW controller)
+  if ('caches' in window) {
     try {
-      const result = await sendMessageToSW({ type: 'SAVE_AUTH_TOKEN', token })
-      if (result.success) {
-        console.log('[Auth] Token salvo no SW Cache com sucesso')
-        return true
-      }
+      const cache = await caches.open('poly-io-auth')
+      const response = new Response(JSON.stringify({ token, savedAt: Date.now() }))
+      await cache.put('/auth-token', response)
+      console.log('[Auth] Token salvo no Cache API com sucesso')
     } catch (e) {
-      console.error('[Auth] Erro ao salvar no SW:', e)
+      console.error('[Auth] Erro ao salvar no Cache API:', e)
     }
   }
 
-  // Método 2: IndexedDB (fallback)
+  // Método 2: IndexedDB
   try {
     if (!authDb) await initAuthDB()
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const transaction = authDb.transaction(['auth'], 'readwrite')
       const store = transaction.objectStore('auth')
       const request = store.put({ key: 'remember_token', value: token })
-      request.onsuccess = () => {
-        console.log('[Auth] Token salvo no IndexedDB com sucesso')
-        resolve(true)
-      }
-      request.onerror = () => {
-        console.error('[Auth] Erro ao salvar token:', request.error)
-        reject(request.error)
-      }
+      request.onsuccess = () => resolve(true)
+      request.onerror = () => reject(request.error)
     })
+    console.log('[Auth] Token salvo no IndexedDB')
   } catch (e) {
-    console.error('[Auth] Erro ao salvar token no IndexedDB:', e)
-    return false
+    console.error('[Auth] Erro IndexedDB:', e)
   }
+
+  // Método 3: localStorage
+  try {
+    localStorage.setItem('poly_remember_token', token)
+    console.log('[Auth] Token salvo no localStorage')
+  } catch (e) {
+    console.error('[Auth] Erro localStorage:', e)
+  }
+
+  return true
 }
 
 async function loadRememberToken() {
-  // Método 1: Service Worker Cache (mais persistente em PWA)
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  // Método 1: Cache API direto
+  if ('caches' in window) {
     try {
-      const result = await sendMessageToSW({ type: 'LOAD_AUTH_TOKEN' })
-      if (result.success && result.token) {
-        console.log('[Auth] Token carregado do SW Cache')
-        return result.token
+      const cache = await caches.open('poly-io-auth')
+      const response = await cache.match('/auth-token')
+      if (response) {
+        const data = await response.json()
+        if (data.token) {
+          console.log('[Auth] Token carregado do Cache API')
+          return data.token
+        }
       }
     } catch (e) {
-      console.error('[Auth] Erro ao carregar do SW:', e)
+      console.error('[Auth] Erro ao carregar do Cache API:', e)
     }
   }
 
-  // Método 2: IndexedDB (fallback)
+  // Método 2: localStorage
+  try {
+    const token = localStorage.getItem('poly_remember_token')
+    if (token) {
+      console.log('[Auth] Token carregado do localStorage')
+      return token
+    }
+  } catch (e) {
+    console.error('[Auth] Erro localStorage:', e)
+  }
+
+  // Método 3: IndexedDB
   try {
     if (!authDb) await initAuthDB()
     return new Promise((resolve) => {
@@ -5624,20 +5642,26 @@ async function loadRememberToken() {
       request.onerror = () => resolve(null)
     })
   } catch (e) {
-    console.error('[Auth] Erro ao carregar token do IndexedDB:', e)
+    console.error('[Auth] Erro IndexedDB:', e)
     return null
   }
+
+  return null
 }
 
 async function clearRememberToken() {
-  // Limpar do SW Cache
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  // Limpar do Cache API
+  if ('caches' in window) {
     try {
-      await sendMessageToSW({ type: 'CLEAR_AUTH_TOKEN' })
-    } catch (e) {
-      // ignorar erro
-    }
+      const cache = await caches.open('poly-io-auth')
+      await cache.delete('/auth-token')
+    } catch (e) { /* ignorar */ }
   }
+
+  // Limpar do localStorage
+  try {
+    localStorage.removeItem('poly_remember_token')
+  } catch (e) { /* ignorar */ }
 
   // Limpar do IndexedDB
   try {
