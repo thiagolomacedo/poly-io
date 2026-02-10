@@ -76,6 +76,11 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS contacts_config JSONB
     `)
 
+    // Adicionar coluna remember_token para auto-login (migração)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS remember_token VARCHAR(64)
+    `)
+
     // ==================== CAMPOS DA IO (ASSISTENTE) ====================
     // Apelido que a io usa para chamar o usuário
     await client.query(`

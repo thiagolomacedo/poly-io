@@ -1189,7 +1189,7 @@ app.post('/api/auth/register', async (req, res) => {
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, senha } = req.body
+  const { email, senha, rememberMe } = req.body
 
   if (!email || !senha) {
     return res.status(400).json({ error: 'Email e senha são obrigatórios' })
@@ -1214,7 +1214,17 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' })
 
-    console.log(`[Auth] Login: ${user.nome}`)
+    // Gerar remember_token se "Lembrar-me" estiver marcado
+    let rememberToken = null
+    if (rememberMe) {
+      rememberToken = require('crypto').randomBytes(32).toString('hex')
+      await pool.query('UPDATE users SET remember_token = $1 WHERE id = $2', [rememberToken, user.id])
+    } else {
+      // Limpar remember_token se não quiser lembrar
+      await pool.query('UPDATE users SET remember_token = NULL WHERE id = $1', [user.id])
+    }
+
+    console.log(`[Auth] Login: ${user.nome}${rememberMe ? ' (lembrar)' : ''}`)
 
     res.json({
       user: {
@@ -1226,11 +1236,46 @@ app.post('/api/auth/login', async (req, res) => {
         codigo_amigo: user.codigo_amigo,
         avatar_config: user.avatar_config
       },
-      token
+      token,
+      rememberToken
     })
   } catch (error) {
     console.error('[Auth] Erro no login:', error.message)
     res.status(500).json({ error: 'Erro ao fazer login' })
+  }
+})
+
+// Auto-login com remember_token
+app.post('/api/auth/auto-login', async (req, res) => {
+  const { rememberToken } = req.body
+
+  if (!rememberToken) {
+    return res.status(400).json({ error: 'Token não fornecido' })
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT id, nome, email, idioma, pais, codigo_amigo, avatar_config FROM users WHERE remember_token = $1',
+      [rememberToken]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
+
+    const user = result.rows[0]
+
+    // Atualizar último acesso
+    await pool.query('UPDATE users SET ultimo_acesso = NOW() WHERE id = $1', [user.id])
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '30d' })
+
+    console.log(`[Auth] Auto-login: ${user.nome}`)
+
+    res.json({ user, token })
+  } catch (error) {
+    console.error('[Auth] Erro no auto-login:', error.message)
+    res.status(500).json({ error: 'Erro ao fazer auto-login' })
   }
 })
 

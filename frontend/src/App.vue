@@ -3043,7 +3043,10 @@ async function login() {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginForm.value)
+      body: JSON.stringify({
+        ...loginForm.value,
+        rememberMe: rememberMe.value
+      })
     })
 
     const data = await res.json()
@@ -3063,13 +3066,14 @@ async function login() {
       localStorage.setItem('poly_avatar', JSON.stringify(data.user.avatar_config))
     }
 
-    // Salvar ou limpar credenciais baseado no checkbox
-    if (rememberMe.value) {
-      saveCredentials(loginForm.value.email, loginForm.value.senha)
-      // Salvar também no gerenciador de senhas do Windows
-      saveToPasswordManager(loginForm.value.email, loginForm.value.senha)
+    // Salvar remember_token para auto-login
+    if (rememberMe.value && data.rememberToken) {
+      // Salvar no Credential Management API (funciona no PWA)
+      saveToPasswordManager(data.user.email, data.rememberToken)
+      // Backup em cookie
+      setCookie('poly_remember_token', data.rememberToken)
     } else {
-      clearCredentials()
+      deleteCookie('poly_remember_token')
     }
 
     initializeApp()
@@ -3077,6 +3081,52 @@ async function login() {
     authError.value = error.message
   } finally {
     loading.value = false
+  }
+}
+
+// Auto-login usando remember_token do servidor
+async function tryAutoLoginWithToken() {
+  // Tentar carregar do Credential Management API primeiro
+  let rememberToken = null
+
+  const pmCreds = await loadFromPasswordManager()
+  if (pmCreds && pmCreds.senha) {
+    // O "senha" na verdade é o rememberToken
+    rememberToken = pmCreds.senha
+  }
+
+  // Fallback para cookie
+  if (!rememberToken) {
+    rememberToken = getCookie('poly_remember_token')
+  }
+
+  if (!rememberToken) return false
+
+  try {
+    const res = await fetch(`${API_URL}/auth/auto-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rememberToken })
+    })
+
+    if (!res.ok) return false
+
+    const data = await res.json()
+
+    token.value = data.token
+    currentUser.value = data.user
+    localStorage.setItem('poly_token', data.token)
+    setCookie('poly_token', data.token)
+
+    if (data.user.avatar_config) {
+      myAvatar.value = data.user.avatar_config
+    }
+
+    initializeApp()
+    return true
+  } catch (e) {
+    console.error('Erro no auto-login:', e)
+    return false
   }
 }
 
@@ -3250,9 +3300,13 @@ async function checkAuth() {
 
 // Autologin com credenciais salvas
 async function tryAutoLogin() {
+  // Primeiro, tentar auto-login com remember_token do servidor
+  const success = await tryAutoLoginWithToken()
+  if (success) return
+
+  // Fallback: tentar com credenciais salvas (método antigo)
   let { email, senha } = loadCredentials()
 
-  // Se não achou em localStorage/cookies, tenta gerenciador de senhas
   if (!email || !senha) {
     const pmCreds = await loadFromPasswordManager()
     if (pmCreds) {
