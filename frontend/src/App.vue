@@ -4002,6 +4002,9 @@ async function loadConnections() {
       status: onlineUsers[c.user_id] || 'offline'
     }))
 
+    // Sincronizar ordem dos contatos com localStorage
+    syncContactsOrder()
+
     // Atualizar contadores de não lidos do banco de dados
     data.forEach(c => {
       const connId = c.connection_id.toString()
@@ -5503,33 +5506,45 @@ function togglePinContact(contactId) {
 
 function moveContact(contactId, direction) {
   const isPinned = pinnedContacts.value.includes(contactId)
-  const list = isPinned ? pinnedContacts : contactsOrder
 
-  // Se não está na lista de ordem, adicionar todos os contatos primeiro
-  if (!isPinned && !list.value.includes(contactId)) {
-    // Inicializar ordem com todos os contatos atuais
-    list.value = sortedConnections.value
-      .filter(c => !pinnedContacts.value.includes(c.id))
-      .map(c => c.id)
-  }
-
-  const index = list.value.indexOf(contactId)
-  if (index === -1) return
-
-  const newIndex = direction === 'up' ? index - 1 : index + 1
-
-  // Verificar limites
-  if (newIndex < 0 || newIndex >= list.value.length) return
-
-  // Trocar posições
-  const temp = list.value[newIndex]
-  list.value[newIndex] = list.value[index]
-  list.value[index] = temp
-
-  // Salvar
   if (isPinned) {
+    // Mover dentro dos fixados
+    const index = pinnedContacts.value.indexOf(contactId)
+    if (index === -1) return
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= pinnedContacts.value.length) return
+
+    // Trocar posições
+    const temp = pinnedContacts.value[newIndex]
+    pinnedContacts.value[newIndex] = pinnedContacts.value[index]
+    pinnedContacts.value[index] = temp
+
     localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
   } else {
+    // Mover dentro dos não fixados
+    // Garantir que todos os contatos não fixados estão na lista de ordem
+    const notPinnedIds = connections.value
+      .filter(c => !pinnedContacts.value.includes(c.id))
+      .map(c => c.id)
+
+    // Sincronizar contactsOrder com contatos existentes
+    // Manter ordem existente + adicionar novos no final
+    const existingOrder = contactsOrder.value.filter(id => notPinnedIds.includes(id))
+    const newIds = notPinnedIds.filter(id => !contactsOrder.value.includes(id))
+    contactsOrder.value = [...existingOrder, ...newIds]
+
+    const index = contactsOrder.value.indexOf(contactId)
+    if (index === -1) return
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= contactsOrder.value.length) return
+
+    // Trocar posições
+    const temp = contactsOrder.value[newIndex]
+    contactsOrder.value[newIndex] = contactsOrder.value[index]
+    contactsOrder.value[index] = temp
+
     localStorage.setItem('poly_contacts_order', JSON.stringify(contactsOrder.value))
   }
 }
@@ -5540,6 +5555,25 @@ function moveContactUp(contactId) {
 
 function moveContactDown(contactId) {
   moveContact(contactId, 'down')
+}
+
+// Sincronizar ordem dos contatos quando carregados do backend
+function syncContactsOrder() {
+  // Remover IDs de contatos que não existem mais
+  pinnedContacts.value = pinnedContacts.value.filter(id =>
+    connections.value.some(c => c.id === id)
+  )
+  localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+
+  // Sincronizar contactsOrder: manter ordem existente + novos no final
+  const notPinnedIds = connections.value
+    .filter(c => !pinnedContacts.value.includes(c.id))
+    .map(c => c.id)
+
+  const existingOrder = contactsOrder.value.filter(id => notPinnedIds.includes(id))
+  const newIds = notPinnedIds.filter(id => !contactsOrder.value.includes(id))
+  contactsOrder.value = [...existingOrder, ...newIds]
+  localStorage.setItem('poly_contacts_order', JSON.stringify(contactsOrder.value))
 }
 
 // ==================== MODO NARRATIVO DA IO ====================
