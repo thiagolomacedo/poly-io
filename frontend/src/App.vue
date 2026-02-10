@@ -1608,6 +1608,43 @@ function clearCredentials() {
   deleteCookie('poly_senha')
 }
 
+// ==================== CREDENTIAL MANAGEMENT API ====================
+// Salva no gerenciador de senhas do Windows/navegador
+
+async function saveToPasswordManager(email, senha) {
+  if (!('credentials' in navigator)) return
+
+  try {
+    const cred = new PasswordCredential({
+      id: email,
+      password: senha,
+      name: 'Poly.io'
+    })
+    await navigator.credentials.store(cred)
+    console.log('[Auth] Credenciais salvas no gerenciador de senhas')
+  } catch (e) {
+    console.warn('[Auth] Não foi possível salvar no gerenciador:', e)
+  }
+}
+
+async function loadFromPasswordManager() {
+  if (!('credentials' in navigator)) return null
+
+  try {
+    const cred = await navigator.credentials.get({
+      password: true,
+      mediation: 'optional'
+    })
+    if (cred && cred.type === 'password') {
+      console.log('[Auth] Credenciais carregadas do gerenciador de senhas')
+      return { email: cred.id, senha: cred.password }
+    }
+  } catch (e) {
+    console.warn('[Auth] Não foi possível carregar do gerenciador:', e)
+  }
+  return null
+}
+
 // Estado de autenticação
 const authMode = ref('login')
 const loading = ref(false)
@@ -2934,6 +2971,8 @@ async function login() {
     // Salvar ou limpar credenciais baseado no checkbox
     if (rememberMe.value) {
       saveCredentials(loginForm.value.email, loginForm.value.senha)
+      // Salvar também no gerenciador de senhas do Windows
+      saveToPasswordManager(loginForm.value.email, loginForm.value.senha)
     } else {
       clearCredentials()
     }
@@ -3116,7 +3155,16 @@ async function checkAuth() {
 
 // Autologin com credenciais salvas
 async function tryAutoLogin() {
-  const { email, senha } = loadCredentials()
+  let { email, senha } = loadCredentials()
+
+  // Se não achou em localStorage/cookies, tenta gerenciador de senhas
+  if (!email || !senha) {
+    const pmCreds = await loadFromPasswordManager()
+    if (pmCreds) {
+      email = pmCreds.email
+      senha = pmCreds.senha
+    }
+  }
 
   if (email && senha) {
     loginForm.value.email = email
@@ -5598,9 +5646,19 @@ function updateApp() {
 
 // ==================== LIFECYCLE ====================
 
-onMounted(() => {
+onMounted(async () => {
   // Recarregar credenciais salvas (fix para PWA/Desktop)
-  const { email, senha } = loadCredentials()
+  let { email, senha } = loadCredentials()
+
+  // Se não achou, tenta gerenciador de senhas do Windows
+  if (!email || !senha) {
+    const pmCreds = await loadFromPasswordManager()
+    if (pmCreds) {
+      email = pmCreds.email
+      senha = pmCreds.senha
+    }
+  }
+
   if (email && !loginForm.value.email) {
     loginForm.value.email = email
     loginForm.value.senha = senha || ''
