@@ -1710,9 +1710,24 @@ const resetPasswordSuccess = ref('')
 const sidebarOpen = ref(true)
 const currentTab = ref('connections')
 const connections = ref([])
-// Sistema de fixar e ordenar contatos
-const pinnedContacts = ref(JSON.parse(localStorage.getItem('poly_pinned_contacts') || '[]'))
-const contactsOrder = ref(JSON.parse(localStorage.getItem('poly_contacts_order') || '[]'))
+// Sistema de fixar e ordenar contatos (usa localStorage + cookie para PWA)
+function loadContactsConfig(key) {
+  const fromLS = localStorage.getItem(key)
+  const fromCookie = getCookie(key)
+  const data = fromLS || fromCookie || '[]'
+  try {
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+function saveContactsConfig(key, value) {
+  const json = JSON.stringify(value)
+  localStorage.setItem(key, json)
+  setCookie(key, json)
+}
+const pinnedContacts = ref(loadContactsConfig('poly_pinned_contacts'))
+const contactsOrder = ref(loadContactsConfig('poly_contacts_order'))
 const pendingRequests = ref([])
 const sentRequests = ref([])
 const searchQuery = ref('')
@@ -5501,7 +5516,7 @@ function togglePinContact(contactId) {
     // Desafixar
     pinnedContacts.value.splice(index, 1)
   }
-  localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+  saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
 }
 
 function moveContact(contactId, direction) {
@@ -5520,7 +5535,7 @@ function moveContact(contactId, direction) {
     pinnedContacts.value[newIndex] = pinnedContacts.value[index]
     pinnedContacts.value[index] = temp
 
-    localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+    saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
   } else {
     // Mover dentro dos não fixados
     // Garantir que todos os contatos não fixados estão na lista de ordem
@@ -5545,7 +5560,7 @@ function moveContact(contactId, direction) {
     contactsOrder.value[newIndex] = contactsOrder.value[index]
     contactsOrder.value[index] = temp
 
-    localStorage.setItem('poly_contacts_order', JSON.stringify(contactsOrder.value))
+    saveContactsConfig('poly_contacts_order', contactsOrder.value)
   }
 }
 
@@ -5563,7 +5578,7 @@ function syncContactsOrder() {
   pinnedContacts.value = pinnedContacts.value.filter(id =>
     connections.value.some(c => c.id === id)
   )
-  localStorage.setItem('poly_pinned_contacts', JSON.stringify(pinnedContacts.value))
+  saveContactsConfig('poly_pinned_contacts', pinnedContacts.value)
 
   // Sincronizar contactsOrder: manter ordem existente + novos no final
   const notPinnedIds = connections.value
@@ -5573,7 +5588,7 @@ function syncContactsOrder() {
   const existingOrder = contactsOrder.value.filter(id => notPinnedIds.includes(id))
   const newIds = notPinnedIds.filter(id => !contactsOrder.value.includes(id))
   contactsOrder.value = [...existingOrder, ...newIds]
-  localStorage.setItem('poly_contacts_order', JSON.stringify(contactsOrder.value))
+  saveContactsConfig('poly_contacts_order', contactsOrder.value)
 }
 
 // ==================== MODO NARRATIVO DA IO ====================
