@@ -416,10 +416,29 @@ CONSISTÊNCIA DE LONGO PRAZO
 
 `
 
+// Frases humanas para quando a io precisa de uma pausa
+const IO_PAUSAS = [
+  // Pausa com pensamento (bem humana)
+  'Tô pensando nisso...',
+  'Deixa eu organizar a ideia.',
+  'Hmm… deixa eu ver.',
+  'Pensando aqui...',
+  // Pausa gentil (doce, feminina)
+  'Já volto contigo!',
+  'Só um instante, tá?',
+  'Um pouquinho, já te digo.',
+  'Calma aí um segundinho.'
+]
+
+// Retorna uma frase aleatória de pausa
+function getPausaAleatoria() {
+  return IO_PAUSAS[Math.floor(Math.random() * IO_PAUSAS.length)]
+}
+
 // Função para chamar a API do Groq
 async function chamarGroqIA(mensagem, connectionId, userId = null) {
   if (!GROQ_API_KEY) {
-    return { texto: 'Desculpa, estou temporariamente indisponível. Tente novamente mais tarde! 🙁', acao: null }
+    return { texto: getPausaAleatoria(), acao: null }
   }
 
   try {
@@ -498,13 +517,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (data.error) {
       console.error('[io IA] Erro da API:', data.error)
       // Mostrar erro específico se for rate limit ou contexto muito grande
-      if (data.error.code === 'rate_limit_exceeded') {
-        return { texto: 'Estou um pouco sobrecarregada agora. Me dá uns segundinhos? 😊', acao: null }
-      }
-      if (data.error.code === 'context_length_exceeded') {
-        return { texto: 'Nossa conversa ficou longa! Vou recomeçar do zero. O que você queria me dizer? 💬', acao: null }
-      }
-      return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
+      return { texto: getPausaAleatoria(), acao: null }
     }
 
     if (data.choices && data.choices[0]?.message?.content) {
@@ -538,14 +551,10 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     }
 
     console.error('[io IA] Resposta inesperada:', JSON.stringify(data))
-    return { texto: 'Hmm, não consegui processar isso. Pode reformular? 🤔', acao: null }
+    return { texto: getPausaAleatoria(), acao: null }
   } catch (error) {
     console.error('[io IA] Erro catch:', error.name, error.message)
-    // Erro de timeout
-    if (error.name === 'AbortError') {
-      return { texto: 'Demorei demais pensando! Pode repetir? 🤔', acao: null }
-    }
-    return { texto: 'Ops, tive um probleminha técnico. Tenta de novo? 😅', acao: null }
+    return { texto: getPausaAleatoria(), acao: null }
   }
 }
 
