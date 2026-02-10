@@ -1570,16 +1570,55 @@ let socket = null
 const showUpdatePrompt = ref(false)
 let swRegistration = null
 
+// ==================== COOKIES (persistência PWA) ====================
+function setCookie(name, value, days = 365) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString()
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`
+}
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+  return match ? decodeURIComponent(match[2]) : ''
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+}
+
+// Salvar credenciais (localStorage + cookie)
+function saveCredentials(email, senha) {
+  localStorage.setItem('poly_saved_email', email)
+  localStorage.setItem('poly_saved_senha', senha)
+  setCookie('poly_email', email)
+  setCookie('poly_senha', senha)
+}
+
+// Carregar credenciais (tenta localStorage primeiro, depois cookie)
+function loadCredentials() {
+  const email = localStorage.getItem('poly_saved_email') || getCookie('poly_email')
+  const senha = localStorage.getItem('poly_saved_senha') || getCookie('poly_senha')
+  return { email, senha }
+}
+
+// Limpar credenciais
+function clearCredentials() {
+  localStorage.removeItem('poly_saved_email')
+  localStorage.removeItem('poly_saved_senha')
+  deleteCookie('poly_email')
+  deleteCookie('poly_senha')
+}
+
 // Estado de autenticação
 const authMode = ref('login')
 const loading = ref(false)
 const authError = ref('')
-const token = ref(localStorage.getItem('poly_token') || '')
+const token = ref(localStorage.getItem('poly_token') || getCookie('poly_token') || '')
 const currentUser = ref(null)
 
+const savedCreds = loadCredentials()
 const loginForm = ref({
-  email: localStorage.getItem('poly_saved_email') || '',
-  senha: localStorage.getItem('poly_saved_senha') || ''
+  email: savedCreds.email || '',
+  senha: savedCreds.senha || ''
 })
 const rememberMe = ref(true) // Sempre marcado por padrão
 
@@ -2884,6 +2923,7 @@ async function login() {
     token.value = data.token
     currentUser.value = data.user
     localStorage.setItem('poly_token', data.token)
+    setCookie('poly_token', data.token)
 
     // Carregar avatar do banco (se existir)
     if (data.user.avatar_config) {
@@ -2893,11 +2933,9 @@ async function login() {
 
     // Salvar ou limpar credenciais baseado no checkbox
     if (rememberMe.value) {
-      localStorage.setItem('poly_saved_email', loginForm.value.email)
-      localStorage.setItem('poly_saved_senha', loginForm.value.senha)
+      saveCredentials(loginForm.value.email, loginForm.value.senha)
     } else {
-      localStorage.removeItem('poly_saved_email')
-      localStorage.removeItem('poly_saved_senha')
+      clearCredentials()
     }
 
     initializeApp()
@@ -3078,12 +3116,11 @@ async function checkAuth() {
 
 // Autologin com credenciais salvas
 async function tryAutoLogin() {
-  const savedEmail = localStorage.getItem('poly_saved_email')
-  const savedSenha = localStorage.getItem('poly_saved_senha')
+  const { email, senha } = loadCredentials()
 
-  if (savedEmail && savedSenha) {
-    loginForm.value.email = savedEmail
-    loginForm.value.senha = savedSenha
+  if (email && senha) {
+    loginForm.value.email = email
+    loginForm.value.senha = senha
     rememberMe.value = true
     await login()
   }
@@ -3093,6 +3130,7 @@ function logout() {
   token.value = ''
   currentUser.value = null
   localStorage.removeItem('poly_token')
+  deleteCookie('poly_token')
   if (socket) {
     socket.disconnect()
     socket = null
@@ -5562,11 +5600,10 @@ function updateApp() {
 
 onMounted(() => {
   // Recarregar credenciais salvas (fix para PWA/Desktop)
-  const savedEmail = localStorage.getItem('poly_saved_email')
-  const savedSenha = localStorage.getItem('poly_saved_senha')
-  if (savedEmail && !loginForm.value.email) {
-    loginForm.value.email = savedEmail
-    loginForm.value.senha = savedSenha || ''
+  const { email, senha } = loadCredentials()
+  if (email && !loginForm.value.email) {
+    loginForm.value.email = email
+    loginForm.value.senha = senha || ''
     rememberMe.value = true
   }
 
