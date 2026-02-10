@@ -2222,8 +2222,8 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     // Se o destinatário é a IA "io", verificar comandos ANTES de responder
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       const textoLower = texto.toLowerCase().trim()
-      const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo']
-      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off']
+      const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo', 'ioio', 'modo narrativo', 'narrativo on', 'modo livro']
+      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off', 'narrativo off', 'fala normal', 'modo normal', 'ioio off']
 
       let respostaComando = null
 
