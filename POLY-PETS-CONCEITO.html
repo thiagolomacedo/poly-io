@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poly Pets - Conceito | Poly.io</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #e4e4e4;
+      line-height: 1.7;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 50px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .logo {
+      font-size: 4rem;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 1.1rem;
+    }
+
+    .version {
+      display: inline-block;
+      background: linear-gradient(90deg, #f59e0b, #ea580c);
+      color: white;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin-top: 15px;
+    }
+
+    .section {
+      margin-bottom: 35px;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      color: #f59e0b;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: linear-gradient(180deg, #f59e0b, #ef4444);
+      border-radius: 2px;
+    }
+
+    .content {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 20px 25px;
+      border-radius: 12px;
+      border-left: 3px solid #f59e0b;
+    }
+
+    .content p {
+      margin-bottom: 12px;
+    }
+
+    .content p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    ul li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+    }
+
+    ul li::before {
+      content: '🐾';
+      position: absolute;
+      left: 0;
+    }
+
+    .highlight {
+      background: rgba(245, 158, 11, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #fcd34d;
+    }
+
+    .warning {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin: 15px 0;
+    }
+
+    .warning-title {
+      color: #ef4444;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .feature-card {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+
+    .feature-title {
+      color: #fcd34d;
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+    }
+
+    .pet-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .pet-card {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px 15px;
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .pet-card:hover {
+      border-color: #f59e0b;
+      transform: translateY(-3px);
+    }
+
+    .pet-card .emoji {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+    }
+
+    .pet-card .name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    .pet-card .type {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .rarity-common { border-color: #9ca3af; }
+    .rarity-rare { border-color: #3b82f6; }
+    .rarity-epic { border-color: #a855f7; }
+    .rarity-legendary { border-color: #f59e0b; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .stat-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-item .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #f59e0b;
+    }
+
+    .stat-item .label {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .flow-diagram {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre;
+      overflow-x: auto;
+      color: #fcd34d;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+
+    th {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+      font-weight: 600;
+    }
+
+    td {
+      color: #ccc;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-free { background: #10b981; color: #fff; }
+    .badge-idea { background: #8b5cf6; color: #fff; }
+    .badge-future { background: #6366f1; color: #fff; }
+
+    .cost-box {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+      border: 2px solid #10b981;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .cost-box .price {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #10b981;
+    }
+
+    .cost-box .label {
+      color: #888;
+      margin-top: 5px;
+    }
+
+    .battle-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      padding: 30px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      margin: 15px 0;
+    }
+
+    .battle-pet {
+      text-align: center;
+    }
+
+    .battle-pet .emoji {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .battle-pet .name {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .battle-pet .hp {
+      font-size: 0.85rem;
+      color: #10b981;
+    }
+
+    .battle-vs {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #ef4444;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: #666;
+    }
+
+    @media print {
+      body {
+        background: white;
+        color: #333;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        box-shadow: none;
+        padding: 20px;
+      }
+
+      h1 {
+        background: none;
+        -webkit-text-fill-color: #f59e0b;
+        color: #f59e0b;
+      }
+
+      .section-title {
+        color: #ea580c;
+      }
+
+      .content {
+        background: #f5f5f5;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🐾</div>
+      <h1>Poly Pets</h1>
+      <p class="subtitle">Sistema de Pets Virtuais para o Poly.io</p>
+      <span class="version">FASE 2 - Conceito</span>
+    </div>
+
+    <!-- VISÃO GERAL -->
+    <div class="section">
+      <h2 class="section-title">Visão Geral</h2>
+      <div class="content">
+        <p>
+          <strong>Poly Pets</strong> é um sistema de bichinhos virtuais estilo Tamagotchi integrado ao Poly.io.
+          Os usuários podem criar, cuidar, treinar e batalhar com seus pets contra outros jogadores.
+        </p>
+        <p>
+          O diferencial: <span class="highlight">quem perde a batalha, perde o pet</span>.
+          Isso cria um sistema de colecionáveis onde pets raros são verdadeiros troféus.
+        </p>
+        <p>
+          Totalmente gratuito, usando a mesma infraestrutura do Poly.io (ou serviços gratuitos adicionais).
+        </p>
+      </div>
+    </div>
+
+    <!-- CONCEITO CORE -->
+    <div class="section">
+      <h2 class="section-title">Conceito Central</h2>
+      <div class="content">
+        <div class="feature-card">
+          <div class="feature-title">🥚 Adotar Pet</div>
+          <p>Usuário ganha um ovo inicial ao ativar o sistema. O ovo choca e revela um pet aleatório (comum, raro, épico ou lendário).</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">🍖 Cuidar (Tamagotchi)</div>
+          <p>Alimentar, brincar, descansar. Se não cuidar, o pet fica triste e seus stats diminuem. Pet feliz = stats melhores em batalha.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">💪 Treinar</div>
+          <p>Treinos aumentam XP. Subir de nível melhora os stats base. Quanto mais forte, mais chances de vencer batalhas.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">⚔️ Batalhar</div>
+          <p>Desafie amigos ou jogadores aleatórios. Batalha turn-based simples. <strong>Quem perde, perde o pet!</strong></p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">🏆 Colecionar</div>
+          <p>Pets conquistados ficam na sua coleção. Mostre no perfil como troféus. Quanto mais raros, mais prestígio!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESPÉCIES DE PETS -->
+    <div class="section">
+      <h2 class="section-title">Espécies de Pets (Exemplos)</h2>
+      <div class="content">
+        <p>Pets seriam criados em <strong>Pixel Art SVG</strong> ou <strong>estilo Kawaii</strong> (igual avatares do Poly.io), sem custo de armazenamento de imagens.</p>
+
+        <div class="pet-grid">
+          <div class="pet-card rarity-common">
+            <span class="emoji">🐱</span>
+            <span class="name">Mewling</span>
+            <span class="type">Comum</span>
+          </div>
+          <div class="pet-card rarity-common">
+            <span class="emoji">🐶</span>
+            <span class="name">Pupper</span>
+            <span class="type">Comum</span>
+          </div>
+          <div class="pet-card rarity-common">
+            <span class="emoji">🐰</span>
+            <span class="name">Hoppy</span>
+            <span class="type">Comum</span>
+          </div>
+          <div class="pet-card rarity-rare">
+            <span class="emoji">🦊</span>
+            <span class="name">Foxfire</span>
+            <span class="type">Raro</span>
+          </div>
+          <div class="pet-card rarity-rare">
+            <span class="emoji">🐼</span>
+            <span class="name">Bamboo</span>
+            <span class="type">Raro</span>
+          </div>
+          <div class="pet-card rarity-epic">
+            <span class="emoji">🦁</span>
+            <span class="name">Lionheart</span>
+            <span class="type">Épico</span>
+          </div>
+          <div class="pet-card rarity-epic">
+            <span class="emoji">🐉</span>
+            <span class="name">Dragonet</span>
+            <span class="type">Épico</span>
+          </div>
+          <div class="pet-card rarity-legendary">
+            <span class="emoji">🦄</span>
+            <span class="name">Mythic</span>
+            <span class="type">Lendário</span>
+          </div>
+        </div>
+
+        <p style="margin-top: 20px; color: #888; font-size: 0.9rem;">
+          * Sprites finais seriam Pixel Art SVG customizados, não emojis. Estilo retrô 16x16 ou 32x32.
+        </p>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE STATS -->
+    <div class="section">
+      <h2 class="section-title">Sistema de Stats</h2>
+      <div class="content">
+        <p>Cada pet tem 4 atributos principais que determinam seu desempenho em batalha:</p>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="value">❤️</div>
+            <div class="label">HP (Vida)</div>
+          </div>
+          <div class="stat-item">
+            <div class="value">⚔️</div>
+            <div class="label">ATK (Ataque)</div>
+          </div>
+          <div class="stat-item">
+            <div class="value">🛡️</div>
+            <div class="label">DEF (Defesa)</div>
+          </div>
+          <div class="stat-item">
+            <div class="value">⚡</div>
+            <div class="label">SPD (Velocidade)</div>
+          </div>
+        </div>
+
+        <table>
+          <tr>
+            <th>Raridade</th>
+            <th>Stats Base</th>
+            <th>Chance de Drop</th>
+            <th>Cor</th>
+          </tr>
+          <tr>
+            <td>Comum</td>
+            <td>50-70</td>
+            <td>60%</td>
+            <td style="color: #9ca3af;">■ Cinza</td>
+          </tr>
+          <tr>
+            <td>Raro</td>
+            <td>70-90</td>
+            <td>25%</td>
+            <td style="color: #3b82f6;">■ Azul</td>
+          </tr>
+          <tr>
+            <td>Épico</td>
+            <td>90-110</td>
+            <td>12%</td>
+            <td style="color: #a855f7;">■ Roxo</td>
+          </tr>
+          <tr>
+            <td>Lendário</td>
+            <td>110-130</td>
+            <td>3%</td>
+            <td style="color: #f59e0b;">■ Dourado</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- SISTEMA DE BATALHA -->
+    <div class="section">
+      <h2 class="section-title">Sistema de Batalha</h2>
+      <div class="content">
+        <p>Batalhas são <strong>turn-based</strong> (por turnos), simples e rápidas:</p>
+
+        <div class="battle-visual">
+          <div class="battle-pet">
+            <span class="emoji">🦊</span>
+            <span class="name">Foxfire (Lv.12)</span>
+            <span class="hp">HP: 85/100</span>
+          </div>
+          <span class="battle-vs">VS</span>
+          <div class="battle-pet">
+            <span class="emoji">🐼</span>
+            <span class="name">Bamboo (Lv.10)</span>
+            <span class="hp">HP: 62/90</span>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">🎮 Ações por Turno</div>
+          <ul style="padding-left: 0;">
+            <li><strong>Atacar</strong> - Dano baseado em ATK vs DEF do oponente</li>
+            <li><strong>Defender</strong> - Reduz dano recebido no próximo turno</li>
+            <li><strong>Habilidade</strong> - Poder especial (cooldown de 3 turnos)</li>
+            <li><strong>Fugir</strong> - Desiste da batalha (perde o pet)</li>
+          </ul>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">⚠️ REGRA PRINCIPAL</div>
+          <p>Quem perder a batalha (HP chega a 0), <strong>PERDE O PET</strong> para o vencedor!</p>
+          <p style="margin-top: 10px; font-size: 0.9rem; color: #888;">
+            Isso incentiva treinar bem antes de batalhar e cria valor real para pets raros.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAMAGOTCHI -->
+    <div class="section">
+      <h2 class="section-title">Cuidados (Tamagotchi)</h2>
+      <div class="content">
+        <p>Pets precisam de cuidados diários. Negligenciar afeta os stats em batalha!</p>
+
+        <table>
+          <tr>
+            <th>Necessidade</th>
+            <th>Ação</th>
+            <th>Efeito se Negligenciar</th>
+          </tr>
+          <tr>
+            <td>🍖 Fome</td>
+            <td>Alimentar (a cada 8h)</td>
+            <td>-10% ATK em batalha</td>
+          </tr>
+          <tr>
+            <td>😊 Felicidade</td>
+            <td>Brincar (minigames)</td>
+            <td>-10% SPD em batalha</td>
+          </tr>
+          <tr>
+            <td>💤 Energia</td>
+            <td>Descansar (a cada 12h)</td>
+            <td>-10% DEF em batalha</td>
+          </tr>
+          <tr>
+            <td>✨ Higiene</td>
+            <td>Limpar (a cada 24h)</td>
+            <td>-5% todos os stats</td>
+          </tr>
+        </table>
+
+        <p style="margin-top: 15px;">
+          <span class="highlight">Pet 100% cuidado = Bônus de +5% em todos os stats!</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- INTEGRAÇÃO POLY.IO -->
+    <div class="section">
+      <h2 class="section-title">Integração com Poly.io</h2>
+      <div class="content">
+        <div class="flow-diagram">
+┌─────────────────────────────────────────────────┐
+│  POLY.IO - Menu Principal                       │
+├─────────────────────────────────────────────────┤
+│  👥 Conexões     (chat privado)                 │
+│  🏠 Salas        (chat em grupo)                │
+│  🔍 Buscar       (encontrar usuários)           │
+│  ✋ Solicitações (pedidos de amizade)           │
+│  ─────────────────────────────────────────────  │
+│  🐾 Poly Pets    (NOVA ABA!)                    │
+│     ├── 🏠 Meu Pet (cuidar/treinar)             │
+│     ├── ⚔️ Arena (batalhar)                     │
+│     ├── 🏆 Coleção (pets ganhos)                │
+│     └── 📊 Ranking (top treinadores)            │
+└─────────────────────────────────────────────────┘
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">💬 Desafio pelo Chat</div>
+          <p>No chat com um amigo, botão "🐾 Desafiar" aparece. Clicou = convite de batalha em tempo real!</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">👤 Pet no Perfil</div>
+          <p>Seu pet principal aparece no perfil, junto com contador de vitórias e coleção.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-title">🔔 Notificações</div>
+          <p>"Seu pet está com fome!", "Fulano te desafiou para uma batalha!", "Você ganhou um pet Épico!"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFRAESTRUTURA -->
+    <div class="section">
+      <h2 class="section-title">Infraestrutura Técnica</h2>
+      <div class="content">
+        <table>
+          <tr>
+            <th>Componente</th>
+            <th>Tecnologia</th>
+            <th>Custo</th>
+          </tr>
+          <tr>
+            <td>Banco de Dados</td>
+            <td>Neon (PostgreSQL) ou MongoDB Atlas</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+          <tr>
+            <td>Backend</td>
+            <td>Node.js + Express (mesmo do Poly.io)</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+          <tr>
+            <td>Frontend</td>
+            <td>Vue.js 3 (mesmo do Poly.io)</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+          <tr>
+            <td>Hospedagem</td>
+            <td>Vercel + Render</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+          <tr>
+            <td>Sprites dos Pets</td>
+            <td>SVG Pixel Art inline (igual bandeiras)</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+          <tr>
+            <td>Tempo Real (batalhas)</td>
+            <td>Socket.io (já usado no Poly.io)</td>
+            <td><span class="badge badge-free">Grátis</span></td>
+          </tr>
+        </table>
+
+        <div class="cost-box">
+          <div class="price">R$ 0,00</div>
+          <div class="label">Custo Total de Implementação</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESTRUTURA DO BANCO -->
+    <div class="section">
+      <h2 class="section-title">Estrutura do Banco de Dados</h2>
+      <div class="content">
+        <div class="flow-diagram">
+-- Tabela de Pets (espécies disponíveis)
+CREATE TABLE pet_species (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50),           -- "Foxfire"
+  type VARCHAR(20),           -- "fire", "water", "earth"
+  rarity VARCHAR(20),         -- "common", "rare", "epic", "legendary"
+  base_hp INTEGER,
+  base_atk INTEGER,
+  base_def INTEGER,
+  base_spd INTEGER,
+  sprite_svg TEXT             -- SVG inline do pet
+);
+
+-- Tabela de Pets dos Usuários
+CREATE TABLE user_pets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  species_id INTEGER REFERENCES pet_species(id),
+  nickname VARCHAR(50),       -- Nome dado pelo usuário
+  level INTEGER DEFAULT 1,
+  xp INTEGER DEFAULT 0,
+  hp INTEGER,
+  atk INTEGER,
+  def INTEGER,
+  spd INTEGER,
+  hunger INTEGER DEFAULT 100, -- 0-100
+  happiness INTEGER DEFAULT 100,
+  energy INTEGER DEFAULT 100,
+  hygiene INTEGER DEFAULT 100,
+  is_main BOOLEAN DEFAULT FALSE,
+  won_from_user INTEGER,      -- De quem ganhou (se aplicável)
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Histórico de Batalhas
+CREATE TABLE battles (
+  id SERIAL PRIMARY KEY,
+  challenger_id INTEGER REFERENCES users(id),
+  defender_id INTEGER REFERENCES users(id),
+  winner_id INTEGER REFERENCES users(id),
+  pet_transferred_id INTEGER REFERENCES user_pets(id),
+  battle_log JSONB,           -- Replay da batalha
+  created_at TIMESTAMP DEFAULT NOW()
+);
+        </div>
+      </div>
+    </div>
+
+    <!-- ROADMAP -->
+    <div class="section">
+      <h2 class="section-title">Roadmap de Implementação</h2>
+      <div class="content">
+        <table>
+          <tr>
+            <th>Fase</th>
+            <th>Funcionalidade</th>
+            <th>Status</th>
+          </tr>
+          <tr>
+            <td>1.0</td>
+            <td>Sistema básico de pets (criar, visualizar)</td>
+            <td><span class="badge badge-idea">Ideia</span></td>
+          </tr>
+          <tr>
+            <td>1.0</td>
+            <td>Sprites Pixel Art SVG para pets</td>
+            <td><span class="badge badge-idea">Ideia</span></td>
+          </tr>
+          <tr>
+            <td>1.0</td>
+            <td>Sistema de cuidados (Tamagotchi)</td>
+            <td><span class="badge badge-idea">Ideia</span></td>
+          </tr>
+          <tr>
+            <td>1.0</td>
+            <td>Treino e sistema de níveis</td>
+            <td><span class="badge badge-idea">Ideia</span></td>
+          </tr>
+          <tr>
+            <td>2.0</td>
+            <td>Sistema de batalha turn-based</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+          <tr>
+            <td>2.0</td>
+            <td>Transferência de pets (aposta)</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+          <tr>
+            <td>2.0</td>
+            <td>Integração com chat do Poly.io</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+          <tr>
+            <td>3.0</td>
+            <td>Coleção e perfil de treinador</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+          <tr>
+            <td>3.0</td>
+            <td>Ranking global de treinadores</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+          <tr>
+            <td>3.0</td>
+            <td>Eventos especiais (pets limitados)</td>
+            <td><span class="badge badge-future">Futuro</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- MONETIZAÇÃO FUTURA -->
+    <div class="section">
+      <h2 class="section-title">Monetização Futura (Opcional)</h2>
+      <div class="content">
+        <p>Se quiser monetizar no futuro, algumas opções que NÃO quebram o jogo:</p>
+
+        <ul>
+          <li><strong>Skins cosméticas</strong> - Visuais alternativos para pets (não afetam stats)</li>
+          <li><strong>Ovos extras</strong> - Chance de conseguir pets adicionais</li>
+          <li><strong>Boost de XP</strong> - Treinar mais rápido (não dá vantagem em batalha)</li>
+          <li><strong>Itens de cuidado premium</strong> - Recupera stats de cuidado mais rápido</li>
+        </ul>
+
+        <div class="warning">
+          <div class="warning-title">⚠️ IMPORTANTE: Não ser Pay-to-Win</div>
+          <p>Nunca vender stats, níveis ou vantagens em batalha. Apenas cosméticos e conveniência.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSPIRAÇÕES -->
+    <div class="section">
+      <h2 class="section-title">Inspirações</h2>
+      <div class="content">
+        <ul>
+          <li><strong>Tamagotchi</strong> - Sistema de cuidados e necessidades</li>
+          <li><strong>Pokémon</strong> - Batalhas, tipos, evolução, colecionar</li>
+          <li><strong>Neopets</strong> - Pets virtuais com economia e jogos</li>
+          <li><strong>Axie Infinity</strong> - Batalhas com apostas (sem cripto)</li>
+          <li><strong>Digimon</strong> - Evolução baseada em cuidados</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><strong>Poly Pets</strong> - Conceito para Poly.io</p>
+      <p>Documento criado em Fevereiro de 2026</p>
+      <p style="margin-top: 10px; color: #f59e0b;">🐾 Cuide, treine, batalhe, colecione!</p>
+    </div>
+  </div>
+</body>
+</html>
