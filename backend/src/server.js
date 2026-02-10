@@ -516,7 +516,49 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 
     if (data.error) {
       console.error('[io IA] Erro da API:', data.error)
-      // Mostrar erro específico se for rate limit ou contexto muito grande
+
+      // Se for rate limit, espera 10 segundos e tenta novamente
+      if (data.error.code === 'rate_limit_exceeded') {
+        console.log('[io IA] Rate limit - aguardando 10 segundos para retry...')
+        await new Promise(resolve => setTimeout(resolve, 10000))
+
+        // Segunda tentativa
+        const retryController = new AbortController()
+        const retryTimeoutId = setTimeout(() => retryController.abort(), 30000)
+
+        try {
+          const retryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + GROQ_API_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'llama-3.1-8b-instant',
+              messages: [
+                { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
+                ...historico
+              ],
+              max_tokens: 500,
+              temperature: 0.7
+            }),
+            signal: retryController.signal
+          })
+
+          clearTimeout(retryTimeoutId)
+          const retryData = await retryResponse.json()
+
+          if (retryData.choices && retryData.choices[0]?.message?.content) {
+            let resposta = retryData.choices[0].message.content
+            historico.push({ role: 'assistant', content: resposta })
+            ioConversationHistory.set(connectionId, historico)
+            return { texto: resposta, acao: null }
+          }
+        } catch (retryError) {
+          console.error('[io IA] Retry também falhou:', retryError.message)
+        }
+      }
+
       return { texto: getPausaAleatoria(), acao: null }
     }
 
@@ -2202,8 +2244,8 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         })
       }
 
-      // Aguardar 3 segundos simulando digitação
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      // Aguardar 5 segundos simulando digitação
+      await new Promise(resolve => setTimeout(resolve, 5000))
 
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
