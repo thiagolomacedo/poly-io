@@ -3068,9 +3068,12 @@ async function login() {
 
     // Salvar remember_token para auto-login (IndexedDB + cookie backup)
     if (rememberMe.value && data.rememberToken) {
-      await saveRememberToken(data.rememberToken)
+      console.log('[Auth] Salvando remember_token...')
+      const saved = await saveRememberToken(data.rememberToken)
       setCookie('poly_remember_token', data.rememberToken, 365)
+      console.log('[Auth] Remember token salvo:', saved ? 'OK' : 'FALHOU')
     } else {
+      console.log('[Auth] Lembrar-me não marcado ou sem token, limpando...')
       await clearRememberToken()
       deleteCookie('poly_remember_token')
     }
@@ -3085,13 +3088,20 @@ async function login() {
 
 // Auto-login usando remember_token do servidor
 async function tryAutoLoginWithToken() {
-  // Tentar carregar do IndexedDB primeiro, depois cookie
+  // Tentar carregar do IndexedDB primeiro
   let rememberToken = await loadRememberToken()
+  console.log('[Auth] Token do IndexedDB:', rememberToken ? 'encontrado' : 'não encontrado')
+
+  // Fallback: cookie
   if (!rememberToken) {
     rememberToken = getCookie('poly_remember_token')
+    console.log('[Auth] Token do Cookie:', rememberToken ? 'encontrado' : 'não encontrado')
   }
 
-  if (!rememberToken) return false
+  if (!rememberToken) {
+    console.log('[Auth] Nenhum remember_token encontrado')
+    return false
+  }
 
   try {
     console.log('[Auth] Tentando auto-login com remember_token...')
@@ -5535,11 +5545,17 @@ async function saveRememberToken(token) {
       const transaction = authDb.transaction(['auth'], 'readwrite')
       const store = transaction.objectStore('auth')
       const request = store.put({ key: 'remember_token', value: token })
-      request.onsuccess = () => resolve(true)
-      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        console.log('[Auth] Token salvo no IndexedDB com sucesso')
+        resolve(true)
+      }
+      request.onerror = () => {
+        console.error('[Auth] Erro ao salvar token:', request.error)
+        reject(request.error)
+      }
     })
   } catch (e) {
-    console.error('Erro ao salvar token no IndexedDB:', e)
+    console.error('[Auth] Erro ao salvar token no IndexedDB:', e)
     return false
   }
 }
@@ -5964,26 +5980,20 @@ function updateApp() {
 // ==================== LIFECYCLE ====================
 
 onMounted(async () => {
-  // Recarregar credenciais salvas (fix para PWA/Desktop)
-  let { email, senha } = loadCredentials()
-
-  // Se não achou, tenta gerenciador de senhas do Windows
-  if (!email || !senha) {
-    const pmCreds = await loadFromPasswordManager()
-    if (pmCreds) {
-      email = pmCreds.email
-      senha = pmCreds.senha
-    }
+  // IMPORTANTE: Inicializar IndexedDB de auth PRIMEIRO
+  try {
+    await initAuthDB()
+    console.log('[Auth] IndexedDB inicializado')
+  } catch (e) {
+    console.error('[Auth] Erro ao inicializar IndexedDB:', e)
   }
 
-  if (email && !loginForm.value.email) {
-    loginForm.value.email = email
-    loginForm.value.senha = senha || ''
-    rememberMe.value = true
-  }
+  // Verificar se tem remember_token salvo e tentar auto-login ANTES de tudo
+  const savedToken = await loadRememberToken()
+  console.log('[Auth] Remember token encontrado:', savedToken ? 'SIM' : 'NÃO')
 
   checkResetToken()
-  checkAuth()
+  await checkAuth()
 
   // Fechar dropdown de status ao clicar fora
   document.addEventListener('click', (e) => {
