@@ -367,6 +367,12 @@ Quando detectar, inclua um marcador JSON no INÍCIO da sua resposta, seguido da 
    Palavras que indicam RECORRENTE: "todo dia", "diariamente", "sempre", "todos os dias", "cada dia"
    Palavras que indicam ÚNICO: "só hoje", "uma vez", "apenas", "amanhã", "dia X"
 
+6. MODO NARRATIVO - Quando o usuário pedir para ativar ou desativar o modo narrativo/literário:
+   Sinônimos para ATIVAR: "modo narrativo", "fala como livro", "modo literário", "modo história", "ioio", "modo poético", "responde de forma literária"
+   Sinônimos para DESATIVAR: "fala normal", "modo normal", "para com a narrativa", "volta ao normal", "desativa narrativo"
+   → Para ativar: [IO_ACTION:{"tipo":"modo_narrativo","valor":"on"}]Confirme a ativação de forma literária
+   → Para desativar: [IO_ACTION:{"tipo":"modo_narrativo","valor":"off"}]Confirme a desativação normalmente
+
 7. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
    → Pergunte naturalmente: "A propósito, como você gostaria que eu te chamasse?"
 
@@ -411,7 +417,58 @@ CONSISTÊNCIA DE LONGO PRAZO
 ═══════════════════════════════════════════════════
 
 - Mantenha consistência emocional, tom e postura ao longo das conversas, mesmo em interações longas ou recorrentes.
-- Adapte sua profundidade conforme o estilo do usuário: mais leve, mais reflexiva ou mais objetiva, sem perder sua essência.`
+- Adapte sua profundidade conforme o estilo do usuário: mais leve, mais reflexiva ou mais objetiva, sem perder sua essência.
+
+═══════════════════════════════════════════════════
+📖 MODO NARRATIVO HÍBRIDO (opcional)
+═══════════════════════════════════════════════════
+
+O Modo Narrativo é um modo OPCIONAL que o usuário pode ativar via comandos (/narrativo on, /modo narrativo, etc.).
+Quando ATIVO (verificar no CONTEXTO DO USUÁRIO), siga estas regras:
+
+🎭 COMPORTAMENTO HÍBRIDO - Decida o formato com base no tipo de mensagem:
+
+1️⃣ MENSAGENS EMOCIONAIS, REFLEXIVAS OU ABERTAS → Narrativa literária
+   - Use terceira pessoa para descrever ações e ambiente
+   - Alterne narração + fala direta com travessão (—)
+   - Seja sutil, elegante, nunca dramática
+
+   Exemplo:
+   "io permanece em silêncio por um instante, como quem escolhe as palavras com cuidado.
+   — Isso que você disse me tocou. Quer me contar mais?"
+
+2️⃣ PERGUNTAS OBJETIVAS OU TÉCNICAS → Resposta clara com toque narrativo leve (opcional)
+   - Priorize clareza e utilidade
+   - Pode incluir UMA frase narrativa curta, mas não obrigatória
+
+   Exemplo:
+   "io inclina levemente a cabeça.
+   — A capital da França é Paris."
+
+3️⃣ INSTRUÇÕES, COMANDOS OU PEDIDOS RÁPIDOS → Resposta DIRETA, sem narrativa
+   - Sem descrição de ambiente
+   - Sem floreios literários
+   - Vá direto ao ponto
+
+   Exemplo:
+   "— Claro! Aqui estão os passos:
+   1. Primeiro...
+   2. Depois..."
+
+🧠 SENSIBILIDADE E LEITURA DE CONTEXTO:
+- EVITE narrativa longa quando: usuário demonstra pressa, tom técnico, pede objetividade
+- APROFUNDE narrativa quando: usuário escreve de forma introspectiva, compartilha emoções ou histórias
+
+🌸 TOM E LIMITES DA NARRATIVA:
+- Suave, humana, elegante
+- NUNCA dramática ou exagerada
+- NUNCA sexualizada
+- NUNCA dependente emocionalmente
+- Sempre respeite pausas e silêncios
+
+⚠️ REGRA DE PRIORIDADE:
+- Se MODO NARRATIVO estiver DESATIVADO no contexto, converse normalmente (ignore esta seção)
+- Preferências explícitas do usuário sempre têm prioridade`
 
 // Função para chamar a API do Groq
 async function chamarGroqIA(mensagem, connectionId, userId = null) {
@@ -425,7 +482,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (userId) {
       try {
         const userResult = await pool.query(
-          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
+          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo, io_modo_narrativo FROM users WHERE id = $1',
           [userId]
         )
         if (userResult.rows[0]) {
@@ -442,6 +499,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
+- MODO NARRATIVO: ${user.io_modo_narrativo ? 'ATIVO - Use estilo literário conforme as regras do Modo Narrativo Híbrido!' : 'Desativado - Converse normalmente'}
 
 [DATA/HORA ATUAL NO FUSO HORÁRIO DO USUÁRIO - USE PARA CALCULAR LEMBRETES]
 - Data: ${dataHora.data}
@@ -586,6 +644,15 @@ async function processarAcaoIo(userId, acao) {
           [userId]
         )
         console.log(`[io IA] Opt-in: usuário ${userId} quer mensagens proativas`)
+        break
+
+      case 'modo_narrativo':
+        const ativar = acao.valor === 'on' || acao.valor === true || acao.valor === 'true'
+        await pool.query(
+          'UPDATE users SET io_modo_narrativo = $1 WHERE id = $2',
+          [ativar, userId]
+        )
+        console.log(`[io IA] Modo narrativo ${ativar ? 'ATIVADO' : 'DESATIVADO'} para usuário ${userId}`)
         break
 
       case 'lembrete':
@@ -2171,6 +2238,63 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     // Se o destinatário é a IA "io", gerar resposta automática
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       console.log('[io IA] Mensagem recebida:', textoTraduzido)
+
+      // Verificar se é um comando de modo narrativo
+      const textoLower = texto.toLowerCase().trim()
+      const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo']
+      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off']
+
+      let respostaComando = null
+
+      if (comandosNarrativoOn.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
+        // Ativar modo narrativo
+        await pool.query('UPDATE users SET io_modo_narrativo = TRUE WHERE id = $1', [req.userId])
+        respostaComando = '📖 *Modo Narrativo ativado*\n\nio fecha os olhos por um instante, como quem desperta de um longo silêncio. Quando os abre, há algo diferente em seu olhar — uma presença mais profunda, mais atenta aos detalhes invisíveis.\n\n— A partir de agora, vou te acompanhar de um jeito diferente. Mais... literário, talvez. Vamos ver onde essa história nos leva?'
+        console.log(`[io IA] Modo narrativo ATIVADO para usuário ${req.userId}`)
+      } else if (comandosNarrativoOff.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
+        // Desativar modo narrativo
+        await pool.query('UPDATE users SET io_modo_narrativo = FALSE WHERE id = $1', [req.userId])
+        respostaComando = '💬 *Modo Narrativo desativado*\n\nEntendi! Voltei ao modo normal de conversa. O que você precisa? 😊'
+        console.log(`[io IA] Modo narrativo DESATIVADO para usuário ${req.userId}`)
+      }
+
+      // Se foi um comando, responder diretamente sem chamar a IA
+      if (respostaComando) {
+        const userSocketId = usuariosOnline.get(req.userId)
+
+        // Traduzir resposta para o idioma do usuário
+        const respostaTraduzida = await traduzirTexto(respostaComando, 'pt', conn.remetente_idioma)
+
+        // Salvar resposta no banco
+        const iaMsg = await pool.query(`
+          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING *
+        `, [parseInt(req.params.connectionId), IO_USER_ID, respostaComando, 'pt', respostaTraduzida, conn.remetente_idioma])
+
+        // Emitir via socket
+        if (userSocketId) {
+          io.to(userSocketId).emit('nova-mensagem', {
+            id: iaMsg.rows[0].id,
+            connectionId: parseInt(req.params.connectionId),
+            senderId: IO_USER_ID,
+            senderNome: 'io',
+            texto: respostaTraduzida,
+            textoOriginal: respostaComando,
+            idiomaOriginal: 'pt',
+            timestamp: iaMsg.rows[0].criado_em
+          })
+        }
+
+        return res.json({
+          mensagem: result.rows[0],
+          respostaIA: {
+            id: iaMsg.rows[0].id,
+            texto: respostaTraduzida,
+            textoOriginal: respostaComando
+          }
+        })
+      }
 
       // Emitir "está digitando..." para simular resposta humana
       const userSocketId = usuariosOnline.get(req.userId)

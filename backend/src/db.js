@@ -92,6 +92,10 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS io_ultimo_proativo TIMESTAMP
     `)
+    // Modo narrativo híbrido da io (resposta em estilo literário)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_modo_narrativo BOOLEAN DEFAULT FALSE
+    `)
 
     console.log('[DB] Tabela users OK')
 
