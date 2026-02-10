@@ -5518,6 +5518,26 @@ async function initIndexedDB() {
   })
 }
 
+// ==================== COMUNICAÇÃO COM SERVICE WORKER ====================
+function sendMessageToSW(message) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.serviceWorker.controller) {
+      reject(new Error('Service Worker não disponível'))
+      return
+    }
+
+    const messageChannel = new MessageChannel()
+    messageChannel.port1.onmessage = (event) => {
+      resolve(event.data)
+    }
+
+    navigator.serviceWorker.controller.postMessage(message, [messageChannel.port2])
+
+    // Timeout de 3 segundos
+    setTimeout(() => reject(new Error('Timeout')), 3000)
+  })
+}
+
 // ==================== INDEXEDDB PARA REMEMBER TOKEN ====================
 let authDb = null
 
@@ -5539,6 +5559,20 @@ async function initAuthDB() {
 }
 
 async function saveRememberToken(token) {
+  // Método 1: Service Worker Cache (mais persistente em PWA)
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      const result = await sendMessageToSW({ type: 'SAVE_AUTH_TOKEN', token })
+      if (result.success) {
+        console.log('[Auth] Token salvo no SW Cache com sucesso')
+        return true
+      }
+    } catch (e) {
+      console.error('[Auth] Erro ao salvar no SW:', e)
+    }
+  }
+
+  // Método 2: IndexedDB (fallback)
   try {
     if (!authDb) await initAuthDB()
     return new Promise((resolve, reject) => {
@@ -5561,22 +5595,51 @@ async function saveRememberToken(token) {
 }
 
 async function loadRememberToken() {
+  // Método 1: Service Worker Cache (mais persistente em PWA)
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      const result = await sendMessageToSW({ type: 'LOAD_AUTH_TOKEN' })
+      if (result.success && result.token) {
+        console.log('[Auth] Token carregado do SW Cache')
+        return result.token
+      }
+    } catch (e) {
+      console.error('[Auth] Erro ao carregar do SW:', e)
+    }
+  }
+
+  // Método 2: IndexedDB (fallback)
   try {
     if (!authDb) await initAuthDB()
     return new Promise((resolve) => {
       const transaction = authDb.transaction(['auth'], 'readonly')
       const store = transaction.objectStore('auth')
       const request = store.get('remember_token')
-      request.onsuccess = () => resolve(request.result?.value || null)
+      request.onsuccess = () => {
+        if (request.result?.value) {
+          console.log('[Auth] Token carregado do IndexedDB')
+        }
+        resolve(request.result?.value || null)
+      }
       request.onerror = () => resolve(null)
     })
   } catch (e) {
-    console.error('Erro ao carregar token do IndexedDB:', e)
+    console.error('[Auth] Erro ao carregar token do IndexedDB:', e)
     return null
   }
 }
 
 async function clearRememberToken() {
+  // Limpar do SW Cache
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      await sendMessageToSW({ type: 'CLEAR_AUTH_TOKEN' })
+    } catch (e) {
+      // ignorar erro
+    }
+  }
+
+  // Limpar do IndexedDB
   try {
     if (!authDb) await initAuthDB()
     return new Promise((resolve) => {
@@ -5980,7 +6043,17 @@ function updateApp() {
 // ==================== LIFECYCLE ====================
 
 onMounted(async () => {
-  // IMPORTANTE: Inicializar IndexedDB de auth PRIMEIRO
+  // Aguardar Service Worker estar pronto (importante para PWA)
+  if ('serviceWorker' in navigator) {
+    try {
+      await navigator.serviceWorker.ready
+      console.log('[Auth] Service Worker pronto')
+    } catch (e) {
+      console.log('[Auth] SW não disponível')
+    }
+  }
+
+  // IMPORTANTE: Inicializar IndexedDB de auth
   try {
     await initAuthDB()
     console.log('[Auth] IndexedDB inicializado')
@@ -5988,7 +6061,7 @@ onMounted(async () => {
     console.error('[Auth] Erro ao inicializar IndexedDB:', e)
   }
 
-  // Verificar se tem remember_token salvo e tentar auto-login ANTES de tudo
+  // Verificar se tem remember_token salvo
   const savedToken = await loadRememberToken()
   console.log('[Auth] Remember token encontrado:', savedToken ? 'SIM' : 'NÃO')
 

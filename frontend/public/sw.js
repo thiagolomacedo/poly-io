@@ -1,6 +1,7 @@
 // Poly.io Service Worker - PWA + Push Notifications
 
-const CACHE_NAME = 'poly-io-v3.62';
+const CACHE_NAME = 'poly-io-v3.63';
+const AUTH_CACHE_NAME = 'poly-io-auth';
 
 // Arquivos para cache offline
 const urlsToCache = [
@@ -117,11 +118,55 @@ self.addEventListener('notificationclose', (event) => {
   console.log('[SW] Notificação fechada');
 });
 
-// Mensagem do cliente (para SKIP_WAITING)
-self.addEventListener('message', (event) => {
+// Mensagem do cliente (para SKIP_WAITING e AUTH)
+self.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('[SW] Recebido SKIP_WAITING, ativando nova versão...');
     self.skipWaiting();
+  }
+
+  // Salvar remember_token no cache do SW (persiste melhor em PWA)
+  if (event.data && event.data.type === 'SAVE_AUTH_TOKEN') {
+    try {
+      const cache = await caches.open(AUTH_CACHE_NAME);
+      const response = new Response(JSON.stringify({ token: event.data.token }));
+      await cache.put('/auth-token', response);
+      console.log('[SW] Token de auth salvo no cache');
+      event.ports[0]?.postMessage({ success: true });
+    } catch (e) {
+      console.error('[SW] Erro ao salvar token:', e);
+      event.ports[0]?.postMessage({ success: false, error: e.message });
+    }
+  }
+
+  // Carregar remember_token do cache
+  if (event.data && event.data.type === 'LOAD_AUTH_TOKEN') {
+    try {
+      const cache = await caches.open(AUTH_CACHE_NAME);
+      const response = await cache.match('/auth-token');
+      if (response) {
+        const data = await response.json();
+        console.log('[SW] Token de auth carregado do cache');
+        event.ports[0]?.postMessage({ success: true, token: data.token });
+      } else {
+        event.ports[0]?.postMessage({ success: false, token: null });
+      }
+    } catch (e) {
+      console.error('[SW] Erro ao carregar token:', e);
+      event.ports[0]?.postMessage({ success: false, token: null });
+    }
+  }
+
+  // Limpar remember_token do cache
+  if (event.data && event.data.type === 'CLEAR_AUTH_TOKEN') {
+    try {
+      const cache = await caches.open(AUTH_CACHE_NAME);
+      await cache.delete('/auth-token');
+      console.log('[SW] Token de auth removido do cache');
+      event.ports[0]?.postMessage({ success: true });
+    } catch (e) {
+      event.ports[0]?.postMessage({ success: false });
+    }
   }
 });
 
