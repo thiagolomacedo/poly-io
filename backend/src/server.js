@@ -2255,17 +2255,17 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       const textoLower = texto.toLowerCase().trim()
       const comandosNarrativoOn = ['/modo narrativo', '/narrativo on', '/modo livro', '/ioio', '/narrativo']
-      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off']
+      const comandosNarrativoOff = ['/narrativo off', '/fala normal', '/modo normal', '/ioio off', '/sair']
 
       let respostaComando = null
 
       if (comandosNarrativoOn.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
         await pool.query('UPDATE users SET io_modo_narrativo = TRUE WHERE id = $1', [req.userId])
-        respostaComando = '📖 *Modo Narrativo ativado*\n\nio fecha os olhos por um instante, como quem desperta de um longo silêncio. Quando os abre, há algo diferente em seu olhar — uma presença mais profunda, mais atenta aos detalhes invisíveis.\n\n— A partir de agora, vou te acompanhar de um jeito diferente. Mais... literário, talvez. Vamos ver onde essa história nos leva?'
+        respostaComando = '📖 *Modo Narrativo ativado!*\n\nAgora posso falar com você de um jeito mais literário, como um livro ou RPG. Vou decidir quando usar narrativa baseado no contexto da nossa conversa.\n\n⏳ *Obs: Minhas respostas podem levar até 30 segundos.*\n\n📌 Para sair deste modo, digite: /ioio off ou /sair\n\nio fecha os olhos por um instante e quando os abre, há algo diferente em seu olhar — uma presença mais atenta aos detalhes invisíveis.\n\n— Vamos ver onde essa história nos leva?'
         console.log(`[io IA] Modo narrativo ATIVADO para usuário ${req.userId}`)
       } else if (comandosNarrativoOff.some(cmd => textoLower === cmd || textoLower.startsWith(cmd + ' '))) {
         await pool.query('UPDATE users SET io_modo_narrativo = FALSE WHERE id = $1', [req.userId])
-        respostaComando = '💬 *Modo Narrativo desativado*\n\nEntendi! Voltei ao modo normal de conversa. O que você precisa? 😊'
+        respostaComando = '💬 *Modo Normal ativado!*\n\nVoltei a conversar normalmente. O que você precisa? 😊'
         console.log(`[io IA] Modo narrativo DESATIVADO para usuário ${req.userId}`)
       }
 

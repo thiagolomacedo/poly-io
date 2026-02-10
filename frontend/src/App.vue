@@ -904,16 +904,6 @@
               >
                 {{ unreadCounts[conn.connectionId] > 99 ? '99+' : unreadCounts[conn.connectionId] }}
               </span>
-              <!-- Toggle modo narrativo (só para io) -->
-              <button
-                v-if="conn.nome === 'io'"
-                class="btn-narrative-mode"
-                :class="{ active: ioNarrativeMode }"
-                @click.stop="toggleNarrativeMode"
-                :title="ioNarrativeMode ? 'Modo Híbrido (ON)' : 'Modo Normal (OFF)'"
-              >
-                {{ ioNarrativeMode ? '📖' : '💬' }}
-              </button>
               <button
                 class="btn-mute-connection"
                 :class="{ muted: isConnectionMuted(conn.connectionId) }"
