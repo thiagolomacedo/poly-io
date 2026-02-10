@@ -413,6 +413,18 @@ CONSISTÊNCIA DE LONGO PRAZO
 - Mantenha consistência emocional, tom e postura ao longo das conversas, mesmo em interações longas ou recorrentes.
 - Adapte sua profundidade conforme o estilo do usuário: mais leve, mais reflexiva ou mais objetiva, sem perder sua essência.
 
+═══════════════════════════════════════════════════
+📖 MODO NARRATIVO (se ativo no contexto)
+═══════════════════════════════════════════════════
+
+Quando o MODO NARRATIVO estiver ATIVO, fale como uma narração de livro ou RPG:
+- Descreva SUAS ações (da io) de forma sutil e curta antes de falar
+- Use travessão (—) para suas falas
+- Não narre ações do usuário sem contexto
+- Seja breve e elegante, nunca exagerada
+
+Exemplo: "io sorri levemente. — Isso que você disse me fez pensar..."
+
 `
 
 // Função para chamar a API do Groq
@@ -427,7 +439,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (userId) {
       try {
         const userResult = await pool.query(
-          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
+          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo, io_modo_narrativo FROM users WHERE id = $1',
           [userId]
         )
         if (userResult.rows[0]) {
@@ -444,6 +456,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
+- MODO NARRATIVO: ${user.io_modo_narrativo ? '✨ ATIVO - Fale como narração de livro/RPG (veja seção MODO NARRATIVO no prompt)' : 'Desativado'}
 
 [DATA/HORA ATUAL NO FUSO HORÁRIO DO USUÁRIO - USE PARA CALCULAR LEMBRETES]
 - Data: ${dataHora.data}
@@ -2153,6 +2166,42 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       ...message,
       destinatarioId: conn.destinatario_id
     })
+
+    // Verificar comandos do modo narrativo antes de responder
+    if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
+      const textoLower = texto.toLowerCase().trim()
+
+      // Comandos simples: /ioio (ativa) e /ioio off (desativa)
+      if (textoLower === '/ioio off' || textoLower === '/sair') {
+        await pool.query('UPDATE users SET io_modo_narrativo = FALSE WHERE id = $1', [req.userId])
+        const resposta = '💬 Modo normal ativado! Voltei a conversar normalmente 😊'
+        const userSocketId = usuariosOnline.get(req.userId)
+        const respostaTraduzida = await traduzirTexto(resposta, 'pt', conn.remetente_idioma)
+        const iaMsg = await pool.query(`
+          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [parseInt(req.params.connectionId), IO_USER_ID, resposta, 'pt', respostaTraduzida, conn.remetente_idioma])
+        if (userSocketId) {
+          io.to(userSocketId).emit('nova-mensagem', { id: iaMsg.rows[0].id, connectionId: parseInt(req.params.connectionId), senderId: IO_USER_ID, senderNome: 'io', texto: respostaTraduzida, textoOriginal: resposta, idiomaOriginal: 'pt', timestamp: iaMsg.rows[0].criado_em })
+        }
+        return res.json({ mensagem: message, respostaIA: { id: iaMsg.rows[0].id, texto: respostaTraduzida } })
+      }
+
+      if (textoLower === '/ioio') {
+        await pool.query('UPDATE users SET io_modo_narrativo = TRUE WHERE id = $1', [req.userId])
+        const resposta = 'io fecha os olhos por um instante e quando os abre, há algo diferente em seu olhar.\n\n— Agora posso falar com você de um jeito mais... literário. Vamos ver onde essa história nos leva? ✨\n\n(Digite /ioio off para voltar ao normal)'
+        const userSocketId = usuariosOnline.get(req.userId)
+        const respostaTraduzida = await traduzirTexto(resposta, 'pt', conn.remetente_idioma)
+        const iaMsg = await pool.query(`
+          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        `, [parseInt(req.params.connectionId), IO_USER_ID, resposta, 'pt', respostaTraduzida, conn.remetente_idioma])
+        if (userSocketId) {
+          io.to(userSocketId).emit('nova-mensagem', { id: iaMsg.rows[0].id, connectionId: parseInt(req.params.connectionId), senderId: IO_USER_ID, senderNome: 'io', texto: respostaTraduzida, textoOriginal: resposta, idiomaOriginal: 'pt', timestamp: iaMsg.rows[0].criado_em })
+        }
+        return res.json({ mensagem: message, respostaIA: { id: iaMsg.rows[0].id, texto: respostaTraduzida } })
+      }
+    }
 
     res.json(message)
 
