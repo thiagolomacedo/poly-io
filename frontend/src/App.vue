@@ -5542,6 +5542,15 @@ function updateApp() {
 // ==================== LIFECYCLE ====================
 
 onMounted(() => {
+  // Recarregar credenciais salvas (fix para PWA/Desktop)
+  const savedEmail = localStorage.getItem('poly_saved_email')
+  const savedSenha = localStorage.getItem('poly_saved_senha')
+  if (savedEmail && !loginForm.value.email) {
+    loginForm.value.email = savedEmail
+    loginForm.value.senha = savedSenha || ''
+    rememberMe.value = true
+  }
+
   checkResetToken()
   checkAuth()
 
