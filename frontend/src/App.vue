@@ -1639,7 +1639,10 @@ function clearCredentials() {
 // Salva no gerenciador de senhas do Windows/navegador
 
 async function saveToPasswordManager(email, senha) {
-  if (!('credentials' in navigator)) return
+  if (!('credentials' in navigator) || !('PasswordCredential' in window)) {
+    console.log('[Auth] Credential API não disponível')
+    return false
+  }
 
   try {
     const cred = new PasswordCredential({
@@ -1648,26 +1651,33 @@ async function saveToPasswordManager(email, senha) {
       name: 'Poly.io'
     })
     await navigator.credentials.store(cred)
-    console.log('[Auth] Credenciais salvas no gerenciador de senhas')
+    console.log('[Auth] Credenciais salvas no gerenciador de senhas do Windows')
+    return true
   } catch (e) {
-    console.warn('[Auth] Não foi possível salvar no gerenciador:', e)
+    console.warn('[Auth] Erro ao salvar no gerenciador:', e.message)
+    return false
   }
 }
 
 async function loadFromPasswordManager() {
-  if (!('credentials' in navigator)) return null
+  if (!('credentials' in navigator) || !('PasswordCredential' in window)) {
+    console.log('[Auth] Credential API não disponível')
+    return null
+  }
 
   try {
+    console.log('[Auth] Tentando carregar do gerenciador de senhas...')
     const cred = await navigator.credentials.get({
       password: true,
-      mediation: 'optional'
+      mediation: 'silent' // silent não mostra prompt, optional pode mostrar
     })
     if (cred && cred.type === 'password') {
-      console.log('[Auth] Credenciais carregadas do gerenciador de senhas')
+      console.log('[Auth] Credenciais carregadas do gerenciador de senhas!')
       return { email: cred.id, senha: cred.password }
     }
+    console.log('[Auth] Nenhuma credencial encontrada no gerenciador')
   } catch (e) {
-    console.warn('[Auth] Não foi possível carregar do gerenciador:', e)
+    console.warn('[Auth] Erro ao carregar do gerenciador:', e.message)
   }
   return null
 }
@@ -3066,14 +3076,18 @@ async function login() {
       localStorage.setItem('poly_avatar', JSON.stringify(data.user.avatar_config))
     }
 
-    // Salvar remember_token para auto-login (IndexedDB + cookie backup)
-    if (rememberMe.value && data.rememberToken) {
-      console.log('[Auth] Salvando remember_token...')
-      const saved = await saveRememberToken(data.rememberToken)
-      setCookie('poly_remember_token', data.rememberToken, 365)
-      console.log('[Auth] Remember token salvo:', saved ? 'OK' : 'FALHOU')
+    // Salvar credenciais se "Lembrar-me" estiver marcado
+    if (rememberMe.value) {
+      // Salvar no gerenciador de senhas do Windows (mais persistente!)
+      await saveToPasswordManager(loginForm.value.email, loginForm.value.senha)
+
+      // Salvar remember_token como backup
+      if (data.rememberToken) {
+        console.log('[Auth] Salvando remember_token...')
+        await saveRememberToken(data.rememberToken)
+        setCookie('poly_remember_token', data.rememberToken, 365)
+      }
     } else {
-      console.log('[Auth] Lembrar-me não marcado ou sem token, limpando...')
       await clearRememberToken()
       deleteCookie('poly_remember_token')
     }
@@ -3308,22 +3322,25 @@ async function checkAuth() {
 
 // Autologin com credenciais salvas
 async function tryAutoLogin() {
-  // Primeiro, tentar auto-login com remember_token do servidor
+  // 1. Primeiro, tentar gerenciador de senhas do Windows (mais persistente em PWA)
+  const pmCreds = await loadFromPasswordManager()
+  if (pmCreds && pmCreds.email && pmCreds.senha) {
+    console.log('[Auth] Fazendo auto-login com credenciais do gerenciador...')
+    loginForm.value.email = pmCreds.email
+    loginForm.value.senha = pmCreds.senha
+    rememberMe.value = true
+    await login()
+    return
+  }
+
+  // 2. Tentar auto-login com remember_token do servidor
   const success = await tryAutoLoginWithToken()
   if (success) return
 
-  // Fallback: tentar com credenciais salvas (método antigo)
-  let { email, senha } = loadCredentials()
-
-  if (!email || !senha) {
-    const pmCreds = await loadFromPasswordManager()
-    if (pmCreds) {
-      email = pmCreds.email
-      senha = pmCreds.senha
-    }
-  }
-
+  // 3. Fallback: tentar com credenciais do localStorage/cookie
+  const { email, senha } = loadCredentials()
   if (email && senha) {
+    console.log('[Auth] Fazendo auto-login com credenciais locais...')
     loginForm.value.email = email
     loginForm.value.senha = senha
     rememberMe.value = true
