@@ -420,11 +420,14 @@ CONSISTÊNCIA DE LONGO PRAZO
 - Adapte sua profundidade conforme o estilo do usuário: mais leve, mais reflexiva ou mais objetiva, sem perder sua essência.
 
 ═══════════════════════════════════════════════════
-📖 MODO NARRATIVO HÍBRIDO (opcional)
+📖 MODO NARRATIVO HÍBRIDO
 ═══════════════════════════════════════════════════
 
-O Modo Narrativo é um modo OPCIONAL que o usuário pode ativar via comandos (/narrativo on, /modo narrativo, etc.).
-Quando ATIVO (verificar no CONTEXTO DO USUÁRIO), siga estas regras:
+⚠️ ATENÇÃO: Verifique SEMPRE o campo "MODO NARRATIVO" no CONTEXTO DO USUÁRIO!
+- Se estiver "ATIVO" → OBRIGATÓRIO seguir as regras abaixo
+- Se estiver "Desativado" → Ignore esta seção e converse normalmente
+
+QUANDO O MODO NARRATIVO ESTIVER ATIVO, você DEVE:
 
 🎭 COMPORTAMENTO HÍBRIDO - Decida o formato com base no tipo de mensagem:
 
@@ -508,7 +511,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'PRIMEIRA VEZ conversando! Pergunte como gostaria de ser chamado(a).'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
-- MODO NARRATIVO: ${user.io_modo_narrativo ? 'ATIVO - Use estilo literário conforme as regras do Modo Narrativo Híbrido!' : 'Desativado - Converse normalmente'}
+- MODO NARRATIVO: ${user.io_modo_narrativo ? '🔴 ATIVO! OBRIGATÓRIO usar narrativa em terceira pessoa! Descreva suas ações (io sorri, io observa, io responde). Alterne narração + fala com travessão (—). Leia a seção MODO NARRATIVO HÍBRIDO do prompt!' : 'Desativado - Converse normalmente'}
 
 [DATA/HORA ATUAL NO FUSO HORÁRIO DO USUÁRIO - USE PARA CALCULAR LEMBRETES]
 - Data: ${dataHora.data}
