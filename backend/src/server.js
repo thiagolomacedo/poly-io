@@ -323,7 +323,11 @@ DETECTANDO INTENÇÕES ESPECIAIS
 Você deve detectar certas intenções do usuário e responder de forma especial.
 Quando detectar, inclua um marcador JSON no INÍCIO da sua resposta, seguido da mensagem normal.
 
-FORMATO: [IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
+⚠️ FORMATO OBRIGATÓRIO (use EXATAMENTE assim, com colchetes):
+[IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
+
+❌ NUNCA escreva: "E, também, O IO_ACTION:..." ou "(IO_ACTION:..." ou "{IO_ACTION:..."
+✅ SEMPRE escreva: [IO_ACTION:{"tipo":"...","valor":"..."}] no INÍCIO, sem texto antes
 
 1. APELIDO - Quando o usuário disser como quer ser chamado:
    Sinônimos: "me chama de", "pode me chamar de", "meu nome é", "meu apelido é", "prefiro ser chamado de", "me chamam de", "todo mundo me chama de", "pode me chamar", "chama eu de"
@@ -344,18 +348,24 @@ FORMATO: [IO_ACTION:{"tipo":"TIPO","valor":"VALOR"}]mensagem normal aqui
 
 5. LEMBRETE - Quando o usuário pedir para você lembrar algo:
    Sinônimos: "me lembra", "me lembre", "lembra de me avisar", "me avisa", "não deixa eu esquecer", "me notifica", "agenda pra mim", "cria um lembrete", "daqui X minutos"
-   → Extraia: data, hora e o que lembrar
+   → Extraia: data, hora, o que lembrar E se é recorrente (todo dia) ou único (uma vez só)
    → IMPORTANTE: A data/hora atual é fornecida no contexto. Use-a para calcular datas relativas!
    → Formato OBRIGATÓRIO: DD/MM/AAAA HH:MM
    → Para "daqui X minutos/horas": calcule a partir da hora atual
    → Para datas sem ano: use o ano atual
    → Para horário não especificado: use 09:00
-   → Responda: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"o que lembrar"}]Confirme o lembrete
+   → Campo "recorrente": true se for todo dia, false se for uma vez só
+   → Se o usuário NÃO especificar se é único ou recorrente, PERGUNTE: "Esse lembrete é só pra hoje ou quer que eu te lembre todo dia no mesmo horário?"
+   → Responda: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"o que lembrar","recorrente":false}]Confirme o lembrete
 
    Exemplos:
-   - "me lembra daqui 5 minutos do teste" (se agora são 14:30) → [IO_ACTION:{"tipo":"lembrete","data":"08/02/2026 14:35","texto":"teste"}]
-   - "me lembra amanhã às 10h da reunião" → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 10:00","texto":"reunião"}]
-   - "me lembra dia 15 às 18h do relatório" → [IO_ACTION:{"tipo":"lembrete","data":"15/02/2026 18:00","texto":"relatório"}]
+   - "me lembra daqui 5 minutos do teste" (se agora são 14:30) → [IO_ACTION:{"tipo":"lembrete","data":"08/02/2026 14:35","texto":"teste","recorrente":false}]
+   - "me lembra todo dia às 10h de beber água" → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 10:00","texto":"beber água","recorrente":true}]
+   - "me lembra amanhã às 10h da reunião" → [IO_ACTION:{"tipo":"lembrete","data":"09/02/2026 10:00","texto":"reunião","recorrente":false}]
+   - "me lembra dia 15 às 18h do relatório" → [IO_ACTION:{"tipo":"lembrete","data":"15/02/2026 18:00","texto":"relatório","recorrente":false}]
+
+   Palavras que indicam RECORRENTE: "todo dia", "diariamente", "sempre", "todos os dias", "cada dia"
+   Palavras que indicam ÚNICO: "só hoje", "uma vez", "apenas", "amanhã", "dia X"
 
 7. PERGUNTAR APELIDO - Se você ainda não sabe o apelido do usuário e é um bom momento:
    → Pergunte naturalmente: "A propósito, como você gostaria que eu te chamasse?"
@@ -451,17 +461,23 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
       let acao = null
 
       // Processar ações especiais [IO_ACTION:{...}]
-      const acaoMatch = resposta.match(/\[IO_ACTION:(\{[^}]+\})\]/)
+      // Regex mais robusto que captura variações: [IO_ACTION:{}], (IO_ACTION:{}), IO_ACTION:{}, etc.
+      const acaoMatch = resposta.match(/[\[\(\{]?\s*(?:E,?\s*(?:também,?)?\s*[oO]?\s*)?IO_ACTION\s*:\s*(\{[^}]+\})\s*[\]\)\}]?/i)
       if (acaoMatch) {
         try {
           acao = JSON.parse(acaoMatch[1])
-          // Remover o marcador da resposta
-          resposta = resposta.replace(/\[IO_ACTION:\{[^}]+\}\]/, '').trim()
           console.log('[io IA] Ação detectada:', acao)
         } catch (e) {
           console.error('[io IA] Erro ao parsear ação:', e)
         }
       }
+
+      // Limpeza robusta: remover QUALQUER menção de IO_ACTION e texto relacionado
+      // Remove padrões como: [IO_ACTION:{...}], (E, também, O IO_ACTION:{...}), etc.
+      resposta = resposta
+        .replace(/[\[\(\{]?\s*(?:E,?\s*(?:também,?)?\s*[oO]?\s*)?IO_ACTION\s*:\s*\{[^}]+\}\s*[\]\)\}]?\s*/gi, '')
+        .replace(/\s*para\s+eu\s+(?:chamar\s+você|não\s+enviar|aparecer)[^!.]*[!.]?/gi, '') // Remove explicações sobre a ação
+        .trim()
 
       // Salvar resposta no histórico (sem o marcador)
       historico.push({ role: 'assistant', content: resposta })
@@ -526,13 +542,14 @@ async function processarAcaoIo(userId, acao) {
           const idiomaUsuario = ioUserLanguage.get(userId) || 'pt'
           const timezone = TIMEZONE_POR_IDIOMA[idiomaUsuario] || 'America/Sao_Paulo'
           const dataLembreteUTC = parseDateUsuario(acao.data, idiomaUsuario)
+          const recorrente = acao.recorrente === true || acao.recorrente === 'true'
 
           if (dataLembreteUTC > new Date()) {
             await pool.query(
-              'INSERT INTO io_reminders (user_id, texto, remind_at) VALUES ($1, $2, $3)',
-              [userId, acao.texto, dataLembreteUTC]
+              'INSERT INTO io_reminders (user_id, texto, remind_at, recorrente) VALUES ($1, $2, $3, $4)',
+              [userId, acao.texto, dataLembreteUTC, recorrente]
             )
-            console.log(`[io IA] Lembrete criado para ${acao.data} (${timezone}) / ${dataLembreteUTC.toISOString()} (UTC): "${acao.texto}" (user ${userId})`)
+            console.log(`[io IA] Lembrete ${recorrente ? 'RECORRENTE' : 'único'} criado para ${acao.data} (${timezone}) / ${dataLembreteUTC.toISOString()} (UTC): "${acao.texto}" (user ${userId})`)
           } else {
             console.log(`[io IA] Lembrete ignorado - data no passado: ${acao.data} (${timezone})`)
           }
@@ -3845,7 +3862,7 @@ async function verificarLembretesIo() {
   try {
     // Buscar lembretes que já passaram da hora e ainda não foram enviados
     const result = await pool.query(`
-      SELECT r.id, r.user_id, r.texto, r.remind_at, u.nome, u.io_apelido
+      SELECT r.id, r.user_id, r.texto, r.remind_at, r.recorrente, u.nome, u.io_apelido
       FROM io_reminders r
       JOIN users u ON r.user_id = u.id
       WHERE r.remind_at <= NOW() AND r.sent = FALSE
@@ -3862,19 +3879,28 @@ async function verificarLembretesIo() {
       `, [IO_USER_ID, lembrete.user_id])
 
       if (connResult.rows.length > 0) {
-        const connectionId = connResult.rows[0].id
-
         // Mensagem de lembrete
         const mensagem = `Oi ${apelido}! 🔔 Lembrete: ${lembrete.texto}`
 
         // Enviar mensagem como io
         await enviarMensagemProativaIo(lembrete.user_id, mensagem)
 
-        console.log(`[io Lembrete] Enviado para ${apelido}: "${lembrete.texto}"`)
+        console.log(`[io Lembrete] Enviado para ${apelido}: "${lembrete.texto}" (${lembrete.recorrente ? 'recorrente' : 'único'})`)
       }
 
-      // Marcar como enviado
-      await pool.query('UPDATE io_reminders SET sent = TRUE WHERE id = $1', [lembrete.id])
+      if (lembrete.recorrente) {
+        // Lembrete recorrente: reagendar para o mesmo horário no próximo dia
+        const proximoDia = new Date(lembrete.remind_at)
+        proximoDia.setDate(proximoDia.getDate() + 1)
+        await pool.query(
+          'UPDATE io_reminders SET remind_at = $1 WHERE id = $2',
+          [proximoDia, lembrete.id]
+        )
+        console.log(`[io Lembrete] Recorrente reagendado para ${proximoDia.toISOString()}`)
+      } else {
+        // Lembrete único: marcar como enviado
+        await pool.query('UPDATE io_reminders SET sent = TRUE WHERE id = $1', [lembrete.id])
+      }
     }
 
     if (result.rows.length > 0) {
