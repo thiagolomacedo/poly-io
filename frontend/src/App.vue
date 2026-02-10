@@ -3066,13 +3066,12 @@ async function login() {
       localStorage.setItem('poly_avatar', JSON.stringify(data.user.avatar_config))
     }
 
-    // Salvar remember_token para auto-login
+    // Salvar remember_token para auto-login (IndexedDB + cookie backup)
     if (rememberMe.value && data.rememberToken) {
-      // Salvar no Credential Management API (funciona no PWA)
-      saveToPasswordManager(data.user.email, data.rememberToken)
-      // Backup em cookie
-      setCookie('poly_remember_token', data.rememberToken)
+      await saveRememberToken(data.rememberToken)
+      setCookie('poly_remember_token', data.rememberToken, 365)
     } else {
+      await clearRememberToken()
       deleteCookie('poly_remember_token')
     }
 
@@ -3086,16 +3085,8 @@ async function login() {
 
 // Auto-login usando remember_token do servidor
 async function tryAutoLoginWithToken() {
-  // Tentar carregar do Credential Management API primeiro
-  let rememberToken = null
-
-  const pmCreds = await loadFromPasswordManager()
-  if (pmCreds && pmCreds.senha) {
-    // O "senha" na verdade é o rememberToken
-    rememberToken = pmCreds.senha
-  }
-
-  // Fallback para cookie
+  // Tentar carregar do IndexedDB primeiro, depois cookie
+  let rememberToken = await loadRememberToken()
   if (!rememberToken) {
     rememberToken = getCookie('poly_remember_token')
   }
@@ -3103,13 +3094,19 @@ async function tryAutoLoginWithToken() {
   if (!rememberToken) return false
 
   try {
+    console.log('[Auth] Tentando auto-login com remember_token...')
     const res = await fetch(`${API_URL}/auth/auto-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rememberToken })
     })
 
-    if (!res.ok) return false
+    if (!res.ok) {
+      console.log('[Auth] Token inválido, limpando...')
+      await clearRememberToken()
+      deleteCookie('poly_remember_token')
+      return false
+    }
 
     const data = await res.json()
 
@@ -3122,10 +3119,11 @@ async function tryAutoLoginWithToken() {
       myAvatar.value = data.user.avatar_config
     }
 
+    console.log('[Auth] Auto-login bem-sucedido!')
     initializeApp()
     return true
   } catch (e) {
-    console.error('Erro no auto-login:', e)
+    console.error('[Auth] Erro no auto-login:', e)
     return false
   }
 }
@@ -3328,6 +3326,9 @@ function logout() {
   currentUser.value = null
   localStorage.removeItem('poly_token')
   deleteCookie('poly_token')
+  // Limpar remember_token
+  clearRememberToken()
+  deleteCookie('poly_remember_token')
   if (socket) {
     socket.disconnect()
     socket = null
@@ -5505,6 +5506,73 @@ async function initIndexedDB() {
       }
     }
   })
+}
+
+// ==================== INDEXEDDB PARA REMEMBER TOKEN ====================
+let authDb = null
+
+async function initAuthDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('PolyIO_Auth', 1)
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      authDb = request.result
+      resolve(authDb)
+    }
+    request.onupgradeneeded = (event) => {
+      const database = event.target.result
+      if (!database.objectStoreNames.contains('auth')) {
+        database.createObjectStore('auth', { keyPath: 'key' })
+      }
+    }
+  })
+}
+
+async function saveRememberToken(token) {
+  try {
+    if (!authDb) await initAuthDB()
+    return new Promise((resolve, reject) => {
+      const transaction = authDb.transaction(['auth'], 'readwrite')
+      const store = transaction.objectStore('auth')
+      const request = store.put({ key: 'remember_token', value: token })
+      request.onsuccess = () => resolve(true)
+      request.onerror = () => reject(request.error)
+    })
+  } catch (e) {
+    console.error('Erro ao salvar token no IndexedDB:', e)
+    return false
+  }
+}
+
+async function loadRememberToken() {
+  try {
+    if (!authDb) await initAuthDB()
+    return new Promise((resolve) => {
+      const transaction = authDb.transaction(['auth'], 'readonly')
+      const store = transaction.objectStore('auth')
+      const request = store.get('remember_token')
+      request.onsuccess = () => resolve(request.result?.value || null)
+      request.onerror = () => resolve(null)
+    })
+  } catch (e) {
+    console.error('Erro ao carregar token do IndexedDB:', e)
+    return null
+  }
+}
+
+async function clearRememberToken() {
+  try {
+    if (!authDb) await initAuthDB()
+    return new Promise((resolve) => {
+      const transaction = authDb.transaction(['auth'], 'readwrite')
+      const store = transaction.objectStore('auth')
+      const request = store.delete('remember_token')
+      request.onsuccess = () => resolve(true)
+      request.onerror = () => resolve(false)
+    })
+  } catch (e) {
+    return false
+  }
 }
 
 async function saveFileToDB(connectionId, fileData) {
