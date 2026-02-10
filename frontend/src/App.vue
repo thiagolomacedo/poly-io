@@ -904,6 +904,16 @@
               >
                 {{ unreadCounts[conn.connectionId] > 99 ? '99+' : unreadCounts[conn.connectionId] }}
               </span>
+              <!-- Toggle modo narrativo (só para io) -->
+              <button
+                v-if="conn.nome === 'io'"
+                class="btn-narrative-mode"
+                :class="{ active: ioNarrativeMode }"
+                @click.stop="toggleNarrativeMode"
+                :title="ioNarrativeMode ? 'Modo Híbrido (ON)' : 'Modo Normal (OFF)'"
+              >
+                {{ ioNarrativeMode ? '📖' : '💬' }}
+              </button>
               <button
                 class="btn-mute-connection"
                 :class="{ muted: isConnectionMuted(conn.connectionId) }"
@@ -1624,6 +1634,9 @@ let typingTimeout = null // Timer para resetar o indicador
 // Configurações de notificação
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
 const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
+
+// Modo narrativo da io (híbrido)
+const ioNarrativeMode = ref(false)
 
 // Contador de mensagens não lidas por conexão { connectionId: count }
 const unreadCounts = ref(JSON.parse(localStorage.getItem('poly_unread_counts') || '{}'))
@@ -3670,6 +3683,7 @@ async function initializeApp() {
     loadConnections()
     loadPendingRequests()
     loadRooms()
+    loadNarrativeMode()
     loadMyRoom()
 
     // Configurar push notifications (solicita permissão)
@@ -5191,6 +5205,46 @@ function isConnectionMuted(connectionId) {
   return conexoesMudas.value.includes(connectionId)
 }
 
+// ==================== MODO NARRATIVO DA IO ====================
+
+async function loadNarrativeMode() {
+  try {
+    const res = await fetch(`${API_URL}/io/narrative-mode`, {
+      headers: { 'Authorization': `Bearer ${token.value}` }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      ioNarrativeMode.value = data.narrativeMode
+    }
+  } catch (e) {
+    console.error('Erro ao carregar modo narrativo:', e)
+  }
+}
+
+async function toggleNarrativeMode() {
+  try {
+    const newMode = !ioNarrativeMode.value
+    const res = await fetch(`${API_URL}/io/narrative-mode`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ narrativeMode: newMode })
+    })
+    if (res.ok) {
+      ioNarrativeMode.value = newMode
+      // Feedback visual
+      const msg = newMode
+        ? '📖 Modo Híbrido ativado! io vai usar narrativa quando apropriado.'
+        : '💬 Modo Normal ativado! io vai conversar normalmente.'
+      alert(msg)
+    }
+  } catch (e) {
+    console.error('Erro ao alternar modo narrativo:', e)
+  }
+}
+
 // ==================== SOM DE NOTIFICAÇÃO ====================
 
 // Contexto de áudio (criado uma vez)
@@ -5909,6 +5963,31 @@ body {
 .btn-mute-connection.muted {
   opacity: 1;
   background: #333;
+}
+
+/* Botão modo narrativo da io */
+.btn-narrative-mode {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.btn-narrative-mode:hover {
+  opacity: 1;
+  background: #222;
+}
+
+.btn-narrative-mode.active {
+  opacity: 1;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
 }
 
 /* Badge de mensagens não lidas */

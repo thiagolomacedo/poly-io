@@ -1607,6 +1607,38 @@ app.put('/api/users/:id/avatar', authMiddleware, async (req, res) => {
   }
 })
 
+// ==================== ROTAS DA IO ====================
+
+// Obter estado do modo narrativo
+app.get('/api/io/narrative-mode', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT io_modo_narrativo FROM users WHERE id = $1',
+      [req.userId]
+    )
+    res.json({ narrativeMode: result.rows[0]?.io_modo_narrativo || false })
+  } catch (error) {
+    console.error('[io] Erro ao buscar modo narrativo:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar modo narrativo' })
+  }
+})
+
+// Alternar modo narrativo
+app.put('/api/io/narrative-mode', authMiddleware, async (req, res) => {
+  const { narrativeMode } = req.body
+  try {
+    await pool.query(
+      'UPDATE users SET io_modo_narrativo = $1 WHERE id = $2',
+      [narrativeMode, req.userId]
+    )
+    console.log(`[io] Modo narrativo ${narrativeMode ? 'ATIVADO' : 'DESATIVADO'} para usuário ${req.userId}`)
+    res.json({ success: true, narrativeMode })
+  } catch (error) {
+    console.error('[io] Erro ao atualizar modo narrativo:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar modo narrativo' })
+  }
+})
+
 // ==================== ROTAS DE CONEXÕES ====================
 
 // Listar minhas conexões (aceitas)
