@@ -2247,15 +2247,23 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
 
       // Emitir "está digitando..." para simular resposta humana
       const userSocketId = usuariosOnline.get(req.userId)
+
+      // Função para manter o indicador de digitação ativo
+      let digitandoInterval = null
       if (userSocketId) {
+        // Emite imediatamente
         io.to(userSocketId).emit('usuario-digitando', {
           senderId: IO_USER_ID,
           connectionId: parseInt(req.params.connectionId)
         })
+        // Re-emite a cada 3 segundos para manter ativo (caso o frontend tenha timeout)
+        digitandoInterval = setInterval(() => {
+          io.to(userSocketId).emit('usuario-digitando', {
+            senderId: IO_USER_ID,
+            connectionId: parseInt(req.params.connectionId)
+          })
+        }, 3000)
       }
-
-      // Aguardar 5 segundos simulando digitação
-      await new Promise(resolve => setTimeout(resolve, 5000))
 
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
@@ -2273,6 +2281,9 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       await marcarPrimeiroContatoIo(req.userId)
 
       // Parar indicador de digitação
+      if (digitandoInterval) {
+        clearInterval(digitandoInterval)
+      }
       if (userSocketId) {
         io.to(userSocketId).emit('usuario-parou-digitar', {
           senderId: IO_USER_ID,
