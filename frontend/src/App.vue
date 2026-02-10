@@ -222,12 +222,9 @@
 
           <div class="profile-avatar-large">
             <img
-              v-if="profileUser?.email || profileUser?.avatar_config || profileUser?.nome === 'io'"
               :src="getUserAvatarUrl(profileUser, 150)"
               :alt="profileUser.nome"
-              @error="$event.target.style.display='none'"
             />
-            <span class="profile-letter">{{ profileUser?.nome?.charAt(0).toUpperCase() }}</span>
           </div>
 
           <div class="profile-name-row">
@@ -382,7 +379,7 @@
               class="participant-item"
               @click="openProfile(user); showParticipantsModal = false"
             >
-              <span class="participant-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
+              <img :src="getUserAvatarUrl(user, 40)" class="participant-avatar" />
               <div class="participant-info">
                 <span class="participant-name">{{ user.nome }}</span>
                 <span v-if="user.id === selectedRoom?.owner_id" class="participant-owner">⭐ Dono da sala</span>
@@ -488,11 +485,9 @@
                 class="forward-checkbox"
               />
               <img
-                v-if="contact.avatar_config || contact.email"
                 :src="getUserAvatarUrl(contact, 40)"
                 class="forward-avatar"
               />
-              <span v-else class="forward-avatar-letter">{{ contact.nome?.charAt(0).toUpperCase() }}</span>
               <div class="forward-contact-info">
                 <span class="forward-contact-name">{{ contact.nome }}</span>
                 <span class="forward-contact-lang">{{ getIdiomaLabel(contact.idioma) }}</span>
@@ -528,6 +523,9 @@
 
           <!-- Seletor de Tipo de Avatar -->
           <div class="avatar-type-selector">
+            <button :class="{ active: avatarType === 'flag' }" @click="switchAvatarType('flag')">
+              🏳️ Bandeira
+            </button>
             <button :class="{ active: avatarType === 'kawaii' }" @click="switchAvatarType('kawaii')">
               ✨ Kawaii
             </button>
@@ -542,7 +540,12 @@
           <!-- Preview do Avatar -->
           <div class="avatar-preview-container">
             <img
-              v-if="avatarType === 'kawaii' && editingAvatar"
+              v-if="avatarType === 'flag'"
+              :src="generateFlagSvg(currentUser?.idioma || 'pt', 140)"
+              class="avatar-preview-large"
+            />
+            <img
+              v-else-if="avatarType === 'kawaii' && editingAvatar"
               :src="generateAvatarSvg(editingAvatar, 140)"
               class="avatar-preview-large"
             />
@@ -556,6 +559,13 @@
               :src="getGravatarUrl(currentUser.email, 140)"
               class="avatar-preview-large"
             />
+          </div>
+
+          <!-- Bandeira: Info -->
+          <div class="gravatar-info" v-if="avatarType === 'flag'">
+            <p>Sua bandeira representa seu país/idioma</p>
+            <p class="gravatar-email">{{ getIdiomaLabel(currentUser?.idioma) }}</p>
+            <p class="gravatar-tip">Para mudar, altere seu idioma nas configurações</p>
           </div>
 
           <!-- Kawaii: Tabs de Navegação -->
@@ -891,8 +901,7 @@
               @click="selectConnection(conn)"
             >
               <div class="user-avatar" :class="[conn.status || 'offline']">
-                <img v-if="conn.avatar_config || conn.email || conn.nome === 'io'" :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
-                <span v-else>{{ conn.nome.charAt(0).toUpperCase() }}</span>
+                <img :src="getUserAvatarUrl(conn, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
                 <span class="name">{{ conn.nome }}</span>
@@ -937,7 +946,7 @@
             <!-- Resultado da busca por código -->
             <div v-if="codeResult" class="user-item code-result">
               <div class="user-avatar">
-                {{ codeResult.nome.charAt(0).toUpperCase() }}
+                <img :src="getUserAvatarUrl(codeResult, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
                 <span class="name">{{ codeResult.nome }}</span>
@@ -969,7 +978,7 @@
               class="user-item"
             >
               <div class="user-avatar">
-                {{ user.nome.charAt(0).toUpperCase() }}
+                <img :src="getUserAvatarUrl(user, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
                 <span class="name">{{ user.nome }}</span>
@@ -997,8 +1006,7 @@
               class="user-item request-item"
             >
               <div class="user-avatar">
-                <img v-if="req.avatar_config || req.email" :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
-                <span v-else>{{ req.nome.charAt(0).toUpperCase() }}</span>
+                <img :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
                 <span class="name">{{ req.nome }}</span>
@@ -1020,8 +1028,7 @@
               class="user-item"
             >
               <div class="user-avatar">
-                <img v-if="req.avatar_config || req.email" :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
-                <span v-else>{{ req.nome.charAt(0).toUpperCase() }}</span>
+                <img :src="getUserAvatarUrl(req, 45)" class="connection-avatar-img" />
               </div>
               <div class="user-info">
                 <span class="name">{{ req.nome }}</span>
@@ -1158,7 +1165,7 @@
           <div class="room-users-sidebar" v-if="roomUsers.length > 0 && showRoomParticipants" @click="userMenuOpen = null">
             <h5>Na sala ({{ roomUsers.length }})</h5>
             <div v-for="user in roomUsers" :key="user.id" class="room-user-item">
-              <span class="user-letter">{{ user.nome?.charAt(0).toUpperCase() }}</span>
+              <img :src="getUserAvatarUrl(user, 28)" class="room-user-avatar" />
               <span
                 class="user-name clickable"
                 @click.stop="openProfile(user)"
@@ -1280,12 +1287,9 @@
             <div class="chat-user" @click="openProfile(selectedConnection)" style="cursor: pointer;">
               <div class="user-avatar" :class="[selectedConnection.status || 'offline']">
                 <img
-                  v-if="selectedConnection.avatar_config || selectedConnection.email || selectedConnection.nome === 'io'"
                   :src="getUserAvatarUrl(selectedConnection, 80)"
                   class="gravatar-img"
-                  @error="$event.target.style.display='none'"
                 />
-                <span class="avatar-letter">{{ selectedConnection.nome.charAt(0).toUpperCase() }}</span>
               </div>
               <div>
                 <span class="name">{{ selectedConnection.nome }}</span>
@@ -1902,15 +1906,106 @@ function getGravatarUrl(email, size = 100) {
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=mp`
 }
 
-// Obter avatar do usuário (Kawaii/Pixel se salvou, senão Gravatar)
+// Gerar SVG da bandeira do país baseado no idioma
+function generateFlagSvg(idioma, size = 80) {
+  const flags = {
+    // Brasil - Verde, amarelo, azul com estrelas
+    pt: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#009739"/>
+      <polygon points="50,15 90,50 50,85 10,50" fill="#FEDD00"/>
+      <circle cx="50" cy="50" r="18" fill="#002776"/>
+      <circle cx="44" cy="46" r="2" fill="#fff"/>
+      <circle cx="56" cy="46" r="2" fill="#fff"/>
+      <circle cx="50" cy="54" r="2" fill="#fff"/>
+      <circle cx="44" cy="54" r="1.5" fill="#fff"/>
+      <circle cx="56" cy="54" r="1.5" fill="#fff"/>
+      <path d="M35 50 Q50 42 65 50" stroke="#fff" stroke-width="2" fill="none"/>
+    </svg>`,
+    // USA - Vermelho, branco, azul
+    en: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#B22234"/>
+      <rect x="2" y="20" width="96" height="8" fill="#fff"/>
+      <rect x="2" y="36" width="96" height="8" fill="#fff"/>
+      <rect x="2" y="52" width="96" height="8" fill="#fff"/>
+      <rect x="2" y="68" width="96" height="8" fill="#fff"/>
+      <rect x="2" y="10" width="45" height="40" fill="#3C3B6E"/>
+      <text x="24" y="35" font-size="20" fill="#fff" text-anchor="middle">★</text>
+    </svg>`,
+    // Espanha - Vermelho e amarelo
+    es: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#AA151B"/>
+      <rect x="2" y="30" width="96" height="40" fill="#F1BF00"/>
+      <circle cx="35" cy="50" r="8" fill="#AA151B" stroke="#F1BF00" stroke-width="2"/>
+    </svg>`,
+    // França - Azul, branco, vermelho
+    fr: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff"/>
+      <path d="M50,2 A48,48 0 0,0 50,98 L50,2" fill="#EF4135"/>
+      <path d="M50,2 A48,48 0 0,1 50,98 L50,2" fill="#0055A4" transform="rotate(180 50 50)"/>
+    </svg>`,
+    // Alemanha - Preto, vermelho, amarelo
+    de: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#FFCC00"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#000"/>
+      <rect x="2" y="35" width="96" height="30" fill="#DD0000"/>
+    </svg>`,
+    // Itália - Verde, branco, vermelho
+    it: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff"/>
+      <path d="M17,17 A48,48 0 0,0 17,83 L17,17" fill="#009246" transform="translate(-4,0)"/>
+      <path d="M83,17 A48,48 0 0,1 83,83 L83,17" fill="#CE2B37" transform="translate(4,0)"/>
+    </svg>`,
+    // Japão - Branco com círculo vermelho
+    ja: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff" stroke="#eee" stroke-width="1"/>
+      <circle cx="50" cy="50" r="22" fill="#BC002D"/>
+    </svg>`,
+    // Coreia do Sul - Branco com Taeguk
+    ko: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff" stroke="#eee" stroke-width="1"/>
+      <circle cx="50" cy="50" r="20" fill="#C60C30"/>
+      <path d="M50,30 A20,20 0 0,1 50,70 A10,10 0 0,1 50,50 A10,10 0 0,0 50,30" fill="#003478"/>
+    </svg>`,
+    // China - Vermelho com estrelas amarelas
+    zh: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#DE2910"/>
+      <text x="30" y="45" font-size="24" fill="#FFDE00">★</text>
+      <text x="48" y="30" font-size="10" fill="#FFDE00">★</text>
+      <text x="58" y="35" font-size="10" fill="#FFDE00">★</text>
+      <text x="58" y="48" font-size="10" fill="#FFDE00">★</text>
+      <text x="48" y="55" font-size="10" fill="#FFDE00">★</text>
+    </svg>`,
+    // Rússia - Branco, azul, vermelho
+    ru: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#D52B1E"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#fff"/>
+      <rect x="2" y="35" width="96" height="15" fill="#0039A6"/>
+    </svg>`,
+    // Arábia Saudita - Verde com espada e texto
+    ar: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#006C35"/>
+      <rect x="20" y="58" width="60" height="4" rx="2" fill="#fff"/>
+      <text x="50" y="48" font-size="12" fill="#fff" text-anchor="middle" font-family="Arial">ﷲ</text>
+    </svg>`
+  }
+
+  const svg = flags[idioma] || flags.pt
+  return 'data:image/svg+xml,' + encodeURIComponent(svg)
+}
+
+// Obter avatar do usuário (Kawaii/Pixel se salvou, senão Bandeira do país)
 function getUserAvatarUrl(user, size = 80) {
   // io tem avatar personalizado
   // io é identificada pelo nome (id é dinâmico)
   if (user?.nome === 'io') {
     return '/io-avatar.png'
   }
-  // Prioridade: Avatar personalizado (Kawaii ou Pixel) > Gravatar > null
+  // Prioridade: Avatar personalizado (Kawaii/Pixel/Gravatar) > Bandeira do país
   if (user?.avatar_config) {
+    // Tipo Gravatar - usa foto do Gravatar
+    if (user.avatar_config.type === 'gravatar' && user.email) {
+      return getGravatarUrl(user.email, size)
+    }
     // Verificar se é pixel art
     if (user.avatar_config.type === 'pixel' && user.avatar_config.grid) {
       return generatePixelAvatarSvg(user.avatar_config.grid, size)
@@ -1918,10 +2013,12 @@ function getUserAvatarUrl(user, size = 80) {
     // Senão é Kawaii
     return generateAvatarSvg(user.avatar_config, size)
   }
-  if (user?.email) {
-    return getGravatarUrl(user.email, size)
+  // Sem avatar configurado: usa bandeira do idioma/país
+  if (user?.idioma) {
+    return generateFlagSvg(user.idioma, size)
   }
-  return null
+  // Fallback: bandeira do Brasil
+  return generateFlagSvg('pt', size)
 }
 
 // Função MD5 simplificada para Gravatar
@@ -2183,18 +2280,26 @@ const myAvatar = ref(savedAvatar ? { ...defaultAvatar, ...JSON.parse(savedAvatar
 
 // URL do avatar do usuário atual (baseado no avatar_config do banco)
 const myAvatarUrl = computed(() => {
-  // Se currentUser tem avatar_config no banco, usa Kawaii ou Pixel
-  // Se não tem (null), usa Gravatar
+  // Se currentUser tem avatar_config no banco
   if (currentUser.value?.avatar_config) {
-    if (currentUser.value.avatar_config.type === 'pixel' && currentUser.value.avatar_config.grid) {
-      return generatePixelAvatarSvg(currentUser.value.avatar_config.grid, 80)
+    const config = currentUser.value.avatar_config
+    // Gravatar explícito
+    if (config.type === 'gravatar' && currentUser.value.email) {
+      return getGravatarUrl(currentUser.value.email, 80)
     }
-    return generateAvatarSvg(currentUser.value.avatar_config, 80)
+    // Pixel Art
+    if (config.type === 'pixel' && config.grid) {
+      return generatePixelAvatarSvg(config.grid, 80)
+    }
+    // Kawaii
+    return generateAvatarSvg(config, 80)
   }
-  if (currentUser.value?.email) {
-    return getGravatarUrl(currentUser.value.email, 80)
+  // Sem avatar_config = usa bandeira do idioma
+  if (currentUser.value?.idioma) {
+    return generateFlagSvg(currentUser.value.idioma, 80)
   }
-  return generateAvatarSvg(myAvatar.value, 80)
+  // Fallback: bandeira do Brasil
+  return generateFlagSvg('pt', 80)
 })
 
 const showAvatarModal = ref(false)
@@ -2517,19 +2622,23 @@ function generateAvatarSvg(config, size = 80) {
 
 // Abre o modal de edição de avatar
 function openAvatarEditor() {
-  // Carregar do banco se tiver, senão do local
+  // Carregar do banco se tiver, senão é bandeira (padrão)
   if (currentUser.value?.avatar_config) {
-    // Verificar se é pixel art
-    if (currentUser.value.avatar_config.type === 'pixel') {
-      pixelGrid.value = currentUser.value.avatar_config.grid || createEmptyGrid()
+    const config = currentUser.value.avatar_config
+    if (config.type === 'pixel') {
+      pixelGrid.value = config.grid || createEmptyGrid()
       avatarType.value = 'pixel'
+    } else if (config.type === 'gravatar') {
+      avatarType.value = 'gravatar'
     } else {
-      editingAvatar.value = { ...defaultAvatar, ...currentUser.value.avatar_config }
+      // É Kawaii
+      editingAvatar.value = { ...defaultAvatar, ...config }
       avatarType.value = 'kawaii'
     }
   } else {
-    editingAvatar.value = { ...myAvatar.value }
-    avatarType.value = 'gravatar'
+    // Sem avatar_config = bandeira (padrão)
+    avatarType.value = 'flag'
+    editingAvatar.value = { ...defaultAvatar }
   }
   avatarEditorTab.value = 'expression'
   showAvatarModal.value = true
@@ -2542,7 +2651,19 @@ async function saveAvatar() {
   // Sincronizar com o banco de dados
   if (currentUser.value?.id) {
     try {
-      if (avatarType.value === 'kawaii') {
+      if (avatarType.value === 'flag') {
+        // Usar Bandeira - limpar avatar_config
+        await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
+          method: 'PUT',
+          headers: {
+            ...authHeaders(),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ avatarConfig: null })
+        })
+        // Atualizar currentUser para refletir a mudança
+        currentUser.value.avatar_config = null
+      } else if (avatarType.value === 'kawaii') {
         // Salvar Kawaii
         myAvatar.value = { ...editingAvatar.value }
         await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
@@ -2569,17 +2690,18 @@ async function saveAvatar() {
         // Atualizar currentUser para refletir a mudança
         currentUser.value.avatar_config = pixelConfig
       } else {
-        // Usar Gravatar - limpar avatar_config
+        // Usar Gravatar - salvar type: gravatar
+        const gravatarConfig = { type: 'gravatar' }
         await fetch(`${API_URL}/users/${currentUser.value.id}/avatar`, {
           method: 'PUT',
           headers: {
             ...authHeaders(),
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ avatarConfig: null })
+          body: JSON.stringify({ avatarConfig: gravatarConfig })
         })
         // Atualizar currentUser para refletir a mudança
-        currentUser.value.avatar_config = null
+        currentUser.value.avatar_config = gravatarConfig
       }
     } catch (error) {
       console.error('Erro ao salvar avatar no servidor:', error)
@@ -9195,6 +9317,14 @@ body {
   font-weight: 600;
 }
 
+.room-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .room-user-item .user-name {
   color: #ccc;
 }
@@ -9547,6 +9677,14 @@ body {
     font-size: 1.1rem;
     font-weight: 600;
     color: #fff;
+  }
+
+  .participant-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
     flex-shrink: 0;
   }
 
