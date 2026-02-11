@@ -1773,7 +1773,9 @@ const idiomaRecepcao = ref(null) // null = usar idioma do perfil (padrão)
 const messages = ref([])
 const newMessage = ref('')
 const isSendingMessage = ref(false) // Previne cliques duplos
-const messageBubbleColor = ref(localStorage.getItem('poly_bubble_color') || '#6366f1')
+const savedBubbleColor = localStorage.getItem('poly_bubble_color')
+console.log('[BubbleColor] Cor carregada do localStorage:', savedBubbleColor)
+const messageBubbleColor = ref(savedBubbleColor || '#6366f1')
 const messagesContainer = ref(null)
 const myStatus = ref('online')
 const isOtherTyping = ref(false) // Indica se o outro usuário está digitando
@@ -6414,6 +6416,7 @@ watch(newMessage, (newVal, oldVal) => {
 
 // Watch para salvar cor do balão
 watch(messageBubbleColor, (newColor) => {
+  console.log('[BubbleColor] Salvando cor:', newColor)
   localStorage.setItem('poly_bubble_color', newColor)
 })
 </script>
