@@ -2501,7 +2501,7 @@ app.post('/api/chat/forward', authMiddleware, async (req, res) => {
       FROM connections c
       JOIN users u1 ON c.user_a_id = u1.id
       JOIN users u2 ON c.user_b_id = u2.id
-      WHERE c.id = $1 AND c.status = 'accepted'
+      WHERE c.id = $1 AND c.status = 'aceita'
         AND (c.user_a_id = $2 OR c.user_b_id = $2)
     `, [connectionId, req.userId])
 
