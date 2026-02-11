@@ -10695,23 +10695,23 @@ body {
   }
 }
 
-/* PWA Update Prompt */
+/* PWA Update Prompt - Barra discreta no topo */
 .update-prompt {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 10000;
-  animation: slideUp 0.3s ease;
+  animation: slideDown 0.3s ease;
 }
 
-@keyframes slideUp {
+@keyframes slideDown {
   from {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -10719,13 +10719,12 @@ body {
 .update-content {
   display: flex;
   align-items: center;
-  gap: 15px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
   color: #fff;
-  padding: 12px 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-  font-size: 0.95rem;
+  padding: 8px 16px;
+  font-size: 0.85rem;
 }
 
 .update-actions {
@@ -10737,9 +10736,10 @@ body {
   background: #fff;
   color: #6366f1;
   border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 4px 12px;
+  border-radius: 4px;
   font-weight: 600;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: transform 0.2s;
 }
@@ -10751,9 +10751,10 @@ body {
 .btn-later {
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 6px 14px;
-  border-radius: 6px;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -10763,28 +10764,21 @@ body {
 }
 
 @media (max-width: 480px) {
-  .update-prompt {
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    transform: none;
+  .update-content {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    gap: 8px;
   }
 
-  @keyframes slideUp {
+  @keyframes slideDown {
     from {
-      transform: translateY(100%);
+      transform: translateY(-100%);
       opacity: 0;
     }
     to {
       transform: translateY(0);
       opacity: 1;
     }
-  }
-
-  .update-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
   }
 }
 </style>
