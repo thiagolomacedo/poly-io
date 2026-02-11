@@ -1939,10 +1939,10 @@ const filteredEmojis = computed(() => {
 
 // Contatos filtrados para encaminhamento
 const filteredForwardContacts = computed(() => {
-  // Filtrar apenas conexões aceitas (excluindo io e o contato atual)
+  // Todas as conexões já são aceitas (o backend filtra)
+  // Excluir apenas io e o contato atual
   let contactsList = connections.value.filter(c =>
-    c.status === 'accepted' &&
-    c.id !== 1 && // Excluir io
+    c.nome?.toLowerCase() !== 'io' && // Excluir io pelo nome
     c.connectionId !== selectedConnection.value?.connectionId // Excluir contato atual
   )
 
