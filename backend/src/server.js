@@ -644,7 +644,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.1-70b-versatile',
         messages: [
           { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
           ...historico
@@ -680,7 +680,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              model: 'llama-3.1-8b-instant',
+              model: 'llama-3.1-70b-versatile',
               messages: [
                 { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
                 ...historico
