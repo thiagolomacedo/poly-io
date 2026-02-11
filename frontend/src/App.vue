@@ -5067,6 +5067,78 @@ function handleFileSelect(event) {
   reader.readAsDataURL(file)
 }
 
+// Handler para colar imagens com Ctrl+V (apenas chat 1:1, não io)
+function handlePaste(event) {
+  console.log('[Paste] Evento disparado', event.clipboardData)
+
+  // Só funciona para conexões 1:1 (não io)
+  if (!selectedConnection.value || selectedConnection.value.nome === 'io') {
+    console.log('[Paste] Ignorado - sem conexão ou é io')
+    return
+  }
+
+  const clipboardData = event.clipboardData || window.clipboardData
+  if (!clipboardData) {
+    console.log('[Paste] Sem clipboardData')
+    return
+  }
+
+  const items = clipboardData.items || clipboardData.files
+  console.log('[Paste] Items:', items?.length)
+  if (!items || items.length === 0) return
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    console.log('[Paste] Item:', item.type, item.kind)
+
+    // Verificar se é uma imagem
+    if (item.type && item.type.startsWith('image/')) {
+      event.preventDefault()
+
+      const file = item.getAsFile ? item.getAsFile() : item
+      console.log('[Paste] Arquivo:', file)
+      if (!file) return
+
+      if (file.size > MAX_FILE_SIZE) {
+        alert('Imagem muito grande! Máximo: 10MB')
+        return
+      }
+
+      // Gerar nome do arquivo com timestamp
+      const extension = file.type.split('/')[1] || 'png'
+      const fileName = `screenshot_${Date.now()}.${extension}`
+
+      // Converter para base64 e enviar
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result
+        console.log('[Paste] Enviando arquivo:', fileName)
+        socket.emit('enviar-arquivo', {
+          connectionId: selectedConnection.value.connectionId,
+          recipientId: selectedConnection.value.id,
+          fileName: fileName,
+          fileType: file.type,
+          fileData: base64
+        })
+
+        // Adicionar na lista local
+        messages.value.push({
+          id: `file-${Date.now()}`,
+          euEnviei: true,
+          isFile: true,
+          fileName: fileName,
+          fileType: file.type,
+          fileData: base64,
+          enviadoEm: new Date().toISOString()
+        })
+        scrollToBottom()
+      }
+      reader.readAsDataURL(file)
+      return // Processar apenas uma imagem
+    }
+  }
+}
+
 async function handleFileReceived(data) {
   // Verificar se é uma das minhas conexões
   const minhaConexao = connections.value.find(c => c.connectionId === data.connectionId)
@@ -6115,6 +6187,10 @@ onMounted(async () => {
       statusDropdownOpen.value = false
     }
   })
+
+  // Listener global para colar imagens com Ctrl+V no chat 1:1
+  document.addEventListener('paste', handlePaste)
+  console.log('[Paste] Listener global registrado')
 
   // Detectar atualizações do Service Worker
   if ('serviceWorker' in navigator) {
