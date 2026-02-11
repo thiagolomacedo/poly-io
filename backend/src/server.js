@@ -2275,20 +2275,16 @@ app.post('/api/chat/forward', authMiddleware, async (req, res) => {
     const recipientIdioma = conn.user_a_id === req.userId ? conn.idioma_b : conn.idioma_a
     const senderIdioma = conn.user_a_id === req.userId ? conn.idioma_a : conn.idioma_b
 
-    // Detectar idioma e traduzir
-    const detectedLang = detectLanguage(texto) || senderIdioma
-    let textoTraduzido = texto
-
-    if (detectedLang !== recipientIdioma) {
-      textoTraduzido = await translateText(texto, detectedLang, recipientIdioma)
-    }
+    // Detectar idioma e traduzir (usando as mesmas funções do chat normal)
+    const idiomaOriginal = detectarIdioma(texto, senderIdioma)
+    const textoTraduzido = await traduzirTexto(texto, idiomaOriginal, recipientIdioma)
 
     // Salvar mensagem encaminhada (prefixo ↪️ indica encaminhamento)
     const msgResult = await pool.query(`
-      INSERT INTO messages (connection_id, sender_id, texto_original, texto_traduzido, idioma_detectado)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
-    `, [connectionId, req.userId, `↪️ ${texto}`, `↪️ ${textoTraduzido}`, detectedLang])
+    `, [connectionId, req.userId, `↪️ ${texto}`, idiomaOriginal, `↪️ ${textoTraduzido}`, recipientIdioma])
 
     const newMessage = msgResult.rows[0]
 
