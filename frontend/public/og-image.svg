@@ -19,7 +19,7 @@
 
   <!-- Logo text -->
   <text x="600" y="280" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="120" font-weight="700">
-    <tspan fill="#ffffff">Poly</tspan><tspan fill="url(#accent)">.io</tspan>
+    <tspan fill="#ffffff">Poly</tspan><tspan fill="#6366f1">.io</tspan>
   </text>
 
   <!-- Tagline -->
