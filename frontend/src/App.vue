@@ -4128,6 +4128,13 @@ async function loadConnections() {
     // Sincronizar ordem dos contatos com localStorage
     syncContactsOrder()
 
+    // Enviar arquivos pendentes para conexões que já estão online
+    connections.value.forEach(conn => {
+      if (conn.online && conn.status !== 'offline' && conn.status !== 'invisivel') {
+        sendPendingFilesToUser(conn.id, conn.connectionId)
+      }
+    })
+
     // Atualizar contadores de não lidos do banco de dados
     data.forEach(c => {
       const connId = c.connection_id.toString()
@@ -5023,6 +5030,40 @@ async function clearConversation() {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
+// Função auxiliar para enviar arquivo ou salvar na fila se offline
+async function sendOrQueueFile(connectionId, recipientId, fileName, fileType, fileData, isOnline) {
+  const filePayload = {
+    connectionId,
+    recipientId,
+    fileName,
+    fileType,
+    fileData
+  }
+
+  if (isOnline) {
+    // Enviar direto
+    socket.emit('enviar-arquivo', filePayload)
+    console.log('[File] Enviado direto:', fileName)
+  } else {
+    // Salvar na fila para envio posterior
+    await savePendingFile(filePayload)
+    console.log('[File] Salvo na fila (usuário offline):', fileName)
+  }
+
+  // Adicionar na lista local de qualquer forma
+  messages.value.push({
+    id: `file-${Date.now()}`,
+    euEnviei: true,
+    isFile: true,
+    fileName,
+    fileType,
+    fileData,
+    enviadoEm: new Date().toISOString(),
+    pending: !isOnline // Marcar como pendente se offline
+  })
+  scrollToBottom()
+}
+
 function handleFileSelect(event) {
   const file = event.target.files[0]
   if (!file) return
@@ -5040,29 +5081,20 @@ function handleFileSelect(event) {
     return
   }
 
-  // Converter para base64 e enviar
+  const isOnline = selectedConnection.value.status !== 'offline' && selectedConnection.value.status !== 'invisivel'
+
+  // Converter para base64 e enviar/enfileirar
   const reader = new FileReader()
   reader.onload = () => {
     const base64 = reader.result
-    socket.emit('enviar-arquivo', {
-      connectionId: selectedConnection.value.connectionId,
-      recipientId: selectedConnection.value.id,
-      fileName: file.name,
-      fileType: file.type,
-      fileData: base64
-    })
-
-    // Adicionar na lista local
-    messages.value.push({
-      id: `file-${Date.now()}`,
-      euEnviei: true,
-      isFile: true,
-      fileName: file.name,
-      fileType: file.type,
-      fileData: base64,
-      enviadoEm: new Date().toISOString()
-    })
-    scrollToBottom()
+    sendOrQueueFile(
+      selectedConnection.value.connectionId,
+      selectedConnection.value.id,
+      file.name,
+      file.type,
+      base64,
+      isOnline
+    )
   }
   reader.readAsDataURL(file)
 }
@@ -5087,6 +5119,8 @@ function handlePaste(event) {
   console.log('[Paste] Items:', items?.length)
   if (!items || items.length === 0) return
 
+  const isOnline = selectedConnection.value.status !== 'offline' && selectedConnection.value.status !== 'invisivel'
+
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
     console.log('[Paste] Item:', item.type, item.kind)
@@ -5108,30 +5142,19 @@ function handlePaste(event) {
       const extension = file.type.split('/')[1] || 'png'
       const fileName = `screenshot_${Date.now()}.${extension}`
 
-      // Converter para base64 e enviar
+      // Converter para base64 e enviar/enfileirar
       const reader = new FileReader()
       reader.onload = () => {
         const base64 = reader.result
-        console.log('[Paste] Enviando arquivo:', fileName)
-        socket.emit('enviar-arquivo', {
-          connectionId: selectedConnection.value.connectionId,
-          recipientId: selectedConnection.value.id,
-          fileName: fileName,
-          fileType: file.type,
-          fileData: base64
-        })
-
-        // Adicionar na lista local
-        messages.value.push({
-          id: `file-${Date.now()}`,
-          euEnviei: true,
-          isFile: true,
-          fileName: fileName,
-          fileType: file.type,
-          fileData: base64,
-          enviadoEm: new Date().toISOString()
-        })
-        scrollToBottom()
+        console.log('[Paste] Processando arquivo:', fileName, isOnline ? '(online)' : '(offline - enfileirando)')
+        sendOrQueueFile(
+          selectedConnection.value.connectionId,
+          selectedConnection.value.id,
+          fileName,
+          file.type,
+          base64,
+          isOnline
+        )
       }
       reader.readAsDataURL(file)
       return // Processar apenas uma imagem
@@ -5552,6 +5575,8 @@ function handleUserOnline(data) {
   if (conn) {
     conn.online = true
     conn.status = status
+    // Enviar arquivos pendentes para este usuário
+    sendPendingFilesToUser(userId, conn.connectionId)
   }
   if (selectedConnection.value?.id === userId) {
     selectedConnection.value.online = true
@@ -5601,10 +5626,80 @@ async function initIndexedDB() {
     request.onupgradeneeded = (event) => {
       const database = event.target.result
       if (!database.objectStoreNames.contains('pendingFiles')) {
-        database.createObjectStore('pendingFiles', { keyPath: 'id', autoIncrement: true })
+        const store = database.createObjectStore('pendingFiles', { keyPath: 'id', autoIncrement: true })
+        store.createIndex('recipientId', 'recipientId', { unique: false })
       }
     }
   })
+}
+
+// Salvar arquivo pendente no IndexedDB
+async function savePendingFile(fileData) {
+  if (!db) await initIndexedDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pendingFiles', 'readwrite')
+    const store = tx.objectStore('pendingFiles')
+    const request = store.add({
+      ...fileData,
+      savedAt: Date.now()
+    })
+    request.onsuccess = () => {
+      console.log('[PendingFiles] Arquivo salvo para envio posterior:', fileData.fileName)
+      resolve(request.result)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}
+
+// Buscar arquivos pendentes para um destinatário
+async function getPendingFilesForUser(recipientId) {
+  if (!db) await initIndexedDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pendingFiles', 'readonly')
+    const store = tx.objectStore('pendingFiles')
+    const request = store.getAll()
+    request.onsuccess = () => {
+      const files = request.result.filter(f => f.recipientId === recipientId)
+      resolve(files)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}
+
+// Deletar arquivo pendente após envio
+async function deletePendingFile(id) {
+  if (!db) await initIndexedDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('pendingFiles', 'readwrite')
+    const store = tx.objectStore('pendingFiles')
+    const request = store.delete(id)
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+// Enviar arquivos pendentes quando usuário ficar online
+async function sendPendingFilesToUser(userId, connectionId) {
+  try {
+    const pendingFiles = await getPendingFilesForUser(userId)
+    if (pendingFiles.length === 0) return
+
+    console.log(`[PendingFiles] Enviando ${pendingFiles.length} arquivo(s) pendente(s) para usuário ${userId}`)
+
+    for (const file of pendingFiles) {
+      socket.emit('enviar-arquivo', {
+        connectionId: connectionId,
+        recipientId: file.recipientId,
+        fileName: file.fileName,
+        fileType: file.fileType,
+        fileData: file.fileData
+      })
+      await deletePendingFile(file.id)
+      console.log('[PendingFiles] Arquivo enviado e removido da fila:', file.fileName)
+    }
+  } catch (err) {
+    console.error('[PendingFiles] Erro ao enviar arquivos pendentes:', err)
+  }
 }
 
 // ==================== COMUNICAÇÃO COM SERVICE WORKER ====================
@@ -6191,6 +6286,14 @@ onMounted(async () => {
   // Listener global para colar imagens com Ctrl+V no chat 1:1
   document.addEventListener('paste', handlePaste)
   console.log('[Paste] Listener global registrado')
+
+  // Inicializar IndexedDB para arquivos pendentes
+  try {
+    await initIndexedDB()
+    console.log('[IndexedDB] Inicializado para arquivos pendentes')
+  } catch (e) {
+    console.error('[IndexedDB] Erro ao inicializar:', e)
+  }
 
   // Detectar atualizações do Service Worker
   if ('serviceWorker' in navigator) {
