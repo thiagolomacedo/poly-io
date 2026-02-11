@@ -1,7 +1,8 @@
 // Poly.io Service Worker - PWA + Push Notifications
 
-const CACHE_NAME = 'poly-io-v3.66';
+const CACHE_NAME = 'poly-io-v3.67';
 const AUTH_CACHE_NAME = 'poly-io-auth';
+const PREFS_CACHE_NAME = 'poly-io-prefs';
 
 // Arquivos para cache offline
 const urlsToCache = [
@@ -15,7 +16,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
-    // NÃO chama skipWaiting() aqui - espera o usuário clicar em "Atualizar"
+      .then(() => self.skipWaiting()) // Força atualização automática
   );
 });
 
@@ -166,6 +167,38 @@ self.addEventListener('message', async (event) => {
       event.ports[0]?.postMessage({ success: true });
     } catch (e) {
       event.ports[0]?.postMessage({ success: false });
+    }
+  }
+
+  // Salvar cor do balão
+  if (event.data && event.data.type === 'SAVE_BUBBLE_COLOR') {
+    try {
+      const cache = await caches.open(PREFS_CACHE_NAME);
+      const response = new Response(JSON.stringify({ color: event.data.color }));
+      await cache.put('/bubble-color', response);
+      console.log('[SW] Cor do balão salva:', event.data.color);
+      event.ports[0]?.postMessage({ success: true });
+    } catch (e) {
+      console.error('[SW] Erro ao salvar cor:', e);
+      event.ports[0]?.postMessage({ success: false, error: e.message });
+    }
+  }
+
+  // Carregar cor do balão
+  if (event.data && event.data.type === 'LOAD_BUBBLE_COLOR') {
+    try {
+      const cache = await caches.open(PREFS_CACHE_NAME);
+      const response = await cache.match('/bubble-color');
+      if (response) {
+        const data = await response.json();
+        console.log('[SW] Cor do balão carregada:', data.color);
+        event.ports[0]?.postMessage({ success: true, color: data.color });
+      } else {
+        event.ports[0]?.postMessage({ success: false, color: null });
+      }
+    } catch (e) {
+      console.error('[SW] Erro ao carregar cor:', e);
+      event.ports[0]?.postMessage({ success: false, color: null });
     }
   }
 });

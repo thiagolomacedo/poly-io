@@ -5867,7 +5867,22 @@ async function clearRememberToken() {
 // ==================== PREFERÊNCIAS DO USUÁRIO (COR DO BALÃO) ====================
 
 async function saveBubbleColor(color) {
-  // Método 1: Cache API
+  console.log('[BubbleColor] Salvando cor:', color)
+
+  // Método 1: Service Worker (mais confiável em PWA)
+  if (navigator.serviceWorker?.controller) {
+    try {
+      const messageChannel = new MessageChannel()
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'SAVE_BUBBLE_COLOR', color },
+        [messageChannel.port2]
+      )
+    } catch (e) {
+      console.error('[BubbleColor] Erro ao salvar via SW:', e)
+    }
+  }
+
+  // Método 2: Cache API direto
   if ('caches' in window) {
     try {
       const cache = await caches.open('poly-io-prefs')
@@ -5879,7 +5894,7 @@ async function saveBubbleColor(color) {
     }
   }
 
-  // Método 2: IndexedDB
+  // Método 3: IndexedDB
   try {
     if (!authDb) await initAuthDB()
     await new Promise((resolve, reject) => {
@@ -5894,14 +5909,41 @@ async function saveBubbleColor(color) {
     console.error('[BubbleColor] Erro IndexedDB:', e)
   }
 
-  // Método 3: localStorage (backup)
+  // Método 4: localStorage (backup)
   try {
     localStorage.setItem('poly_bubble_color', color)
   } catch (e) { /* ignorar */ }
 }
 
 async function loadBubbleColor() {
-  // Método 1: Cache API
+  // Método 1: Service Worker
+  if (navigator.serviceWorker?.controller) {
+    try {
+      const color = await new Promise((resolve) => {
+        const messageChannel = new MessageChannel()
+        messageChannel.port1.onmessage = (event) => {
+          if (event.data.success && event.data.color) {
+            resolve(event.data.color)
+          } else {
+            resolve(null)
+          }
+        }
+        navigator.serviceWorker.controller.postMessage(
+          { type: 'LOAD_BUBBLE_COLOR' },
+          [messageChannel.port2]
+        )
+        setTimeout(() => resolve(null), 1000) // Timeout
+      })
+      if (color) {
+        console.log('[BubbleColor] Cor carregada do SW:', color)
+        return color
+      }
+    } catch (e) {
+      console.error('[BubbleColor] Erro ao carregar via SW:', e)
+    }
+  }
+
+  // Método 2: Cache API direto
   if ('caches' in window) {
     try {
       const cache = await caches.open('poly-io-prefs')
@@ -5918,7 +5960,7 @@ async function loadBubbleColor() {
     }
   }
 
-  // Método 2: IndexedDB
+  // Método 3: IndexedDB
   try {
     if (!authDb) await initAuthDB()
     const color = await new Promise((resolve) => {
@@ -5940,7 +5982,7 @@ async function loadBubbleColor() {
     console.error('[BubbleColor] Erro IndexedDB:', e)
   }
 
-  // Método 3: localStorage (backup)
+  // Método 4: localStorage (backup)
   try {
     const color = localStorage.getItem('poly_bubble_color')
     if (color) {

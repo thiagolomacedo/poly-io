@@ -1,0 +1,4258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poly Pets - Demo Jogável</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #e4e4e4;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ==================== TELA INICIAL ==================== */
+    .screen {
+      display: none;
+      padding: 20px;
+      max-width: 500px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .game-header {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .game-title {
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+    }
+
+    .game-subtitle {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    /* ==================== SELEÇÃO DE PET ==================== */
+    .pet-selection {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .pet-option {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .pet-option:hover {
+      border-color: #f59e0b;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(245, 158, 11, 0.2);
+    }
+
+    .pet-option.selected {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .pet-emoji {
+      font-size: 4rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .pet-preview {
+      height: 55px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .pet-preview .pixel-pet-container {
+      transform: scale(0.9);
+    }
+
+    .pet-name {
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+
+    .pet-type {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .pet-type-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      margin-top: 5px;
+    }
+
+    .type-fogo { background: linear-gradient(90deg, #ef4444, #f97316); color: white; }
+    .type-agua { background: linear-gradient(90deg, #3b82f6, #06b6d4); color: white; }
+    .type-planta { background: linear-gradient(90deg, #22c55e, #84cc16); color: white; }
+    .type-eletrico { background: linear-gradient(90deg, #eab308, #f59e0b); color: black; }
+    .type-sombra { background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white; }
+    .type-luz { background: linear-gradient(90deg, #fbbf24, #fef3c7); color: black; }
+
+    .name-input {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .name-input input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      color: white;
+      font-size: 1.1rem;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .name-input input:focus {
+      border-color: #f59e0b;
+    }
+
+    .name-input input::placeholder {
+      color: #666;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 15px 30px;
+      margin-top: 20px;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ==================== TELA PRINCIPAL DO PET ==================== */
+    .pet-display {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    /* ==================== TAMAGOTCHI LCD STYLE ==================== */
+    .pixel-pet-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 45px;
+      background: #e3e6c9; /* LCD screen background */
+      border-radius: 6px;
+      border: 2px solid #6c6c4e;
+      margin: 0 auto;
+      width: 45px;
+    }
+
+    /* Pet maior na tela principal */
+    .main-pet-display .pixel-pet-container {
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      border: 3px solid #6c6c4e;
+    }
+
+    .main-pet-display .tama-wrapper {
+      transform: scale(2.5);
+    }
+
+    .tama-wrapper {
+      position: relative;
+      width: 30px;
+      height: 30px;
+    }
+
+    .tama-wrapper.animate {
+      animation: tama-walk 1.5s steps(2) infinite;
+    }
+
+    .tama-wrapper.sleeping {
+      animation: none;
+      opacity: 0.6;
+    }
+
+    @keyframes tama-walk {
+      0%, 100% { transform: translateX(0) scaleX(1); }
+      25% { transform: translateX(-4px) scaleX(1); }
+      50% { transform: translateX(-4px) scaleX(-1); }
+      75% { transform: translateX(0) scaleX(-1); }
+    }
+
+    /* Sprite LCD monocromático */
+    .tama-sprite {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: transparent;
+    }
+
+    .tama-sprite.frame1 { }
+    .tama-sprite.frame2 {
+      opacity: 0;
+    }
+
+    .tama-wrapper.animate .tama-sprite.frame1 {
+      animation: tama-frame 0.75s steps(1) infinite;
+    }
+    .tama-wrapper.animate .tama-sprite.frame2 {
+      animation: tama-frame 0.75s steps(1) infinite reverse;
+    }
+
+    @keyframes tama-frame {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    /* Shadow effect like original */
+    .tama-sprite::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      box-shadow: inherit;
+      opacity: 0.15;
+      transform: translateY(-1px);
+    }
+
+    .pet-avatar {
+      font-size: 2.5rem;
+    }
+
+    .pet-info {
+      margin-top: 20px;
+    }
+
+    .pet-display-name {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .pet-level {
+      color: #f59e0b;
+      font-size: 1rem;
+      margin-top: 5px;
+    }
+
+    .pet-rarity {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .rarity-common { background: #6b7280; color: white; }
+    .rarity-rare { background: linear-gradient(90deg, #3b82f6, #06b6d4); color: white; }
+    .rarity-epic { background: linear-gradient(90deg, #8b5cf6, #a855f7); color: white; }
+    .rarity-legendary { background: linear-gradient(90deg, #f59e0b, #ef4444); color: white; }
+
+    .mood-indicator {
+      margin-top: 15px;
+      font-size: 1.5rem;
+    }
+
+    .zzz {
+      position: absolute;
+      font-size: 1.5rem;
+      animation: float-zzz 2s ease-in-out infinite;
+      opacity: 0.7;
+    }
+
+    @keyframes float-zzz {
+      0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+      50% { transform: translateY(-30px) translateX(20px); opacity: 1; }
+    }
+
+    /* ==================== STATS ==================== */
+    .stats-container {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+      width: 40px;
+    }
+
+    .stat-info {
+      flex: 1;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 3px;
+    }
+
+    .stat-bar-bg {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .stat-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.5s ease, background 0.3s;
+    }
+
+    .stat-bar.hunger { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .stat-bar.happiness { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-bar.energy { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+    .stat-bar.health { background: linear-gradient(90deg, #22c55e, #84cc16); }
+    .stat-bar.xp { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+
+    .stat-bar.low { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    .stat-value {
+      font-size: 0.75rem;
+      color: #aaa;
+      text-align: right;
+      width: 45px;
+      margin-left: 10px;
+    }
+
+    /* ==================== CABEÇALHO DE TELA COM VOLTAR ==================== */
+    .screen-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .back-btn:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: #f59e0b;
+    }
+
+    /* ==================== AÇÕES ==================== */
+    .actions-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 15px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      transform: translateY(-3px);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .action-btn .icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .action-btn .label {
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+
+    /* ==================== BATALHA ==================== */
+    .battle-container {
+      margin-top: 30px;
+    }
+
+    .battle-btn {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .battle-btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+    }
+
+    .battle-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ==================== TELA DE BATALHA ==================== */
+    .battle-arena {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .battle-pets {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 30px 0;
+    }
+
+    .battle-pet {
+      text-align: center;
+      flex: 1;
+    }
+
+    .battle-pet-emoji {
+      font-size: 5rem;
+      display: block;
+    }
+
+    .battle-pet.attacking .battle-pet-emoji {
+      animation: attack-right 0.3s ease-in-out;
+    }
+
+    .battle-pet.defending .battle-pet-emoji {
+      animation: shake 0.3s ease-in-out;
+    }
+
+    .enemy .battle-pet-emoji {
+      transform: scaleX(-1);
+    }
+
+    .enemy.attacking .battle-pet-emoji {
+      animation: attack-left 0.3s ease-in-out;
+    }
+
+    @keyframes attack-right {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(50px); }
+    }
+
+    @keyframes attack-left {
+      0%, 100% { transform: translateX(0) scaleX(-1); }
+      50% { transform: translateX(-50px) scaleX(-1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .battle-pet-name {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    /* Área de mensagens no topo - COMPACTA */
+    .battle-message-area {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.1));
+      border: 2px solid rgba(245, 158, 11, 0.5);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .battle-message {
+      color: #f59e0b;
+      font-weight: bold;
+      font-size: 0.9rem;
+      text-align: center;
+      animation: message-fade 0.3s ease-in;
+    }
+
+    @keyframes message-fade {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Arena de batalha LCD - GRANDE */
+    .battle-arena-lcd {
+      background: #e3e6c9;
+      border: 4px solid #6c6c4e;
+      border-radius: 16px;
+      padding: 15px 20px;
+      margin: 5px auto;
+      width: 95%;
+      max-width: 400px;
+      height: 180px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+    }
+
+    .battle-arena-lcd .pixel-pet-container {
+      background: rgba(108, 108, 78, 0.1);
+      border: 2px solid #6c6c4e;
+      border-radius: 8px;
+      width: 110px;
+      height: 110px;
+    }
+
+    .battle-arena-lcd .tama-wrapper {
+      transform: scale(2.8);
+    }
+
+    /* Dado centralizado na arena */
+    .center-dice-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .center-dice-area .dice {
+      width: 50px;
+      height: 50px;
+      font-size: 1.8rem;
+    }
+
+    .center-dice-area .dice-result {
+      font-size: 0.7rem;
+      color: #6c6c4e;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .battle-arena-lcd .battle-pet {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .battle-arena-lcd .vs-text {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #6c6c4e;
+    }
+
+    /* Animações de ataque */
+    .battle-pet.attacking .pixel-pet-container {
+      animation: attack-move 0.3s ease-in-out;
+    }
+
+    .battle-pet.attacking.player .pixel-pet-container {
+      animation: attack-right 0.3s ease-in-out;
+    }
+
+    .battle-pet.attacking.enemy .pixel-pet-container {
+      animation: attack-left 0.3s ease-in-out;
+    }
+
+    .battle-pet.hit .pixel-pet-container {
+      animation: hit-shake 0.3s ease-in-out;
+    }
+
+    @keyframes attack-right {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(30px); }
+    }
+
+    @keyframes attack-left {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-30px); }
+    }
+
+    @keyframes hit-shake {
+      0%, 100% { transform: translateX(0); opacity: 1; }
+      25% { transform: translateX(-5px); opacity: 0.5; }
+      50% { transform: translateX(5px); opacity: 0.5; }
+      75% { transform: translateX(-5px); opacity: 0.5; }
+    }
+
+    /* Efeito de dano */
+    .battle-pet.hit .pixel-pet-container::before {
+      content: '💥';
+      position: absolute;
+      font-size: 1.5rem;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: damage-pop 0.3s ease-out;
+    }
+
+    @keyframes damage-pop {
+      0% { opacity: 1; transform: translateX(-50%) scale(0.5); }
+      100% { opacity: 0; transform: translateX(-50%) scale(1.5) translateY(-10px); }
+    }
+
+    /* ==================== SISTEMA DE DADOS ==================== */
+    .dice {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(145deg, #fff, #e0e0e0);
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #333;
+      box-shadow: 3px 3px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .dice:hover {
+      transform: scale(1.05);
+    }
+
+    .dice.rolling {
+      animation: dice-roll 0.5s ease-in-out;
+    }
+
+    @keyframes dice-roll {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(90deg) scale(1.1); }
+      50% { transform: rotate(180deg) scale(1); }
+      75% { transform: rotate(270deg) scale(1.1); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    .dice-result.activated {
+      color: #22c55e;
+      font-weight: bold;
+    }
+
+    /* Ações de batalha com ativação por dado */
+    .battle-action-btn {
+      position: relative;
+    }
+
+    .battle-action-btn .dice-req {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-size: 0.6rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .battle-action-btn.dice-locked {
+      opacity: 0.35;
+      pointer-events: none;
+      filter: grayscale(0.3);
+    }
+
+    .battle-action-btn.dice-unlocked {
+      border-color: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      background: linear-gradient(145deg, rgba(34, 197, 94, 0.15), rgba(15, 23, 42, 0.95));
+    }
+
+    /* Indicador de turno - ESTILIZADO */
+    .turn-indicator {
+      text-align: center;
+      padding: 8px 15px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(234, 179, 8, 0.15));
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 8px;
+      margin: 8px 0;
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: #fbbf24;
+      transition: all 0.3s ease;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Dado brilhando quando pode rolar */
+    .dice:not(.rolling) {
+      animation: dice-glow 1.5s ease-in-out infinite;
+    }
+
+    .dice.rolling, .dice[style*="cursor: default"] {
+      animation: none;
+    }
+
+    @keyframes dice-glow {
+      0%, 100% { box-shadow: 3px 3px 8px rgba(0,0,0,0.3), 0 0 5px rgba(245, 158, 11, 0.3); }
+      50% { box-shadow: 3px 3px 8px rgba(0,0,0,0.3), 0 0 15px rgba(245, 158, 11, 0.6); }
+    }
+
+    /* Efeitos ativos */
+    .active-effects {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      margin-top: 5px;
+    }
+
+    .effect-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(139, 92, 246, 0.3);
+      color: #a855f7;
+    }
+
+    .effect-badge.buff { background: rgba(34, 197, 94, 0.3); color: #22c55e; }
+    .effect-badge.debuff { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+
+    /* Brilho no botão desbloqueado */
+    .battle-action-btn.dice-unlocked {
+      animation: unlocked-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes unlocked-pulse {
+      0%, 100% {
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        border-color: #22c55e;
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(34, 197, 94, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-color: #4ade80;
+      }
+    }
+
+    /* Log de batalha colorido */
+    .battle-log-entry.critical {
+      color: #fbbf24;
+      font-weight: bold;
+    }
+
+    /* Stats mini na batalha */
+    .battle-stats-mini {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .stat-badge {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-badge.atk { color: #ef4444; }
+    .stat-badge.def { color: #3b82f6; }
+
+    /* Painel de informações da batalha - DESIGN MELHORADO */
+    .battle-info-panel {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
+      border-radius: 12px;
+      padding: 10px;
+      margin: 10px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .info-section {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.05));
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    }
+
+    .info-title {
+      font-size: 0.75rem;
+      color: #60a5fa;
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .skill-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .skill-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      transition: background 0.2s;
+    }
+
+    .skill-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .skill-icon {
+      font-size: 0.9rem;
+      width: 20px;
+      text-align: center;
+    }
+
+    .skill-info {
+      flex: 1;
+    }
+
+    .skill-name {
+      font-weight: 600;
+      color: #e2e8f0;
+      font-size: 0.72rem;
+    }
+
+    .skill-desc {
+      color: #94a3b8;
+      font-size: 0.62rem;
+      margin-top: 1px;
+    }
+
+    .artifact-section {
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(245, 158, 11, 0.1));
+      border: 1px solid rgba(147, 51, 234, 0.3);
+    }
+
+    .artifact-section::before {
+      background: linear-gradient(90deg, #a855f7, #f59e0b);
+    }
+
+    .artifact-section .info-title {
+      color: #c084fc;
+    }
+
+    .artifact-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+
+    .artifact-icon {
+      font-size: 1.6rem;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    .artifact-details {
+      flex: 1;
+    }
+
+    .artifact-name {
+      font-weight: bold;
+      color: #c084fc;
+      font-size: 0.8rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .artifact-req {
+      color: #fbbf24;
+      font-size: 0.68rem;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .artifact-effect {
+      color: #94a3b8;
+      font-size: 0.65rem;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    /* Dado de defesa - OVERLAY BONITO */
+    .defense-dice-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+
+    .defense-dice-container {
+      text-align: center;
+      background: linear-gradient(180deg, rgba(30, 30, 50, 0.95), rgba(20, 20, 35, 0.98));
+      border: 2px solid rgba(59, 130, 246, 0.5);
+      border-radius: 20px;
+      padding: 25px 30px;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+    }
+
+    .defense-dice-title {
+      color: #ef4444;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+
+    .defense-dice {
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(145deg, #fff, #e8e8e8);
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #333;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5);
+      cursor: pointer;
+      margin: 15px auto;
+      animation: defense-pulse 1.2s ease-in-out infinite;
+      border: 3px solid #3b82f6;
+    }
+
+    @keyframes defense-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 20px rgba(59, 130, 246, 0.4); }
+      50% { transform: scale(1.08); box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 35px rgba(59, 130, 246, 0.7); }
+    }
+
+    .defense-instruction {
+      color: #3b82f6;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .damage-preview {
+      margin: 15px 0;
+      padding: 12px 15px;
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+      border-radius: 12px;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    .damage-preview-title {
+      color: #f87171;
+      font-size: 0.75rem;
+      margin-bottom: 3px;
+    }
+
+    .damage-preview-value {
+      color: #fff;
+      font-size: 1.8rem;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+
+    /* Tabela de defesa */
+    .defense-table {
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      font-size: 0.7rem;
+      color: #888;
+    }
+
+    .defense-table-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .defense-table-row span:first-child {
+      color: #f59e0b;
+    }
+
+    .battle-vs {
+      font-size: 2rem;
+      color: #f59e0b;
+      font-weight: bold;
+    }
+
+    .battle-hp-bar {
+      width: 100%;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .battle-hp {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #84cc16);
+      border-radius: 10px;
+      transition: width 0.5s ease;
+    }
+
+    .battle-hp.low {
+      background: linear-gradient(90deg, #ef4444, #f97316);
+    }
+
+    .battle-log {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      padding: 15px;
+      margin: 20px 0;
+      max-height: 150px;
+      overflow-y: auto;
+      text-align: left;
+    }
+
+    .battle-log-entry {
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.9rem;
+    }
+
+    .battle-log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .battle-log-entry.damage {
+      color: #ef4444;
+    }
+
+    .battle-log-entry.heal {
+      color: #22c55e;
+    }
+
+    .battle-log-entry.special {
+      color: #f59e0b;
+    }
+
+    .battle-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .battle-action-btn {
+      padding: 12px 10px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+      color: white;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .battle-action-btn:hover:not(:disabled) {
+      border-color: #f59e0b;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .battle-action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .battle-action-btn .action-emoji {
+      font-size: 1.3rem;
+      display: block;
+      margin-bottom: 4px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    }
+
+    /* ==================== RESULTADO DA BATALHA ==================== */
+    .battle-result {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .result-emoji {
+      font-size: 6rem;
+      margin-bottom: 20px;
+    }
+
+    .result-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .result-title.victory {
+      color: #22c55e;
+    }
+
+    .result-title.defeat {
+      color: #ef4444;
+    }
+
+    .result-rewards {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .reward-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .reward-item:last-child {
+      border-bottom: none;
+    }
+
+    /* ==================== EVOLUÇÃO ==================== */
+    .evolution-screen {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .evolution-animation {
+      position: relative;
+      margin: 40px 0;
+    }
+
+    .evolution-pet {
+      font-size: 6rem;
+      animation: evolve-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes evolve-glow {
+      0%, 100% {
+        filter: drop-shadow(0 0 20px #f59e0b);
+        transform: scale(1);
+      }
+      50% {
+        filter: drop-shadow(0 0 50px #fbbf24);
+        transform: scale(1.1);
+      }
+    }
+
+    .evolution-sparks {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      animation: sparks 1s ease-in-out infinite;
+    }
+
+    @keyframes sparks {
+      0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+    }
+
+    .evolution-title {
+      font-size: 1.5rem;
+      color: #f59e0b;
+      margin-bottom: 20px;
+    }
+
+    .evolution-arrow {
+      font-size: 3rem;
+      margin: 20px 0;
+      color: #f59e0b;
+    }
+
+    /* ==================== NOTIFICAÇÕES ==================== */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(0, 0, 0, 0.9);
+      border: 2px solid #f59e0b;
+      border-radius: 12px;
+      padding: 15px 25px;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .notification.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notification-icon {
+      font-size: 1.5rem;
+    }
+
+    .notification-text {
+      color: white;
+    }
+
+    /* Botão ativo na navegação */
+    .action-btn.active {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    /* ==================== INVENTÁRIO ==================== */
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .inventory-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .inventory-item:hover {
+      border-color: #f59e0b;
+    }
+
+    .inventory-item .item-emoji {
+      font-size: 2rem;
+    }
+
+    .inventory-item .item-count {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 5px;
+    }
+
+    /* ==================== RESPONSIVO ==================== */
+    @media (max-width: 400px) {
+      .pet-selection {
+        grid-template-columns: 1fr;
+      }
+
+      .actions-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .pet-avatar {
+        font-size: 6rem;
+      }
+    }
+
+    /* Padding das telas */
+    .screen {
+      padding-bottom: 20px;
+    }
+
+    /* Tela de batalha */
+    #screen-battle {
+      padding-top: 10px;
+      padding-bottom: 20px;
+    }
+
+    #screen-battle .battle-arena {
+      padding: 0 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Notificação -->
+  <div id="notification" class="notification">
+    <span class="notification-icon">✨</span>
+    <span class="notification-text">Mensagem aqui</span>
+  </div>
+
+  <!-- ==================== TELA DE SELEÇÃO ==================== -->
+  <div id="screen-select" class="screen active">
+    <div class="game-header">
+      <h1 class="game-title">Poly Pets</h1>
+      <p class="game-subtitle">Seu companheiro virtual no Poly.io</p>
+    </div>
+
+    <h3 style="text-align: center; color: #f59e0b; margin-bottom: 10px;">Escolha seu primeiro Pet!</h3>
+
+    <div class="pet-selection" id="pet-selection">
+      <div class="pet-option" data-pet="pyro" data-emoji="🦊" data-type="fogo">
+        <div class="pet-preview" id="preview-pyro"></div>
+        <div class="pet-name">Pyro</div>
+        <div class="pet-type">Raposa de Fogo</div>
+        <span class="pet-type-badge type-fogo">🔥 Fogo</span>
+      </div>
+
+      <div class="pet-option" data-pet="aqua" data-emoji="🐙" data-type="agua">
+        <div class="pet-preview" id="preview-aqua"></div>
+        <div class="pet-name">Aqua</div>
+        <div class="pet-type">Polvo Marinho</div>
+        <span class="pet-type-badge type-agua">💧 Água</span>
+      </div>
+
+      <div class="pet-option" data-pet="flora" data-emoji="🌸" data-type="planta">
+        <div class="pet-preview" id="preview-flora"></div>
+        <div class="pet-name">Flora</div>
+        <div class="pet-type">Flor Encantada</div>
+        <span class="pet-type-badge type-planta">🌿 Planta</span>
+      </div>
+
+      <div class="pet-option" data-pet="volt" data-emoji="⚡" data-type="eletrico">
+        <div class="pet-preview" id="preview-volt"></div>
+        <div class="pet-name">Volt</div>
+        <div class="pet-type">Faísca Elétrica</div>
+        <span class="pet-type-badge type-eletrico">⚡ Elétrico</span>
+      </div>
+
+      <div class="pet-option" data-pet="shadow" data-emoji="👻" data-type="sombra">
+        <div class="pet-preview" id="preview-shadow"></div>
+        <div class="pet-name">Shadow</div>
+        <div class="pet-type">Fantasma Sombrio</div>
+        <span class="pet-type-badge type-sombra">🌙 Sombra</span>
+      </div>
+
+      <div class="pet-option" data-pet="lumi" data-emoji="✨" data-type="luz">
+        <div class="pet-preview" id="preview-lumi"></div>
+        <div class="pet-name">Lumi</div>
+        <div class="pet-type">Estrela Brilhante</div>
+        <span class="pet-type-badge type-luz">☀️ Luz</span>
+      </div>
+    </div>
+
+    <div class="name-input">
+      <input type="text" id="pet-name-input" placeholder="Dê um nome ao seu Pet..." maxlength="15">
+    </div>
+
+    <button class="btn-primary" id="btn-start" disabled>Começar Aventura!</button>
+  </div>
+
+  <!-- ==================== TELA PRINCIPAL ==================== -->
+  <div id="screen-main" class="screen">
+    <div class="game-header" style="padding: 10px 0;">
+      <h2 class="game-title" style="font-size: 1.5rem;">Poly Pets</h2>
+    </div>
+
+    <div class="pet-display main-pet-display">
+      <div style="position: relative; display: inline-block;">
+        <div class="pixel-pet-container" id="main-pet-pixel">
+          <!-- Pixel art será renderizado aqui -->
+        </div>
+        <span class="zzz" id="zzz-indicator" style="display: none;">💤</span>
+      </div>
+      <div class="pet-info">
+        <div class="pet-display-name" id="main-pet-name">Pyro</div>
+        <div class="pet-level" id="main-pet-level">Nível 1</div>
+        <span class="pet-rarity rarity-common" id="main-pet-rarity">Common</span>
+        <div class="mood-indicator" id="mood-indicator">😊 Feliz</div>
+      </div>
+    </div>
+
+    <div class="actions-container">
+      <button class="action-btn" id="nav-main" data-screen="main" title="Pet">
+        <span class="icon">🏠</span>
+        <span class="label">Pet</span>
+      </button>
+
+      <button class="action-btn" id="nav-collection" data-screen="collection" title="Coleção">
+        <span class="icon">🏆</span>
+        <span class="label">Coleção</span>
+      </button>
+
+      <button class="action-btn" id="nav-inventory" data-screen="inventory" title="Inventário">
+        <span class="icon">🎒</span>
+        <span class="label">Itens</span>
+      </button>
+
+      <button class="action-btn" id="nav-stats" data-screen="stats" title="Estatísticas">
+        <span class="icon">📊</span>
+        <span class="label">Stats</span>
+      </button>
+    </div>
+
+    <div class="battle-container">
+      <button class="battle-btn" id="btn-battle">
+        <span>⚔️</span>
+        <span>BATALHAR!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE BATALHA ==================== -->
+  <div id="screen-battle" class="screen">
+    <!-- Área de mensagens no topo (substitui o título) -->
+    <div class="battle-message-area" id="battle-message-area">
+      <div class="battle-message" id="battle-message">⚔️ A batalha começou!</div>
+    </div>
+
+    <div class="battle-arena">
+      <!-- Arena LCD grande com os dois pets -->
+      <div class="battle-arena-lcd">
+        <div class="battle-pet player" id="battle-player">
+          <div class="pixel-pet-container" id="battle-player-pixel"></div>
+        </div>
+
+        <!-- DADO NO CENTRO -->
+        <div class="center-dice-area">
+          <div class="dice" id="battle-dice" title="Clique para rolar!">?</div>
+          <div class="dice-result" id="dice-result"></div>
+        </div>
+
+        <div class="battle-pet enemy" id="battle-enemy">
+          <div class="pixel-pet-container" id="battle-enemy-pixel" style="transform: scaleX(-1);"></div>
+        </div>
+      </div>
+
+      <!-- Info abaixo da arena - COMPACTA -->
+      <div class="battle-pets" style="margin-top: 5px;">
+        <div style="text-align: center; flex: 1;">
+          <div class="battle-pet-name" id="battle-player-name" style="font-size: 0.85rem;">Pyro</div>
+          <div class="battle-hp-bar" style="height: 14px;">
+            <div class="battle-hp" id="battle-player-hp" style="width: 100%"></div>
+          </div>
+          <div style="font-size: 0.7rem; margin-top: 2px;" id="battle-player-hp-text">100/100</div>
+          <div class="battle-stats-mini" style="margin-top: 3px;">
+            <span class="stat-badge atk" style="font-size: 0.65rem; padding: 2px 5px;">⚔️<span id="player-atk">12</span></span>
+            <span class="stat-badge def" style="font-size: 0.65rem; padding: 2px 5px;">🛡️<span id="player-def">8</span></span>
+          </div>
+        </div>
+
+        <div style="width: 20px;"></div>
+
+        <div style="text-align: center; flex: 1;">
+          <div class="battle-pet-name" id="battle-enemy-name" style="font-size: 0.85rem;">Lobo Selvagem</div>
+          <div class="battle-hp-bar" style="height: 14px;">
+            <div class="battle-hp" id="battle-enemy-hp" style="width: 100%"></div>
+          </div>
+          <div style="font-size: 0.7rem; margin-top: 2px;" id="battle-enemy-hp-text">80/80</div>
+          <div class="battle-stats-mini" style="margin-top: 3px;">
+            <span class="stat-badge atk" style="font-size: 0.65rem; padding: 2px 5px;">⚔️<span id="enemy-atk">10</span></span>
+            <span class="stat-badge def" style="font-size: 0.65rem; padding: 2px 5px;">🛡️<span id="enemy-def">5</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicador de Turno -->
+      <div class="turn-indicator" id="turn-indicator">
+        🎯 Seu turno - Role o dado!
+      </div>
+
+      <!-- Painel de Habilidades e Artefato -->
+      <div class="battle-info-panel" id="battle-info-panel">
+        <div class="info-section">
+          <div class="info-title">⚔️ Combate</div>
+          <div class="skill-list" id="skill-list">
+            <div class="skill-item">
+              <span class="skill-icon">🗡️</span>
+              <div class="skill-info">
+                <div class="skill-name">Ataque</div>
+                <div class="skill-desc">ATK + 🎲 - DEF inimigo</div>
+              </div>
+            </div>
+            <div class="skill-item">
+              <span class="skill-icon">🔥</span>
+              <div class="skill-info">
+                <div class="skill-name">Especial</div>
+                <div class="skill-desc">ATK×1.8 + 🎲×2 (requer 5-6)</div>
+              </div>
+            </div>
+            <div class="skill-item">
+              <span class="skill-icon">🛡️</span>
+              <div class="skill-info">
+                <div class="skill-name">Preparar</div>
+                <div class="skill-desc">+🎲 bônus na defesa</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="info-section artifact-section">
+          <div class="info-title">✨ Artefato</div>
+          <div class="artifact-info" id="artifact-info">
+            <span class="artifact-icon" id="artifact-icon">🌑</span>
+            <div class="artifact-details">
+              <div class="artifact-name" id="artifact-name">Artefato Sombrio</div>
+              <div class="artifact-req" id="artifact-req">🎲 2 ou 6</div>
+              <div class="artifact-effect" id="artifact-effect">Drena vida do inimigo</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log oculto para compatibilidade -->
+      <div class="battle-log" id="battle-log" style="display: none;"></div>
+
+      <div class="battle-actions" id="battle-actions">
+        <button class="battle-action-btn" data-action="attack">
+          <span class="action-emoji">🗡️</span>
+          <span>Ataque</span>
+        </button>
+        <button class="battle-action-btn" data-action="defend">
+          <span class="action-emoji">🛡️</span>
+          <span>Preparar</span>
+        </button>
+        <button class="battle-action-btn dice-locked" data-action="special" data-dice="5,6">
+          <span class="dice-req">🎲5-6</span>
+          <span class="action-emoji">🔥</span>
+          <span>Especial</span>
+        </button>
+        <button class="battle-action-btn dice-locked" data-action="artifact" data-dice="6">
+          <span class="dice-req">🎲6</span>
+          <span class="action-emoji">💎</span>
+          <span>Artefato</span>
+        </button>
+      </div>
+
+      <!-- Ações secundárias -->
+      <div class="battle-actions" style="margin-top: 6px;">
+        <button class="battle-action-btn" data-action="item">
+          <span class="action-emoji">🧪</span>
+          <span>Item</span>
+        </button>
+        <button class="battle-action-btn" data-action="flee">
+          <span class="action-emoji">🏃</span>
+          <span>Fugir</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE RESULTADO ==================== -->
+  <div id="screen-result" class="screen">
+    <div class="battle-result">
+      <div class="result-emoji" id="result-emoji">🏆</div>
+      <div class="result-title victory" id="result-title">Vitória!</div>
+      <p id="result-message">Seu pet derrotou o inimigo!</p>
+
+      <div class="result-rewards" id="result-rewards">
+        <h3 style="margin-bottom: 15px; color: #f59e0b;">Recompensas</h3>
+        <div class="reward-item">
+          <span>⭐ XP Ganho</span>
+          <span id="reward-xp">+50</span>
+        </div>
+        <div class="reward-item">
+          <span>🪙 Moedas</span>
+          <span id="reward-coins">+10</span>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-continue">Continuar</button>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE EVOLUÇÃO ==================== -->
+  <div id="screen-evolution" class="screen">
+    <div class="evolution-screen">
+      <h2 class="evolution-title">🌟 Evolução!</h2>
+      <p>Seu pet está evoluindo!</p>
+
+      <div class="evolution-animation">
+        <div class="evolution-sparks">✨⭐🌟</div>
+        <div class="pixel-pet-container" id="evolution-old-pixel" style="height: 70px;"></div>
+      </div>
+
+      <div class="evolution-arrow">⬇️</div>
+
+      <div class="evolution-animation">
+        <div class="pixel-pet-container" id="evolution-new-pixel" style="height: 70px;"></div>
+      </div>
+
+      <p style="margin-top: 20px;">
+        <span id="evolution-old-name">Pyro</span> evoluiu para
+        <strong style="color: #f59e0b;" id="evolution-new-rarity">Rare</strong>!
+      </p>
+
+      <button class="btn-primary" id="btn-evolution-continue" style="margin-top: 30px;">Incrível!</button>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE INVENTÁRIO ==================== -->
+  <div id="screen-inventory" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goToMain()">← Início</button>
+      <h2 class="game-title" style="font-size: 1.5rem;">🎒 Inventário</h2>
+    </div>
+
+    <!-- Moedas -->
+    <div style="text-align: center; margin: 20px 0;">
+      <div style="display: inline-flex; align-items: center; gap: 10px; background: rgba(245, 158, 11, 0.2); padding: 10px 25px; border-radius: 30px; border: 2px solid #f59e0b;">
+        <span style="font-size: 1.5rem;">🪙</span>
+        <span style="font-size: 1.3rem; font-weight: bold; color: #f59e0b;" id="inventory-coins">100</span>
+      </div>
+    </div>
+
+    <!-- Itens -->
+    <div style="margin-top: 20px;">
+      <h3 style="color: #f59e0b; margin-bottom: 15px; font-size: 1rem;">Seus Itens</h3>
+      <div class="inventory-grid" id="inventory-items">
+        <div class="inventory-item" data-item="food" title="Clique para usar">
+          <span class="item-emoji">🍖</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Comida</div>
+          <div class="item-count">x<span id="inv-food">5</span></div>
+        </div>
+        <div class="inventory-item" data-item="premium-food" title="Clique para usar">
+          <span class="item-emoji">🥩</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Comida+</div>
+          <div class="item-count">x<span id="inv-premium-food">0</span></div>
+        </div>
+        <div class="inventory-item" data-item="medicine" title="Clique para usar">
+          <span class="item-emoji">💊</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Remédio</div>
+          <div class="item-count">x<span id="inv-medicine">3</span></div>
+        </div>
+        <div class="inventory-item" data-item="super-medicine" title="Clique para usar">
+          <span class="item-emoji">💉</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Remédio+</div>
+          <div class="item-count">x<span id="inv-super-medicine">0</span></div>
+        </div>
+        <div class="inventory-item" data-item="toy" title="Clique para usar">
+          <span class="item-emoji">🎾</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Brinquedo</div>
+          <div class="item-count">x<span id="inv-toy">2</span></div>
+        </div>
+        <div class="inventory-item" data-item="energy-drink" title="Clique para usar">
+          <span class="item-emoji">⚡</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Energético</div>
+          <div class="item-count">x<span id="inv-energy-drink">0</span></div>
+        </div>
+        <div class="inventory-item" data-item="xp-boost" title="Clique para usar">
+          <span class="item-emoji">⭐</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">XP Boost</div>
+          <div class="item-count">x<span id="inv-xp-boost">0</span></div>
+        </div>
+        <div class="inventory-item" data-item="lucky-charm" title="Clique para usar">
+          <span class="item-emoji">🍀</span>
+          <div class="item-name" style="font-size: 0.75rem; margin-top: 5px;">Amuleto</div>
+          <div class="item-count">x<span id="inv-lucky-charm">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loja -->
+    <div style="margin-top: 30px;">
+      <h3 style="color: #f59e0b; margin-bottom: 15px; font-size: 1rem;">🛒 Loja</h3>
+      <div class="shop-grid" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="shop-item" data-shop="food" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">🍖</span>
+            <div>
+              <div style="font-weight: bold;">Comida</div>
+              <div style="font-size: 0.75rem; color: #888;">+30 Fome</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="food" data-price="10" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 10
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="premium-food" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">🥩</span>
+            <div>
+              <div style="font-weight: bold;">Comida Premium</div>
+              <div style="font-size: 0.75rem; color: #888;">+60 Fome, +10 Felicidade</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="premium-food" data-price="25" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 25
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="medicine" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">💊</span>
+            <div>
+              <div style="font-weight: bold;">Remédio</div>
+              <div style="font-size: 0.75rem; color: #888;">+40 Saúde</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="medicine" data-price="20" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 20
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="super-medicine" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">💉</span>
+            <div>
+              <div style="font-weight: bold;">Super Remédio</div>
+              <div style="font-size: 0.75rem; color: #888;">+100 Saúde (cura total)</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="super-medicine" data-price="50" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 50
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="toy" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">🎾</span>
+            <div>
+              <div style="font-weight: bold;">Brinquedo</div>
+              <div style="font-size: 0.75rem; color: #888;">+40 Felicidade</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="toy" data-price="15" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 15
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="energy-drink" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">⚡</span>
+            <div>
+              <div style="font-weight: bold;">Energético</div>
+              <div style="font-size: 0.75rem; color: #888;">+50 Energia</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="energy-drink" data-price="30" style="background: linear-gradient(90deg, #f59e0b, #ea580c); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 30
+          </button>
+        </div>
+
+        <div class="shop-item" data-shop="xp-boost" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">⭐</span>
+            <div>
+              <div style="font-weight: bold; color: #a855f7;">XP Boost</div>
+              <div style="font-size: 0.75rem; color: #888;">+100 XP instantâneo</div>
+            </div>
+          </div>
+          <button class="shop-buy-btn" data-buy="xp-boost" data-price="100" style="background: linear-gradient(90deg, #8b5cf6, #a855f7); border: none; padding: 8px 15px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <span>🪙</span> 100
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE COLEÇÃO DE PETS ==================== -->
+  <div id="screen-collection" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goToMain()">← Início</button>
+      <h2 class="game-title" style="font-size: 1.5rem;">🏆 Coleção de Pets</h2>
+    </div>
+
+    <div style="text-align: center; margin: 20px 0; color: #888;">
+      <p>Pets capturados em batalhas</p>
+      <p style="font-size: 0.8rem; margin-top: 5px;">Toque em um pet para usá-lo como principal</p>
+    </div>
+
+    <!-- Pet Principal Atual -->
+    <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.1)); border: 2px solid #f59e0b; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center;">
+      <div style="font-size: 0.8rem; color: #f59e0b; margin-bottom: 10px;">⭐ PET PRINCIPAL</div>
+      <div class="pixel-pet-container" id="collection-main-pixel" style="height: 70px;"></div>
+      <div style="font-weight: bold; margin-top: 10px;" id="collection-main-name">-</div>
+      <div style="color: #888; font-size: 0.9rem;" id="collection-main-info">Nível 1 • Common</div>
+    </div>
+
+    <!-- Grid de Pets Capturados -->
+    <div style="margin-top: 20px;">
+      <h3 style="color: #f59e0b; margin-bottom: 15px; font-size: 1rem;">
+        Pets Capturados (<span id="collection-count">0</span>)
+      </h3>
+      <div id="collection-grid" class="inventory-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <!-- Pets capturados aparecem aqui -->
+        <div style="text-align: center; color: #666; grid-column: 1 / -1; padding: 40px;" id="collection-empty">
+          <div style="font-size: 3rem; margin-bottom: 10px;">🎯</div>
+          <p>Nenhum pet capturado ainda!</p>
+          <p style="font-size: 0.8rem; margin-top: 5px;">Vença batalhas para capturar inimigos</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TELA DE ESTATÍSTICAS ==================== -->
+  <div id="screen-stats" class="screen">
+    <div class="screen-header">
+      <button class="back-btn" onclick="goToMain()">← Início</button>
+      <h2 class="game-title" style="font-size: 1.5rem;">📊 Estatísticas</h2>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <!-- Info do Pet -->
+      <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #f59e0b; margin-bottom: 15px;">🐾 Seu Pet</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Nome</div>
+            <div style="font-weight: bold;" id="stats-pet-name">-</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Tipo</div>
+            <div style="font-weight: bold;" id="stats-pet-type">-</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Nível</div>
+            <div style="font-weight: bold;" id="stats-pet-level">-</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Raridade</div>
+            <div style="font-weight: bold;" id="stats-pet-rarity">-</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Ataque</div>
+            <div style="font-weight: bold; color: #ef4444;" id="stats-pet-atk">-</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Defesa</div>
+            <div style="font-weight: bold; color: #3b82f6;" id="stats-pet-def">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estatísticas de Batalha -->
+      <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #f59e0b; margin-bottom: 15px;">⚔️ Batalhas</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+          <div>
+            <div style="font-size: 2rem; font-weight: bold;" id="stats-total-battles">0</div>
+            <div style="color: #888; font-size: 0.8rem;">Total</div>
+          </div>
+          <div>
+            <div style="font-size: 2rem; font-weight: bold; color: #22c55e;" id="stats-wins">0</div>
+            <div style="color: #888; font-size: 0.8rem;">Vitórias</div>
+          </div>
+          <div>
+            <div style="font-size: 2rem; font-weight: bold; color: #ef4444;" id="stats-losses">0</div>
+            <div style="color: #888; font-size: 0.8rem;">Derrotas</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; text-align: center;">
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Taxa de Vitória</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #f59e0b;" id="stats-winrate">0%</div>
+          </div>
+          <div>
+            <div style="color: #888; font-size: 0.8rem;">Pets Capturados</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #a855f7;" id="stats-pets-collected">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tempo de Jogo -->
+      <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 20px;">
+        <h3 style="color: #f59e0b; margin-bottom: 15px;">⏱️ Tempo</h3>
+        <div style="text-align: center;">
+          <div style="color: #888; font-size: 0.8rem;">Tempo com seu Pet</div>
+          <div style="font-size: 1.2rem; font-weight: bold;" id="stats-time-played">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // ==================== ESTADO DO JOGO ====================
+    let gameState = {
+      hasPet: false,
+      pet: null,
+      collectedPets: [], // Pets capturados em batalhas
+      inventory: {
+        coins: 100,
+        food: 5,
+        'premium-food': 0,
+        medicine: 3,
+        'super-medicine': 0,
+        toy: 2,
+        'energy-drink': 0,
+        'xp-boost': 0,
+        'lucky-charm': 0
+      },
+      stats: {
+        totalBattles: 0,
+        wins: 0,
+        losses: 0,
+        petsCollected: 0
+      }
+    };
+
+    // Templates de pets
+    const petTemplates = {
+      pyro: { emoji: '🦊', type: 'fogo', baseAtk: 12, baseDef: 8, baseHp: 150 },
+      aqua: { emoji: '🐙', type: 'agua', baseAtk: 10, baseDef: 10, baseHp: 160 },
+      flora: { emoji: '🌸', type: 'planta', baseAtk: 8, baseDef: 12, baseHp: 180 },
+      volt: { emoji: '⚡', type: 'eletrico', baseAtk: 14, baseDef: 6, baseHp: 130 },
+      shadow: { emoji: '👻', type: 'sombra', baseAtk: 11, baseDef: 11, baseHp: 155 },
+      lumi: { emoji: '✨', type: 'luz', baseAtk: 9, baseDef: 9, baseHp: 165 }
+    };
+
+    // ==================== TAMAGOTCHI LCD SPRITES ====================
+    // Estilo autêntico LCD monocromático como o Tamagotchi original
+    // Baseado no CodePen mr-tamagotchi/bBYEME
+    // Cor LCD: #6c6c4e (verde escuro)
+
+    const LCD = '#6c6c4e';  // Cor LCD autêntica
+    const S = 2;  // Tamanho do pixel (reduzido para caber melhor)
+
+    // Helper para criar box-shadow string
+    function createSprite(pixels) {
+      return pixels.map(([x, y]) => `${x * S}px ${y * S}px 0 ${LCD}`).join(', ');
+    }
+
+    const tamaSprites = {
+      // ===== MARGO STYLE (do CodePen original) - Pyro =====
+      pyro: {
+        frame1: [ // stand
+          [5,0],[6,0],[7,0],[8,0],[9,0],
+          [4,1],[10,1],
+          [1,2],[2,2],[3,2],[5,2],[9,2],[11,2],
+          [0,3],[12,3],
+          [1,4],[2,4],[3,4],[12,4],
+          [0,5],[12,5],
+          [1,6],[2,6],[3,6],[12,6],
+          [3,7],[8,7],[10,7],[13,7],
+          [3,8],[8,8],[10,8],[13,8],
+          [3,9],[9,9],[13,9],
+          [4,10],[12,10],
+          [5,11],[7,11],[8,11],[9,11],[11,11],
+          [5,12],[7,12],[9,12],[11,12],
+          [6,13],[10,13]
+        ],
+        frame2: [ // sit
+          [5,1],[6,1],[7,1],[8,1],[9,1],
+          [4,2],[10,2],
+          [1,3],[2,3],[3,3],[5,3],[9,3],[11,3],
+          [0,4],[12,4],
+          [1,5],[2,5],[3,5],[12,5],
+          [0,6],[12,6],
+          [1,7],[2,7],[3,7],[12,7],
+          [3,8],[8,8],[10,8],[13,8],
+          [3,9],[8,9],[10,9],[13,9],
+          [3,10],[9,10],[13,10],
+          [4,11],[12,11],
+          [5,12],[7,12],[8,12],[9,12],[11,12],
+          [6,13],[10,13]
+        ]
+      },
+
+      // ===== KUCHIPATCHI STYLE - Aqua =====
+      aqua: {
+        frame1: [
+          [4,0],[5,0],[6,0],[7,0],
+          [3,1],[8,1],
+          [2,2],[9,2],
+          [1,3],[4,3],[6,3],[10,3],
+          [1,4],[10,4],
+          [1,5],[4,5],[6,5],[10,5],
+          [2,6],[9,6],
+          [3,7],[8,7],
+          [4,8],[5,8],[6,8],[7,8],
+          [3,9],[5,9],[6,9],[8,9]
+        ],
+        frame2: [
+          [4,1],[5,1],[6,1],[7,1],
+          [3,2],[8,2],
+          [2,3],[9,3],
+          [1,4],[4,4],[6,4],[10,4],
+          [1,5],[10,5],
+          [1,6],[4,6],[6,6],[10,6],
+          [2,7],[9,7],
+          [3,8],[8,8],
+          [4,9],[5,9],[6,9],[7,9],
+          [4,10],[7,10]
+        ]
+      },
+
+      // ===== FLOWER STYLE - Flora =====
+      flora: {
+        frame1: [
+          [5,0],[6,0],
+          [4,1],[7,1],
+          [3,2],[5,2],[6,2],[8,2],
+          [4,3],[7,3],
+          [5,4],[6,4],
+          [4,5],[5,5],[6,5],[7,5],
+          [3,6],[5,6],[6,6],[8,6],
+          [3,7],[8,7],
+          [3,8],[5,8],[6,8],[8,8],
+          [4,9],[7,9],
+          [4,10],[5,10],[6,10],[7,10],
+          [3,11],[8,11]
+        ],
+        frame2: [
+          [5,1],[6,1],
+          [4,2],[7,2],
+          [3,3],[5,3],[6,3],[8,3],
+          [4,4],[7,4],
+          [5,5],[6,5],
+          [4,6],[5,6],[6,6],[7,6],
+          [3,7],[5,7],[6,7],[8,7],
+          [3,8],[8,8],
+          [3,9],[5,9],[6,9],[8,9],
+          [4,10],[7,10],
+          [5,11],[6,11]
+        ]
+      },
+
+      // ===== MASKUTCHI STYLE - Volt =====
+      volt: {
+        frame1: [
+          [6,0],
+          [4,1],[5,1],[6,1],[7,1],[8,1],
+          [3,2],[9,2],
+          [2,3],[5,3],[7,3],[10,3],
+          [2,4],[10,4],
+          [3,5],[4,5],[8,5],[9,5],
+          [4,6],[5,6],[7,6],[8,6],
+          [4,7],[8,7],
+          [3,8],[4,8],[8,8],[9,8],
+          [2,9],[10,9],
+          [1,10],[3,10],[9,10],[11,10]
+        ],
+        frame2: [
+          [6,1],
+          [4,2],[5,2],[6,2],[7,2],[8,2],
+          [3,3],[9,3],
+          [2,4],[5,4],[7,4],[10,4],
+          [2,5],[10,5],
+          [3,6],[4,6],[8,6],[9,6],
+          [4,7],[5,7],[7,7],[8,7],
+          [4,8],[8,8],
+          [3,9],[4,9],[8,9],[9,9],
+          [4,10],[8,10]
+        ]
+      },
+
+      // ===== GHOST STYLE - Shadow =====
+      shadow: {
+        frame1: [
+          [4,0],[5,0],[6,0],[7,0],
+          [3,1],[8,1],
+          [2,2],[5,2],[6,2],[9,2],
+          [2,3],[9,3],
+          [2,4],[5,4],[6,4],[9,4],
+          [3,5],[8,5],
+          [3,6],[8,6],
+          [2,7],[4,7],[5,7],[6,7],[7,7],[9,7],
+          [3,8],[5,8],[6,8],[8,8],
+          [4,9],[7,9]
+        ],
+        frame2: [
+          [4,1],[5,1],[6,1],[7,1],
+          [3,2],[8,2],
+          [2,3],[5,3],[6,3],[9,3],
+          [2,4],[9,4],
+          [2,5],[5,5],[6,5],[9,5],
+          [3,6],[8,6],
+          [3,7],[8,7],
+          [2,8],[4,8],[5,8],[6,8],[7,8],[9,8],
+          [4,9],[7,9]
+        ]
+      },
+
+      // ===== STAR STYLE - Lumi =====
+      lumi: {
+        frame1: [
+          [5,0],[6,0],
+          [4,1],[5,1],[6,1],[7,1],
+          [3,2],[8,2],
+          [2,3],[4,3],[7,3],[9,3],
+          [1,4],[10,4],
+          [2,5],[4,5],[7,5],[9,5],
+          [3,6],[8,6],
+          [4,7],[5,7],[6,7],[7,7],
+          [5,8],[6,8]
+        ],
+        frame2: [
+          [5,1],[6,1],
+          [4,2],[5,2],[6,2],[7,2],
+          [3,3],[8,3],
+          [2,4],[4,4],[7,4],[9,4],
+          [1,5],[10,5],
+          [2,6],[4,6],[7,6],[9,6],
+          [3,7],[8,7],
+          [4,8],[7,8]
+        ]
+      },
+
+      // ===== INIMIGOS =====
+      wolf: {
+        frame1: [
+          [2,0],[3,0],[8,0],[9,0],
+          [1,1],[4,1],[7,1],[10,1],
+          [1,2],[10,2],
+          [0,3],[4,3],[7,3],[11,3],
+          [0,4],[11,4],
+          [0,5],[3,5],[8,5],[11,5],
+          [1,6],[10,6],
+          [2,7],[3,7],[8,7],[9,7],
+          [1,8],[4,8],[7,8],[10,8]
+        ],
+        frame2: [
+          [2,0],[3,0],[8,0],[9,0],
+          [1,1],[4,1],[7,1],[10,1],
+          [1,2],[10,2],
+          [0,3],[4,3],[7,3],[11,3],
+          [0,4],[11,4],
+          [0,5],[3,5],[8,5],[11,5],
+          [1,6],[10,6],
+          [2,7],[3,7],[8,7],[9,7],
+          [2,8],[3,8],[8,8],[9,8]
+        ]
+      },
+
+      slime: {
+        frame1: [
+          [4,2],[5,2],[6,2],[7,2],
+          [3,3],[8,3],
+          [2,4],[5,4],[6,4],[9,4],
+          [2,5],[9,5],
+          [1,6],[10,6],
+          [1,7],[2,7],[3,7],[8,7],[9,7],[10,7],
+          [2,8],[4,8],[7,8],[9,8]
+        ],
+        frame2: [
+          [4,3],[5,3],[6,3],[7,3],
+          [3,4],[8,4],
+          [2,5],[5,5],[6,5],[9,5],
+          [2,6],[9,6],
+          [2,7],[9,7],
+          [3,8],[4,8],[7,8],[8,8]
+        ]
+      },
+
+      bat: {
+        frame1: [
+          [0,1],[1,1],[10,1],[11,1],
+          [1,2],[2,2],[9,2],[10,2],
+          [2,3],[3,3],[8,3],[9,3],
+          [3,4],[8,4],
+          [4,5],[5,5],[6,5],[7,5],
+          [4,6],[5,6],[6,6],[7,6],
+          [5,7],[6,7]
+        ],
+        frame2: [
+          [0,0],[11,0],
+          [0,1],[1,1],[10,1],[11,1],
+          [2,2],[3,2],[8,2],[9,2],
+          [3,3],[8,3],
+          [4,4],[5,4],[6,4],[7,4],
+          [4,5],[5,5],[6,5],[7,5],
+          [5,6],[6,6]
+        ]
+      },
+
+      goblin: {
+        frame1: [
+          [4,0],[7,0],
+          [3,1],[4,1],[7,1],[8,1],
+          [4,2],[5,2],[6,2],[7,2],
+          [3,3],[8,3],
+          [2,4],[5,4],[6,4],[9,4],
+          [2,5],[9,5],
+          [3,6],[5,6],[6,6],[8,6],
+          [4,7],[7,7],
+          [3,8],[8,8]
+        ],
+        frame2: [
+          [4,1],[7,1],
+          [3,2],[4,2],[7,2],[8,2],
+          [4,3],[5,3],[6,3],[7,3],
+          [3,4],[8,4],
+          [2,5],[5,5],[6,5],[9,5],
+          [2,6],[9,6],
+          [3,7],[5,7],[6,7],[8,7],
+          [4,8],[7,8]
+        ]
+      },
+
+      snake: {
+        frame1: [
+          [3,2],[4,2],
+          [2,3],[5,3],
+          [2,4],[4,4],[5,4],
+          [3,5],[6,5],[7,5],
+          [4,6],[5,6],[8,6],
+          [6,7],[7,7],[9,7],
+          [8,8],[10,8],
+          [9,9],[10,9]
+        ],
+        frame2: [
+          [3,3],[4,3],
+          [2,4],[5,4],
+          [2,5],[4,5],[5,5],
+          [3,6],[6,6],[7,6],
+          [4,7],[5,7],[8,7],
+          [6,8],[7,8],[9,8],
+          [8,9],[9,9]
+        ]
+      },
+
+      bear: {
+        frame1: [
+          [2,0],[3,0],[8,0],[9,0],
+          [1,1],[4,1],[7,1],[10,1],
+          [2,2],[3,2],[8,2],[9,2],
+          [3,3],[8,3],
+          [2,4],[5,4],[6,4],[9,4],
+          [2,5],[9,5],
+          [2,6],[4,6],[7,6],[9,6],
+          [3,7],[8,7],
+          [2,8],[9,8],
+          [1,9],[3,9],[8,9],[10,9]
+        ],
+        frame2: [
+          [2,0],[3,0],[8,0],[9,0],
+          [1,1],[4,1],[7,1],[10,1],
+          [2,2],[3,2],[8,2],[9,2],
+          [3,3],[8,3],
+          [2,4],[5,4],[6,4],[9,4],
+          [2,5],[9,5],
+          [2,6],[4,6],[7,6],[9,6],
+          [3,7],[8,7],
+          [2,8],[9,8],
+          [2,9],[3,9],[8,9],[9,9]
+        ]
+      }
+    };
+
+    // Mapa de inimigos para sprites
+    const enemySpriteMap = {
+      'Lobo Selvagem': 'wolf',
+      'Slime Verde': 'slime',
+      'Morcego Sombrio': 'bat',
+      'Goblin Travesso': 'goblin',
+      'Cobra Venenosa': 'snake',
+      'Urso Furioso': 'bear'
+    };
+
+    // Renderiza sprite Tamagotchi LCD usando box-shadow
+    function renderPixelSprite(spriteKey, container, animate = true, sleeping = false) {
+      const sprite = tamaSprites[spriteKey];
+      if (!sprite) {
+        container.innerHTML = `<span class="pet-avatar">${petTemplates[spriteKey]?.emoji || '❓'}</span>`;
+        return;
+      }
+
+      const shadow1 = createSprite(sprite.frame1);
+      const shadow2 = createSprite(sprite.frame2);
+
+      container.innerHTML = `
+        <div class="tama-wrapper ${animate ? 'animate' : ''} ${sleeping ? 'sleeping' : ''}">
+          <div class="tama-sprite frame1" style="box-shadow: ${shadow1};"></div>
+          <div class="tama-sprite frame2" style="box-shadow: ${shadow2};"></div>
+        </div>
+      `;
+    }
+
+    // Evoluções de emoji por raridade
+    const evolutionEmojis = {
+      pyro: { common: '🦊', rare: '🔥', epic: '🌋', legendary: '🐉' },
+      aqua: { common: '🐙', rare: '🌊', epic: '🐋', legendary: '🔱' },
+      flora: { common: '🌸', rare: '🌺', epic: '🌳', legendary: '🌍' },
+      volt: { common: '⚡', rare: '🌩️', epic: '⛈️', legendary: '🌌' },
+      shadow: { common: '👻', rare: '💀', epic: '🦇', legendary: '🌑' },
+      lumi: { common: '✨', rare: '⭐', epic: '🌟', legendary: '☀️' }
+    };
+
+    // Inimigos possíveis (HP aumentado para batalhas mais longas)
+    const enemies = [
+      { name: 'Lobo Selvagem', emoji: '🐺', hp: 140, atk: 8, def: 10, xp: 30, coins: 10 },
+      { name: 'Slime Verde', emoji: '🟢', hp: 100, atk: 6, def: 6, xp: 20, coins: 5 },
+      { name: 'Morcego Sombrio', emoji: '🦇', hp: 120, atk: 9, def: 8, xp: 35, coins: 12 },
+      { name: 'Goblin Travesso', emoji: '👺', hp: 160, atk: 8, def: 11, xp: 40, coins: 15 },
+      { name: 'Cobra Venenosa', emoji: '🐍', hp: 130, atk: 10, def: 9, xp: 45, coins: 18 },
+      { name: 'Urso Furioso', emoji: '🐻', hp: 200, atk: 9, def: 14, xp: 60, coins: 25 }
+    ];
+
+    // Estado da batalha
+    let battleState = null;
+
+    // Estado do sistema de dados
+    const DICE_FACES = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+
+    // Definição de itens de batalha (balanceados para HP maior)
+    const battleItems = {
+      'medicine': { name: 'Poção', emoji: '💊', heal: 40 },
+      'super-medicine': { name: 'Super Poção', emoji: '💉', heal: 80 },
+      'energy-drink': { name: 'Energético', emoji: '⚡', effect: 'boost-atk' }
+    };
+
+    // Definição de artefatos (ativados por dado) - balanceados
+    const artifacts = {
+      'shadow-artifact': {
+        name: 'Artefato Sombrio',
+        emoji: '🌑',
+        diceReq: [2, 6],
+        damage: 15,
+        effect: 'lifesteal',
+        description: 'Drena vida do inimigo'
+      },
+      'blade-sacrifice': {
+        name: 'Lâmina do Sacrifício',
+        emoji: '🗡️',
+        diceReq: [5],
+        damage: 25,
+        selfDamage: 8,
+        description: 'Dano massivo, mas te fere'
+      },
+      'crystal-shield': {
+        name: 'Escudo de Cristal',
+        emoji: '💎',
+        diceReq: [1, 3],
+        effect: 'reflect',
+        description: 'Reflete próximo ataque'
+      }
+    };
+
+    // ==================== INICIALIZAÇÃO ====================
+    function init() {
+      loadGame();
+      setupEventListeners();
+
+      // Renderizar previews de pets na tela de seleção
+      renderPetPreviews();
+
+      if (gameState.hasPet && gameState.pet) {
+        showScreen('main');
+        // Navegação movida para os botões centrais
+        updateMainScreen();
+        startGameLoop();
+      } else {
+        showScreen('select');
+      }
+    }
+
+    function renderPetPreviews() {
+      const petKeys = ['pyro', 'aqua', 'flora', 'volt', 'shadow', 'lumi'];
+      petKeys.forEach(key => {
+        const container = document.getElementById('preview-' + key);
+        if (container) {
+          renderPixelSprite(key, container, true, false);
+        }
+      });
+    }
+
+    // ==================== SAVE/LOAD ====================
+    function saveGame() {
+      localStorage.setItem('polyPetsDemo', JSON.stringify(gameState));
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem('polyPetsDemo');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        gameState = {
+          ...gameState,  // valores padrão
+          ...parsed,     // valores salvos
+          // Garantir estruturas aninhadas
+          inventory: { ...gameState.inventory, ...(parsed.inventory || {}) },
+          stats: { ...gameState.stats, ...(parsed.stats || {}) },
+          collectedPets: parsed.collectedPets || []
+        };
+        console.log('[PolyPets] Jogo carregado. Pets na coleção:', gameState.collectedPets.length);
+      }
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    function setupEventListeners() {
+      // Seleção de pet
+      document.querySelectorAll('.pet-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.pet-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          checkStartButton();
+        });
+      });
+
+      // Nome do pet
+      document.getElementById('pet-name-input').addEventListener('input', checkStartButton);
+
+      // Botão começar
+      document.getElementById('btn-start').addEventListener('click', startGame);
+
+      // Navegação principal (botões no centro)
+      document.querySelectorAll('.actions-container .action-btn[data-screen]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const screen = btn.dataset.screen;
+          // Destacar botão ativo
+          document.querySelectorAll('.actions-container .action-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          showScreen(screen);
+          if (screen === 'inventory') updateInventoryScreen();
+          if (screen === 'stats') updateStatsScreen();
+          if (screen === 'collection') updateCollectionScreen();
+          if (screen === 'main') updateMainScreen();
+        });
+      });
+
+      // Batalha
+      document.getElementById('btn-battle').addEventListener('click', startBattle);
+
+      // Ações de batalha
+      document.querySelectorAll('.battle-action-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleBattleAction(btn.dataset.action));
+      });
+
+      // Dado de batalha
+      document.getElementById('battle-dice').addEventListener('click', rollDice);
+
+      // Continuar após resultado
+      document.getElementById('btn-continue').addEventListener('click', () => {
+        showScreen('main');
+        updateMainScreen();
+      });
+
+      // Continuar após evolução
+      document.getElementById('btn-evolution-continue').addEventListener('click', () => {
+        showScreen('main');
+        updateMainScreen();
+      });
+
+
+      // Comprar na loja
+      document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+        btn.addEventListener('click', () => buyItem(btn.dataset.buy, parseInt(btn.dataset.price)));
+      });
+
+
+      // Usar item do inventário
+      document.querySelectorAll('.inventory-item').forEach(item => {
+        item.addEventListener('click', () => useItem(item.dataset.item));
+      });
+    }
+
+    function checkStartButton() {
+      const selectedPet = document.querySelector('.pet-option.selected');
+      const petName = document.getElementById('pet-name-input').value.trim();
+      document.getElementById('btn-start').disabled = !selectedPet || !petName;
+    }
+
+    // ==================== TELAS ====================
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + screenId).classList.add('active');
+    }
+
+    // Voltar para tela principal
+    function goToMain() {
+      showScreen('main');
+      // Atualizar botão ativo na navegação
+      document.querySelectorAll('.actions-container .action-btn').forEach(b => b.classList.remove('active'));
+      const mainBtn = document.querySelector('.actions-container .action-btn[data-screen="main"]');
+      if (mainBtn) mainBtn.classList.add('active');
+    }
+
+    // ==================== INICIAR JOGO ====================
+    function startGame() {
+      const selectedOption = document.querySelector('.pet-option.selected');
+      const petName = document.getElementById('pet-name-input').value.trim();
+      const petKey = selectedOption.dataset.pet;
+      const template = petTemplates[petKey];
+
+      gameState.hasPet = true;
+      gameState.pet = {
+        key: petKey,
+        name: petName,
+        emoji: template.emoji,
+        type: template.type,
+        level: 1,
+        xp: 0,
+        xpToNext: 100,
+        rarity: 'common',
+        hunger: 100,
+        happiness: 100,
+        energy: 100,
+        health: 100,
+        maxHealth: template.baseHp,
+        atk: template.baseAtk,
+        def: template.baseDef,
+        isSleeping: false,
+        createdAt: Date.now()
+      };
+
+      saveGame();
+      // Navegação movida para os botões centrais
+      showScreen('main');
+      updateMainScreen();
+      startGameLoop();
+      showNotification('🎉', `${petName} se juntou a você!`);
+    }
+
+    // ==================== ATUALIZAR TELA PRINCIPAL ====================
+    function updateMainScreen() {
+      const pet = gameState.pet;
+      if (!pet) return;
+
+      // Renderizar pixel art
+      const pixelContainer = document.getElementById('main-pet-pixel');
+      renderPixelSprite(pet.key, pixelContainer, true, pet.isSleeping);
+
+      document.getElementById('main-pet-name').textContent = pet.name;
+      document.getElementById('main-pet-level').textContent = `Nível ${pet.level}`;
+
+      // Raridade
+      const rarityEl = document.getElementById('main-pet-rarity');
+      rarityEl.textContent = pet.rarity.charAt(0).toUpperCase() + pet.rarity.slice(1);
+      rarityEl.className = `pet-rarity rarity-${pet.rarity}`;
+
+      // Stats
+      updateStat('hunger', pet.hunger);
+      updateStat('happiness', pet.happiness);
+      updateStat('energy', pet.energy);
+      updateStat('health', pet.health);
+
+      // XP
+      const xpPercent = (pet.xp / pet.xpToNext) * 100;
+      document.getElementById('stat-xp').style.width = xpPercent + '%';
+      document.getElementById('stat-xp-value').textContent = Math.round(xpPercent) + '%';
+      document.getElementById('current-xp').textContent = pet.xp;
+      document.getElementById('max-xp').textContent = pet.xpToNext;
+
+      // Mood
+      updateMood();
+
+      // Animação de dormir
+      const zzz = document.getElementById('zzz-indicator');
+      if (pet.isSleeping) {
+        zzz.style.display = 'block';
+      } else {
+        zzz.style.display = 'none';
+      }
+
+      // Desabilitar batalha se dormindo ou sem energia/saúde
+      document.getElementById('btn-battle').disabled = pet.isSleeping || pet.energy < 20 || pet.health < 20;
+    }
+
+    function updateStat(stat, value) {
+      const bar = document.getElementById('stat-' + stat);
+      const valueEl = document.getElementById('stat-' + stat + '-value');
+      bar.style.width = value + '%';
+      valueEl.textContent = Math.round(value) + '%';
+
+      if (value < 30) {
+        bar.classList.add('low');
+      } else {
+        bar.classList.remove('low');
+      }
+    }
+
+    function updateMood() {
+      const pet = gameState.pet;
+      const moodEl = document.getElementById('mood-indicator');
+
+      if (pet.isSleeping) {
+        moodEl.textContent = '😴 Dormindo';
+      } else if (pet.health < 30) {
+        moodEl.textContent = '🤒 Doente';
+      } else if (pet.hunger < 30) {
+        moodEl.textContent = '😫 Faminto';
+      } else if (pet.energy < 30) {
+        moodEl.textContent = '😩 Cansado';
+      } else if (pet.happiness < 30) {
+        moodEl.textContent = '😢 Triste';
+      } else if (pet.happiness > 80 && pet.hunger > 80) {
+        moodEl.textContent = '😄 Muito Feliz!';
+      } else if (pet.happiness > 50) {
+        moodEl.textContent = '😊 Feliz';
+      } else {
+        moodEl.textContent = '😐 Normal';
+      }
+    }
+
+    // ==================== AÇÕES DO PET ====================
+    function feedPet() {
+      const pet = gameState.pet;
+      if (pet.hunger >= 100) {
+        showNotification('🍖', `${pet.name} não está com fome!`);
+        return;
+      }
+
+      pet.hunger = Math.min(100, pet.hunger + 30);
+      pet.happiness = Math.min(100, pet.happiness + 5);
+
+      saveGame();
+      updateMainScreen();
+      showNotification('🍖', `${pet.name} comeu! +30 Fome`);
+    }
+
+    function playWithPet() {
+      const pet = gameState.pet;
+      if (pet.energy < 15) {
+        showNotification('⚡', `${pet.name} está muito cansado!`);
+        return;
+      }
+
+      pet.happiness = Math.min(100, pet.happiness + 25);
+      pet.energy = Math.max(0, pet.energy - 15);
+      pet.hunger = Math.max(0, pet.hunger - 10);
+
+      // XP por brincar
+      addXP(5);
+
+      saveGame();
+      updateMainScreen();
+      showNotification('🎾', `${pet.name} brincou! +25 Felicidade, +5 XP`);
+    }
+
+    function sleepPet() {
+      const pet = gameState.pet;
+
+      if (pet.isSleeping) {
+        // Acordar
+        pet.isSleeping = false;
+        showNotification('☀️', `${pet.name} acordou!`);
+      } else {
+        // Dormir
+        pet.isSleeping = true;
+        showNotification('😴', `${pet.name} foi dormir...`);
+      }
+
+      saveGame();
+      updateMainScreen();
+    }
+
+    function healPet() {
+      const pet = gameState.pet;
+      if (pet.health >= 100) {
+        showNotification('❤️', `${pet.name} está saudável!`);
+        return;
+      }
+
+      if (gameState.inventory.medicine <= 0) {
+        showNotification('💊', 'Você não tem remédios!');
+        return;
+      }
+
+      gameState.inventory.medicine--;
+      pet.health = Math.min(100, pet.health + 40);
+
+      saveGame();
+      updateMainScreen();
+      showNotification('💊', `${pet.name} foi curado! +40 Saúde`);
+    }
+
+    // ==================== SISTEMA DE XP E LEVEL ====================
+    function addXP(amount) {
+      const pet = gameState.pet;
+      pet.xp += amount;
+
+      while (pet.xp >= pet.xpToNext) {
+        pet.xp -= pet.xpToNext;
+        levelUp();
+      }
+
+      saveGame();
+    }
+
+    function levelUp() {
+      const pet = gameState.pet;
+      pet.level++;
+      pet.xpToNext = Math.floor(pet.xpToNext * 1.5);
+      pet.atk += 2;
+      pet.def += 1;
+      pet.maxHealth += 10;
+      pet.health = pet.maxHealth;
+
+      showNotification('⬆️', `${pet.name} subiu para o nível ${pet.level}!`);
+
+      // Verificar evolução
+      checkEvolution();
+    }
+
+    function checkEvolution() {
+      const pet = gameState.pet;
+      const rarities = ['common', 'rare', 'epic', 'legendary'];
+      const currentIndex = rarities.indexOf(pet.rarity);
+
+      let shouldEvolve = false;
+      let newRarity = pet.rarity;
+
+      if (currentIndex === 0 && pet.level >= 5) {
+        shouldEvolve = true;
+        newRarity = 'rare';
+      } else if (currentIndex === 1 && pet.level >= 15) {
+        shouldEvolve = true;
+        newRarity = 'epic';
+      } else if (currentIndex === 2 && pet.level >= 30) {
+        shouldEvolve = true;
+        newRarity = 'legendary';
+      }
+
+      if (shouldEvolve) {
+        triggerEvolution(newRarity);
+      }
+    }
+
+    function triggerEvolution(newRarity) {
+      const pet = gameState.pet;
+      const newEmoji = evolutionEmojis[pet.key] ? evolutionEmojis[pet.key][newRarity] : pet.emoji;
+
+      // Renderizar pixel art na evolução
+      renderPixelSprite(pet.key, document.getElementById('evolution-old-pixel'), true, false);
+      renderPixelSprite(pet.key, document.getElementById('evolution-new-pixel'), true, false);
+
+      document.getElementById('evolution-old-name').textContent = pet.name;
+      document.getElementById('evolution-new-rarity').textContent = newRarity.charAt(0).toUpperCase() + newRarity.slice(1);
+
+      pet.rarity = newRarity;
+      pet.emoji = newEmoji;
+      pet.atk += 5;
+      pet.def += 3;
+      pet.maxHealth += 20;
+
+      saveGame();
+      showScreen('evolution');
+    }
+
+    // ==================== BATALHA ====================
+    function startBattle() {
+      const pet = gameState.pet;
+
+      // Escolher inimigo aleatório baseado no nível
+      const maxEnemyIndex = Math.min(enemies.length - 1, Math.floor(pet.level / 3));
+      const enemy = { ...enemies[Math.floor(Math.random() * (maxEnemyIndex + 1))] };
+
+      // Escalar inimigo com o nível do jogador
+      const scaleFactor = 1 + (pet.level - 1) * 0.1;
+      enemy.hp = Math.floor(enemy.hp * scaleFactor);
+      enemy.atk = Math.floor(enemy.atk * scaleFactor);
+      enemy.def = Math.floor(enemy.def * scaleFactor);
+      enemy.maxHp = enemy.hp;
+
+      battleState = {
+        playerHp: pet.maxHealth,
+        playerMaxHp: pet.maxHealth,
+        enemyHp: enemy.hp,
+        enemyMaxHp: enemy.maxHp,
+        enemy: enemy,
+        isDefending: false,
+        specialCooldown: 0,
+        turn: 0,
+        // Sistema de dados
+        diceRolled: false,
+        diceValue: 0,
+        isPlayerTurn: true,
+        // Efeitos ativos
+        playerEffects: [],
+        enemyEffects: [],
+        // Artefato equipado (aleatório por batalha)
+        currentArtifact: Object.keys(artifacts)[Math.floor(Math.random() * Object.keys(artifacts).length)],
+        // Boost de ataque temporário
+        atkBoost: 0,
+        // Refletir dano
+        reflectActive: false,
+        // Bônus de defesa (acumula com ação de defender)
+        defenseBonus: 0,
+        // Dano pendente do inimigo
+        pendingDamage: 0,
+        enemyDiceValue: 0
+      };
+
+      // Atualizar UI de batalha com pixel art
+      renderPixelSprite(pet.key, document.getElementById('battle-player-pixel'), true, false);
+      document.getElementById('battle-player-name').textContent = pet.name;
+
+      // Renderizar inimigo
+      const enemySpriteKey = enemySpriteMap[enemy.name] || 'slime';
+      renderPixelSprite(enemySpriteKey, document.getElementById('battle-enemy-pixel'), true, false);
+      document.getElementById('battle-enemy-name').textContent = enemy.name;
+
+      updateBattleUI();
+
+      // Inicializar mensagem
+      const battleMessage = document.getElementById('battle-message');
+      if (battleMessage) {
+        battleMessage.textContent = `⚔️ Batalha contra ${enemy.name}!`;
+        battleMessage.style.color = '#f59e0b';
+      }
+
+      // Inicializar sistema de dados
+      resetDiceSystem();
+      updateTurnIndicator();
+      updateArtifactButton();
+      updateBattleInfoPanel();
+
+      // Mostrar stats
+      document.getElementById('player-atk').textContent = pet.atk;
+      document.getElementById('player-def').textContent = pet.def;
+      document.getElementById('enemy-atk').textContent = enemy.atk;
+      document.getElementById('enemy-def').textContent = enemy.def;
+
+      showScreen('battle');
+    }
+
+    // Atualizar painel de informações da batalha
+    function updateBattleInfoPanel() {
+      const pet = gameState.pet;
+      const artifact = artifacts[battleState.currentArtifact];
+
+      // Atualizar artefato
+      if (artifact) {
+        document.getElementById('artifact-icon').textContent = artifact.emoji;
+        document.getElementById('artifact-name').textContent = artifact.name;
+        document.getElementById('artifact-req').textContent = `🎲 ${artifact.diceReq.join(' ou ')}`;
+        document.getElementById('artifact-effect').textContent = artifact.description;
+      }
+
+      // Atualizar habilidades baseado no tipo do pet
+      const skillList = document.getElementById('skill-list');
+      const typeEmoji = {
+        fogo: '🔥', agua: '💧', planta: '🌿', eletrico: '⚡', sombra: '🌙', luz: '☀️'
+      };
+
+      const specialDmg = Math.floor(pet.atk * 1.8);
+
+      skillList.innerHTML = `
+        <div class="skill-item">
+          <span class="skill-icon">🗡️</span>
+          <div class="skill-info">
+            <div class="skill-name">Ataque</div>
+            <div class="skill-desc">~${pet.atk + 3} dano base</div>
+          </div>
+        </div>
+        <div class="skill-item">
+          <span class="skill-icon">${typeEmoji[pet.type] || '🔥'}</span>
+          <div class="skill-info">
+            <div class="skill-name">Especial</div>
+            <div class="skill-desc">~${specialDmg + 8} dano (🎲5-6)</div>
+          </div>
+        </div>
+        <div class="skill-item">
+          <span class="skill-icon">🛡️</span>
+          <div class="skill-info">
+            <div class="skill-name">Preparar</div>
+            <div class="skill-desc">+bônus defesa</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== SISTEMA DE DADOS ====================
+    function resetDiceSystem() {
+      battleState.diceRolled = false;
+      battleState.diceValue = 0;
+
+      const dice = document.getElementById('battle-dice');
+      if (dice) {
+        dice.textContent = '?';
+        dice.classList.remove('rolling');
+        dice.style.cursor = 'pointer';
+      }
+
+      const diceResult = document.getElementById('dice-result');
+      if (diceResult) {
+        diceResult.textContent = 'Role!';
+        diceResult.classList.remove('activated');
+      }
+
+      // Bloquear ações até rolar dado
+      lockAllActions();
+    }
+
+    function lockAllActions() {
+      document.querySelectorAll('.battle-action-btn').forEach(btn => {
+        btn.classList.add('dice-locked');
+        btn.classList.remove('dice-unlocked');
+        btn.disabled = true;
+      });
+    }
+
+    function rollDice() {
+      if (!battleState || battleState.diceRolled || !battleState.isPlayerTurn) return;
+
+      const dice = document.getElementById('battle-dice');
+      dice.classList.add('rolling');
+
+      // Animação de rolagem
+      let rollCount = 0;
+      const rollInterval = setInterval(() => {
+        dice.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
+        rollCount++;
+        if (rollCount >= 10) {
+          clearInterval(rollInterval);
+
+          // Resultado final
+          const value = Math.floor(Math.random() * 6) + 1;
+          battleState.diceValue = value;
+          battleState.diceRolled = true;
+
+          dice.textContent = DICE_FACES[value - 1];
+          dice.classList.remove('rolling');
+          dice.style.cursor = 'default';
+
+          // Atualizar resultado do dado
+          const diceResult = document.getElementById('dice-result');
+          if (diceResult) {
+            diceResult.textContent = `🎲 ${value}`;
+            diceResult.classList.add('activated');
+          }
+
+          // Mostrar na área de mensagem
+          addBattleLog(`🎲 Você tirou ${value}!`, 'special');
+
+          // Verificar quais ações foram desbloqueadas
+          unlockActionsBasedOnDice(value);
+        }
+      }, 80);
+    }
+
+    function unlockActionsBasedOnDice(diceValue) {
+      const activatedActions = [];
+
+      document.querySelectorAll('.battle-action-btn').forEach(btn => {
+        const action = btn.dataset.action;
+        const diceReq = btn.dataset.dice;
+
+        // Ações básicas sempre desbloqueadas
+        if (!diceReq || action === 'attack' || action === 'defend' || action === 'flee' || action === 'item') {
+          btn.classList.remove('dice-locked');
+          btn.disabled = false;
+          return;
+        }
+
+        // Verificar requisito de dado
+        const reqValues = diceReq.split(',').map(v => parseInt(v.trim()));
+        if (reqValues.includes(diceValue)) {
+          btn.classList.remove('dice-locked');
+          btn.classList.add('dice-unlocked');
+          btn.disabled = false;
+          activatedActions.push(btn.querySelector('span:last-child').textContent);
+        } else {
+          btn.classList.add('dice-locked');
+          btn.classList.remove('dice-unlocked');
+          btn.disabled = true;
+        }
+      });
+
+      // Mostrar ativações na mensagem
+      if (activatedActions.length > 0) {
+        setTimeout(() => {
+          addBattleLog(`✨ Desbloqueado: ${activatedActions.join(', ')}!`, 'special');
+        }, 300);
+      }
+
+      // Verificar artefato
+      checkArtifactActivation(diceValue);
+    }
+
+    function checkArtifactActivation(diceValue) {
+      const artifact = artifacts[battleState.currentArtifact];
+      if (artifact && artifact.diceReq.includes(diceValue)) {
+        addBattleLog(`💎 ${artifact.name} ativado! (${artifact.description})`, 'special');
+      }
+    }
+
+    function updateTurnIndicator() {
+      const indicator = document.getElementById('turn-indicator');
+      if (battleState.isPlayerTurn) {
+        if (!battleState.diceRolled) {
+          indicator.textContent = '🎯 Seu turno - Role o dado!';
+          indicator.style.background = 'rgba(245, 158, 11, 0.2)';
+          indicator.style.color = '#f59e0b';
+        } else {
+          indicator.textContent = '⚔️ Seu turno - Escolha uma ação!';
+          indicator.style.background = 'rgba(34, 197, 94, 0.2)';
+          indicator.style.color = '#22c55e';
+        }
+      } else {
+        indicator.textContent = '👹 Turno do inimigo...';
+        indicator.style.background = 'rgba(239, 68, 68, 0.2)';
+        indicator.style.color = '#ef4444';
+      }
+    }
+
+    function updateArtifactButton() {
+      const artifactBtn = document.querySelector('[data-action="artifact"]');
+      const artifact = artifacts[battleState.currentArtifact];
+      if (artifactBtn && artifact) {
+        artifactBtn.querySelector('.action-emoji').textContent = artifact.emoji;
+        artifactBtn.title = artifact.description;
+
+        // Atualizar requisito de dado
+        const reqText = artifact.diceReq.join(',');
+        const diceReqEl = artifactBtn.querySelector('.dice-req');
+        if (diceReqEl) {
+          diceReqEl.textContent = `🎲${reqText}`;
+        }
+        artifactBtn.dataset.dice = reqText;
+      }
+    }
+
+    function updateBattleUI() {
+      if (!battleState) return;
+
+      // HP do jogador
+      const playerHpPercent = (battleState.playerHp / battleState.playerMaxHp) * 100;
+      const playerHpBar = document.getElementById('battle-player-hp');
+      playerHpBar.style.width = Math.max(0, playerHpPercent) + '%';
+      playerHpBar.classList.toggle('low', playerHpPercent < 30);
+      document.getElementById('battle-player-hp-text').textContent =
+        Math.max(0, Math.round(battleState.playerHp)) + '/' + battleState.playerMaxHp;
+
+      // HP do inimigo
+      const enemyHpPercent = (battleState.enemyHp / battleState.enemyMaxHp) * 100;
+      const enemyHpBar = document.getElementById('battle-enemy-hp');
+      enemyHpBar.style.width = Math.max(0, enemyHpPercent) + '%';
+      enemyHpBar.classList.toggle('low', enemyHpPercent < 30);
+      document.getElementById('battle-enemy-hp-text').textContent =
+        Math.max(0, Math.round(battleState.enemyHp)) + '/' + battleState.enemyMaxHp;
+
+      // Cooldown do especial - atualizar texto mas respeitar dice-locked
+      const specialBtn = document.querySelector('[data-action="special"]');
+      if (specialBtn) {
+        const labelSpan = specialBtn.querySelector('span:last-child');
+        if (battleState.specialCooldown > 0) {
+          labelSpan.textContent = `Especial (${battleState.specialCooldown})`;
+          specialBtn.classList.add('dice-locked');
+          specialBtn.disabled = true;
+        } else {
+          labelSpan.textContent = 'Especial';
+          // Só desbloqueia se o dado permitir (5 ou 6)
+          if (battleState.diceRolled && [5, 6].includes(battleState.diceValue)) {
+            specialBtn.classList.remove('dice-locked');
+            specialBtn.classList.add('dice-unlocked');
+            specialBtn.disabled = false;
+          }
+        }
+      }
+
+      // Mostrar efeitos ativos
+      updateActiveEffects();
+    }
+
+    function updateActiveEffects() {
+      // Adicionar indicadores visuais de efeitos ativos se necessário
+      const playerPet = document.getElementById('battle-player');
+      if (!playerPet) return;
+
+      // Limpar efeitos anteriores
+      const existingEffects = playerPet.querySelector('.active-effects');
+      if (existingEffects) existingEffects.remove();
+
+      const effects = [];
+      if (battleState.atkBoost > 0) effects.push({ text: `⚔️+${battleState.atkBoost}`, type: 'buff' });
+      if (battleState.reflectActive) effects.push({ text: '💎Refletir', type: 'buff' });
+      if (battleState.defenseBonus > 0) effects.push({ text: `🛡️+${battleState.defenseBonus}`, type: 'buff' });
+
+      if (effects.length > 0) {
+        const effectsDiv = document.createElement('div');
+        effectsDiv.className = 'active-effects';
+        effectsDiv.innerHTML = effects.map(e =>
+          `<span class="effect-badge ${e.type}">${e.text}</span>`
+        ).join('');
+        playerPet.appendChild(effectsDiv);
+      }
+    }
+
+    function addBattleLog(message, type = '') {
+      // Mostrar mensagem na área do topo
+      const messageArea = document.getElementById('battle-message');
+      if (messageArea) {
+        messageArea.style.animation = 'none';
+        messageArea.offsetHeight; // Trigger reflow
+        messageArea.style.animation = 'message-fade 0.3s ease-in';
+
+        // Cor baseada no tipo
+        if (type === 'damage') {
+          messageArea.style.color = '#ef4444';
+        } else if (type === 'heal') {
+          messageArea.style.color = '#22c55e';
+        } else if (type === 'special') {
+          messageArea.style.color = '#a855f7';
+        } else {
+          messageArea.style.color = '#f59e0b';
+        }
+
+        messageArea.textContent = message;
+      }
+
+      // Também manter no log oculto para referência
+      const log = document.getElementById('battle-log');
+      if (log) {
+        const entry = document.createElement('div');
+        entry.className = 'battle-log-entry ' + type;
+        entry.textContent = message;
+        log.appendChild(entry);
+      }
+    }
+
+    function handleBattleAction(action) {
+      if (!battleState) return;
+      if (!battleState.diceRolled && action !== 'flee') {
+        showNotification('🎲', 'Role o dado primeiro!');
+        return;
+      }
+
+      const pet = gameState.pet;
+      let playerDamage = 0;
+      let skipEnemyTurn = false;
+
+      // Desabilitar botões durante animação
+      document.querySelectorAll('.battle-action-btn').forEach(btn => btn.disabled = true);
+
+      // Calcular dano base com boost
+      const effectiveAtk = pet.atk + battleState.atkBoost;
+
+      switch (action) {
+        case 'attack':
+          // Dano baseado no dado: quanto maior o dado, mais dano (balanceado)
+          const diceBonus = Math.floor(battleState.diceValue * 1.2);
+          const enemyDefReduction = Math.floor(battleState.enemy.def * 0.6);
+          const rawDamage = effectiveAtk + diceBonus + Math.floor(Math.random() * 3);
+          playerDamage = Math.max(1, rawDamage - enemyDefReduction);
+          battleState.enemyHp -= playerDamage;
+          addBattleLog(`🗡️ ${pet.name} atacou!`, 'damage');
+          addBattleLog(`   ATK ${effectiveAtk} + 🎲${battleState.diceValue} = ${rawDamage} - DEF ${enemyDefReduction} = ${playerDamage} HP`, 'damage');
+          animateBattle('player', 'attacking');
+          battleState.isDefending = false;
+          battleState.atkBoost = 0; // Reset boost após ataque
+          break;
+
+        case 'defend':
+          // Preparar defesa - dá bônus ao próximo dado de defesa
+          battleState.defenseBonus = battleState.diceValue;
+          const bonusText = battleState.diceValue >= 4 ? 'excelente' : battleState.diceValue >= 2 ? 'boa' : 'básica';
+
+          addBattleLog(`🛡️ ${pet.name} preparou posição defensiva!`, 'special');
+          addBattleLog(`   Bônus de +${battleState.defenseBonus} no próximo dado de defesa!`, 'special');
+
+          // Também recupera um pouco de HP se dado alto
+          if (battleState.diceValue >= 5) {
+            const healAmount = Math.floor(pet.def * 0.5);
+            battleState.playerHp = Math.min(battleState.playerMaxHp, battleState.playerHp + healAmount);
+            addBattleLog(`💚 Concentração restaurou ${healAmount} HP!`, 'heal');
+          }
+          break;
+
+        case 'special':
+          // Especial precisa de 5 ou 6 no dado (balanceado)
+          const specialBase = Math.floor(effectiveAtk * 1.8);
+          const specialDiceBonus = Math.floor(battleState.diceValue * 2);
+          const specialDefReduction = Math.floor(battleState.enemy.def * 0.3);
+          playerDamage = Math.max(1, specialBase + specialDiceBonus - specialDefReduction);
+          battleState.enemyHp -= playerDamage;
+          battleState.specialCooldown = 2;
+          addBattleLog(`🔥 ${pet.name} usou ATAQUE ESPECIAL!`, 'special');
+          addBattleLog(`   ATK ${effectiveAtk}×1.8 + 🎲${battleState.diceValue}×2 = ${playerDamage} HP`, 'special');
+          animateBattle('player', 'attacking');
+          battleState.isDefending = false;
+          break;
+
+        case 'artifact':
+          const artifactUsed = artifacts[battleState.currentArtifact];
+          if (!artifactUsed) break;
+
+          if (artifactUsed.damage) {
+            const artBaseDmg = artifactUsed.damage;
+            const artDiceBonus = Math.floor(battleState.diceValue * 1.5);
+            playerDamage = artBaseDmg + artDiceBonus;
+            battleState.enemyHp -= playerDamage;
+            addBattleLog(`${artifactUsed.emoji} ${artifactUsed.name} ativado!`, 'special');
+            addBattleLog(`   Base ${artBaseDmg} + 🎲${battleState.diceValue} = ${playerDamage} HP`, 'special');
+            animateBattle('player', 'attacking');
+
+            // Efeito de lifesteal
+            if (artifactUsed.effect === 'lifesteal') {
+              const healAmount = Math.floor(playerDamage * 0.4);
+              battleState.playerHp = Math.min(battleState.playerMaxHp, battleState.playerHp + healAmount);
+              addBattleLog(`💚 Lifesteal: +${healAmount} HP (40% do dano)`, 'heal');
+            }
+
+            // Auto-dano do sacrifício
+            if (artifactUsed.selfDamage) {
+              battleState.playerHp -= artifactUsed.selfDamage;
+              addBattleLog(`💔 Sacrifício pessoal: -${artifactUsed.selfDamage} HP`, 'damage');
+            }
+          }
+
+          // Efeito de reflexão
+          if (artifactUsed.effect === 'reflect') {
+            battleState.reflectActive = true;
+            addBattleLog(`💎 Escudo de Cristal ativado!`, 'special');
+            addBattleLog(`   Próximo ataque será refletido (60% dano)!`, 'special');
+          }
+
+          battleState.isDefending = false;
+          break;
+
+        case 'item':
+          showBattleItemMenu();
+          return; // Não passa turno ainda
+
+        case 'flee':
+          // Chance de fuga baseada no dado
+          const fleeChance = 0.3 + (battleState.diceValue * 0.1);
+          if (Math.random() < fleeChance) {
+            addBattleLog(`🏃 ${pet.name} fugiu da batalha!`);
+            setTimeout(() => {
+              showScreen('main');
+              updateMainScreen();
+            }, 1000);
+            return;
+          } else {
+            addBattleLog(`🏃 ${pet.name} não conseguiu fugir!`);
+            battleState.isDefending = false;
+          }
+          break;
+      }
+
+      // Verificar se inimigo morreu
+      setTimeout(() => {
+        if (battleState && battleState.enemyHp <= 0) {
+          endBattle(true);
+          return;
+        }
+
+        if (!skipEnemyTurn) {
+          // Turno do inimigo
+          battleState.isPlayerTurn = false;
+          updateTurnIndicator();
+          setTimeout(() => enemyTurn(), 800);
+        }
+      }, 500);
+
+      updateBattleUI();
+    }
+
+    // Menu de itens na batalha
+    function showBattleItemMenu() {
+      const hasItems = Object.keys(battleItems).some(key => gameState.inventory[key] > 0);
+
+      if (!hasItems) {
+        showNotification('🧪', 'Você não tem itens de batalha!');
+        return;
+      }
+
+      // Criar menu como overlay
+      let itemsHtml = '<div style="text-align: center; margin-bottom: 15px; color: #f59e0b; font-size: 1.2rem;">🧪 Escolha um item:</div>';
+
+      Object.entries(battleItems).forEach(([key, item]) => {
+        const qty = gameState.inventory[key] || 0;
+        if (qty > 0) {
+          itemsHtml += `
+            <button onclick="useBattleItem('${key}')" style="
+              display: block;
+              width: 100%;
+              padding: 12px;
+              margin: 8px 0;
+              background: rgba(255,255,255,0.1);
+              border: 2px solid rgba(255,255,255,0.2);
+              border-radius: 10px;
+              color: white;
+              cursor: pointer;
+              font-size: 1rem;
+            ">
+              ${item.emoji} ${item.name} (x${qty})
+            </button>
+          `;
+        }
+      });
+
+      itemsHtml += `
+        <button onclick="closeBattleItemMenu()" style="
+          display: block;
+          width: 100%;
+          padding: 12px;
+          margin-top: 15px;
+          background: rgba(239, 68, 68, 0.3);
+          border: 2px solid #ef4444;
+          border-radius: 10px;
+          color: white;
+          cursor: pointer;
+          font-size: 1rem;
+        ">
+          ❌ Cancelar
+        </button>
+      `;
+
+      // Criar overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'item-menu-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      `;
+      overlay.innerHTML = `<div style="background: rgba(30,30,50,0.95); padding: 25px; border-radius: 16px; border: 2px solid #f59e0b; max-width: 300px; width: 90%;">${itemsHtml}</div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function useBattleItem(itemKey) {
+      const item = battleItems[itemKey];
+      if (!item || gameState.inventory[itemKey] <= 0) return;
+
+      gameState.inventory[itemKey]--;
+
+      if (item.heal) {
+        battleState.playerHp = Math.min(battleState.playerMaxHp, battleState.playerHp + item.heal);
+        addBattleLog(`${item.emoji} Usou ${item.name}! +${item.heal} HP`, 'heal');
+      }
+
+      if (item.effect === 'boost-atk') {
+        battleState.atkBoost = 10;
+        addBattleLog(`${item.emoji} Usou ${item.name}! Ataque aumentado!`, 'special');
+      }
+
+      updateBattleUI();
+      saveGame();
+
+      // Restaurar log e passar turno
+      closeBattleItemMenu();
+
+      // Turno do inimigo
+      battleState.isPlayerTurn = false;
+      updateTurnIndicator();
+      setTimeout(() => enemyTurn(), 800);
+    }
+
+    function closeBattleItemMenu() {
+      const overlay = document.getElementById('item-menu-overlay');
+      if (overlay) overlay.remove();
+    }
+
+    function enemyTurn() {
+      if (!battleState) return;
+
+      const pet = gameState.pet;
+      const enemy = battleState.enemy;
+
+      // Dado do inimigo
+      const enemyDice = Math.floor(Math.random() * 6) + 1;
+      addBattleLog(`👹 ${enemy.name} rolou ${DICE_FACES[enemyDice - 1]} (${enemyDice}) para atacar!`, '');
+
+      // Calcular dano com bonus do dado (balanceado)
+      const diceBonus = Math.floor(enemyDice * 1.2);
+      const baseDamage = Math.max(1, enemy.atk + diceBonus + Math.floor(Math.random() * 3));
+
+      // Verificar reflexão
+      if (battleState.reflectActive) {
+        const reflectedDamage = Math.floor(baseDamage * 0.6);
+        battleState.enemyHp -= reflectedDamage;
+        addBattleLog(`💎 Escudo refletiu ${reflectedDamage} HP de volta!`, 'special');
+        battleState.reflectActive = false;
+
+        animateBattle('enemy', 'attacking');
+        updateBattleUI();
+
+        // Verificar morte do inimigo
+        setTimeout(() => {
+          if (battleState && battleState.enemyHp <= 0) {
+            endBattle(true);
+            return;
+          }
+          finishEnemyTurn();
+        }, 600);
+        return;
+      }
+
+      // Armazenar dano para defesa
+      battleState.pendingDamage = baseDamage;
+      battleState.enemyDiceValue = enemyDice;
+
+      // Mostrar overlay de defesa
+      showDefenseDiceOverlay(baseDamage, enemy.name);
+    }
+
+    // Mostrar overlay para jogador rolar dado de defesa
+    function showDefenseDiceOverlay(incomingDamage, enemyName) {
+      const bonus = battleState.defenseBonus || 0;
+      const bonusHtml = bonus > 0
+        ? `<div style="color: #22c55e; font-size: 0.85rem; margin-bottom: 5px;">✨ Bônus ativo: +${bonus}</div>`
+        : '';
+
+      const overlay = document.createElement('div');
+      overlay.id = 'defense-dice-overlay';
+      overlay.className = 'defense-dice-overlay';
+      overlay.innerHTML = `
+        <div class="defense-dice-container">
+          <div class="defense-dice-title">⚠️ ${enemyName} está atacando!</div>
+
+          <div class="damage-preview">
+            <div class="damage-preview-title">Dano do Ataque</div>
+            <div class="damage-preview-value">${incomingDamage} HP</div>
+          </div>
+
+          <div style="color: #3b82f6; font-size: 1.1rem; font-weight: bold; margin-top: 15px;">
+            🛡️ Role para defender!
+          </div>
+
+          ${bonusHtml}
+
+          <div class="defense-dice" id="defense-dice" title="Clique para rolar defesa!">?</div>
+
+          <div class="defense-instruction">Toque no dado</div>
+
+          <div class="defense-table">
+            <div class="defense-table-row">
+              <span>🎲 1-2</span>
+              <span>Reduz 30%</span>
+            </div>
+            <div class="defense-table-row">
+              <span>🎲 3-4</span>
+              <span>Reduz 50%</span>
+            </div>
+            <div class="defense-table-row">
+              <span>🎲 5</span>
+              <span>Reduz 75%</span>
+            </div>
+            <div class="defense-table-row" style="color: #22c55e;">
+              <span style="color: #22c55e;">🎲 6+</span>
+              <span>ANULA!</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      // Event listener para dado de defesa
+      document.getElementById('defense-dice').addEventListener('click', rollDefenseDice);
+    }
+
+    // Rolar dado de defesa
+    function rollDefenseDice() {
+      const dice = document.getElementById('defense-dice');
+      if (!dice || dice.dataset.rolled === 'true') return;
+
+      dice.dataset.rolled = 'true';
+      dice.style.animation = 'dice-roll 0.5s ease-in-out';
+
+      // Animação de rolagem
+      let rollCount = 0;
+      const rollInterval = setInterval(() => {
+        dice.textContent = DICE_FACES[Math.floor(Math.random() * 6)];
+        rollCount++;
+        if (rollCount >= 10) {
+          clearInterval(rollInterval);
+
+          // Resultado final
+          const defenseValue = Math.floor(Math.random() * 6) + 1;
+          dice.textContent = DICE_FACES[defenseValue - 1];
+          dice.style.animation = 'none';
+
+          // Calcular redução de dano baseado no dado
+          setTimeout(() => applyDefenseResult(defenseValue), 500);
+        }
+      }, 80);
+    }
+
+    // Aplicar resultado da defesa
+    function applyDefenseResult(defenseValue) {
+      const pet = gameState.pet;
+      const overlay = document.getElementById('defense-dice-overlay');
+      let baseDamage = battleState.pendingDamage;
+
+      // Aplicar bônus de defesa se tiver preparado
+      const bonus = battleState.defenseBonus || 0;
+      const effectiveDefenseRoll = Math.min(6, defenseValue + bonus);
+      battleState.defenseBonus = 0; // Reset bonus
+
+      // Calcular redução baseada no dado efetivo e na DEF do pet
+      let defenseMultiplier;
+      let defenseText;
+      const bonusText = bonus > 0 ? ` (+${bonus} bônus = ${effectiveDefenseRoll})` : '';
+
+      // Usar o valor efetivo para calcular defesa
+      defenseValue = effectiveDefenseRoll;
+
+      if (defenseValue === 6) {
+        defenseMultiplier = 0;
+        defenseText = '🛡️ DEFESA PERFEITA! Dano anulado!';
+      } else if (defenseValue === 5) {
+        defenseMultiplier = 0.25;
+        defenseText = `🛡️ Defesa excelente! (🎲${defenseValue}) -75%`;
+      } else if (defenseValue >= 3) {
+        defenseMultiplier = 0.5;
+        defenseText = `🛡️ Boa defesa! (🎲${defenseValue}) -50%`;
+      } else {
+        defenseMultiplier = 0.7;
+        defenseText = `🛡️ Defesa fraca... (🎲${defenseValue}) -30%`;
+      }
+
+      // Aplicar DEF do pet como redução adicional
+      const defReduction = Math.floor(pet.def / 2);
+      let finalDamage = Math.floor(baseDamage * defenseMultiplier) - defReduction;
+      finalDamage = Math.max(0, finalDamage);
+
+      // Mostrar resultado no overlay
+      const container = overlay.querySelector('.defense-dice-container');
+      const originalDice = effectiveDefenseRoll - bonus;
+      const resultColor = defenseValue >= 6 ? '#22c55e' : defenseValue >= 5 ? '#4ade80' : defenseValue >= 3 ? '#f59e0b' : '#ef4444';
+      const resultBg = defenseValue >= 6 ? 'rgba(34, 197, 94, 0.15)' : defenseValue >= 5 ? 'rgba(74, 222, 128, 0.1)' : defenseValue >= 3 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+
+      // Guardar dados para usar no botão continuar
+      window.defenseResultData = {
+        defenseText,
+        defenseValue,
+        defenseMultiplier,
+        defReduction,
+        baseDamage,
+        finalDamage
+      };
+
+      container.innerHTML = `
+        <div style="text-align: center;">
+          <!-- Dado resultado -->
+          <div style="
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(145deg, #fff, #e8e8e8);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            margin: 0 auto 10px;
+            border: 3px solid ${resultColor};
+            box-shadow: 0 0 20px ${resultColor}40;
+          ">${DICE_FACES[Math.min(5, originalDice - 1)]}</div>
+
+          ${bonus > 0 ? `
+            <div style="color: #22c55e; font-size: 0.85rem; margin-bottom: 8px;">
+              🎲${originalDice} + ✨${bonus} = <strong>${effectiveDefenseRoll}</strong>
+            </div>
+          ` : ''}
+
+          <!-- Resultado da defesa -->
+          <div style="
+            background: ${resultBg};
+            border: 1px solid ${resultColor}50;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 10px 0;
+          ">
+            <div style="color: ${resultColor}; font-size: 1rem; font-weight: bold;">
+              ${defenseText}
+            </div>
+          </div>
+
+          <!-- Cálculo do dano -->
+          <div style="
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 10px;
+          ">
+            <div style="color: #888; font-size: 0.7rem; margin-bottom: 5px;">Dano Final</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+              <span style="text-decoration: line-through; color: #666; font-size: 1.1rem;">${baseDamage}</span>
+              <span style="color: #f59e0b; font-size: 1.2rem;">→</span>
+              <span style="
+                font-size: 1.8rem;
+                font-weight: bold;
+                color: ${finalDamage === 0 ? '#22c55e' : '#ef4444'};
+                text-shadow: 0 0 10px ${finalDamage === 0 ? '#22c55e' : '#ef4444'}50;
+              ">
+                ${finalDamage}
+              </span>
+            </div>
+            <div style="color: #666; font-size: 0.65rem; margin-top: 5px;">
+              -${Math.round((1-defenseMultiplier)*100)}% defesa, -${defReduction} DEF
+            </div>
+          </div>
+
+          <!-- Botão Continuar -->
+          <button id="defense-continue-btn" style="
+            margin-top: 15px;
+            padding: 12px 40px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+          ">
+            Continuar ➤
+          </button>
+        </div>
+      `;
+
+      // Event listener para botão continuar
+      document.getElementById('defense-continue-btn').addEventListener('click', () => {
+        applyDefenseAndContinue(overlay);
+      });
+    }
+
+    // Aplicar dano e continuar batalha após clicar no botão
+    function applyDefenseAndContinue(overlay) {
+      const data = window.defenseResultData;
+      if (!data) return;
+
+      overlay.remove();
+
+      addBattleLog(`${data.defenseText}`, data.defenseValue >= 5 ? 'special' : '');
+      addBattleLog(`💥 ${battleState.enemy.name} causou ${data.finalDamage} de dano!`, 'damage');
+
+      animateBattle('enemy', 'attacking');
+      if (data.finalDamage > 0) {
+        animateBattle('player', 'defending');
+      }
+
+      battleState.playerHp -= data.finalDamage;
+      battleState.turn++;
+
+      if (battleState.specialCooldown > 0) {
+        battleState.specialCooldown--;
+      }
+
+      updateBattleUI();
+
+      // Verificar se jogador morreu
+      setTimeout(() => {
+        if (!battleState) return;
+
+        if (battleState.playerHp <= 0) {
+          endBattle(false);
+          return;
+        }
+
+        finishEnemyTurn();
+      }, 400);
+    }
+
+    // Finalizar turno do inimigo
+    function finishEnemyTurn() {
+      if (!battleState) return;
+
+      // Volta pro turno do jogador
+      battleState.isPlayerTurn = true;
+      battleState.isDefending = false;
+      resetDiceSystem();
+      updateTurnIndicator();
+    }
+
+    function animateBattle(who, animation) {
+      const el = document.getElementById('battle-' + who);
+      el.classList.add(animation);
+      setTimeout(() => el.classList.remove(animation), 300);
+
+      // Se está atacando, mostrar o hit no oponente
+      if (animation === 'attacking') {
+        const opponent = who === 'player' ? 'enemy' : 'player';
+        setTimeout(() => {
+          const oppEl = document.getElementById('battle-' + opponent);
+          oppEl.classList.add('hit');
+          setTimeout(() => oppEl.classList.remove('hit'), 300);
+        }, 150);
+      }
+    }
+
+    function endBattle(victory) {
+      const pet = gameState.pet;
+      const enemy = battleState.enemy;
+
+      gameState.stats.totalBattles++;
+
+      if (victory) {
+        gameState.stats.wins++;
+
+        // Recompensas
+        const xpGained = enemy.xp + Math.floor(Math.random() * 20);
+        const coinsGained = enemy.coins + Math.floor(Math.random() * 10);
+
+        addXP(xpGained);
+        gameState.inventory.coins += coinsGained;
+
+        // Reduzir energia e fome
+        pet.energy = Math.max(0, pet.energy - 20);
+        pet.hunger = Math.max(0, pet.hunger - 15);
+
+        // CAPTURA DE PET - 60% de chance base
+        let captureChance = 0.60;
+        let capturedPet = null;
+        let captureMessage = '';
+
+        // Aumenta chance se tiver lucky charm
+        if (gameState.inventory['lucky-charm'] > 0) {
+          captureChance = 0.85;
+        }
+
+        // Garantir que collectedPets existe
+        if (!gameState.collectedPets) {
+          gameState.collectedPets = [];
+        }
+
+        // Verifica se já tem esse tipo de pet
+        const alreadyHas = gameState.collectedPets.some(p => p.name === enemy.name);
+
+        if (alreadyHas) {
+          captureMessage = `(Você já tem um ${enemy.name})`;
+        } else if (Math.random() < captureChance) {
+          // Capturou!
+          const spriteKey = enemySpriteMap[enemy.name] || null;
+          capturedPet = {
+            id: Date.now(),
+            key: spriteKey,  // Chave do sprite para pixel art
+            name: enemy.name,
+            emoji: enemy.emoji,
+            type: 'selvagem',
+            level: Math.max(1, pet.level - 2),
+            rarity: 'common',
+            atk: enemy.atk,
+            def: enemy.def,
+            maxHealth: enemy.maxHp,
+            capturedAt: Date.now()
+          };
+          gameState.collectedPets.push(capturedPet);
+          gameState.stats.petsCollected = (gameState.stats.petsCollected || 0) + 1;
+          console.log('[PolyPets] Pet capturado:', capturedPet);
+          console.log('[PolyPets] Coleção atual:', gameState.collectedPets);
+        } else {
+          captureMessage = `(${enemy.name} escapou da captura!)`;
+        }
+
+        // Atualizar tela de resultado
+        document.getElementById('result-emoji').textContent = capturedPet ? '🎊' : '🏆';
+        document.getElementById('result-title').textContent = capturedPet ? 'Vitória + Captura!' : 'Vitória!';
+        document.getElementById('result-title').className = 'result-title victory';
+
+        let resultMsg = capturedPet
+          ? `${pet.name} derrotou e capturou ${enemy.name}!`
+          : `${pet.name} derrotou ${enemy.name}!`;
+
+        if (captureMessage && !capturedPet) {
+          resultMsg += `\n${captureMessage}`;
+        }
+        document.getElementById('result-message').textContent = resultMsg;
+        document.getElementById('result-message').style.whiteSpace = 'pre-line';
+        document.getElementById('reward-xp').textContent = `+${xpGained}`;
+        document.getElementById('reward-coins').textContent = `+${coinsGained}`;
+
+        // Mostrar pet capturado nas recompensas
+        updateCaptureReward(capturedPet);
+
+        document.getElementById('result-rewards').style.display = 'block';
+
+      } else {
+        gameState.stats.losses++;
+
+        // Penalidade
+        pet.health = Math.max(10, pet.health - 30);
+        pet.energy = Math.max(0, pet.energy - 30);
+        pet.happiness = Math.max(0, pet.happiness - 20);
+
+        // Atualizar tela de resultado
+        document.getElementById('result-emoji').textContent = '💔';
+        document.getElementById('result-title').textContent = 'Derrota...';
+        document.getElementById('result-title').className = 'result-title defeat';
+        document.getElementById('result-message').textContent = `${pet.name} foi derrotado por ${enemy.name}...`;
+        document.getElementById('result-rewards').style.display = 'none';
+      }
+
+      saveGame();
+      battleState = null;
+      showScreen('result');
+    }
+
+    function updateCaptureReward(capturedPet) {
+      // Remover reward de captura anterior se existir
+      const existingCapture = document.getElementById('reward-capture');
+      if (existingCapture) existingCapture.remove();
+
+      if (capturedPet) {
+        const captureDiv = document.createElement('div');
+        captureDiv.id = 'reward-capture';
+        captureDiv.className = 'reward-item';
+        captureDiv.style.background = 'rgba(245, 158, 11, 0.2)';
+        captureDiv.style.borderRadius = '8px';
+        captureDiv.style.marginTop = '10px';
+        captureDiv.innerHTML = `
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5rem;">${capturedPet.emoji}</span>
+            Pet Capturado!
+          </span>
+          <span style="color: #f59e0b; font-weight: bold;">${capturedPet.name}</span>
+        `;
+        document.getElementById('result-rewards').appendChild(captureDiv);
+      }
+    }
+
+    // ==================== GAME LOOP ====================
+    function startGameLoop() {
+      // A cada 10 segundos, diminuir stats (simula passagem de tempo)
+      setInterval(() => {
+        if (!gameState.hasPet || !gameState.pet) return;
+
+        const pet = gameState.pet;
+
+        if (pet.isSleeping) {
+          // Dormindo: recupera energia, perde fome devagar
+          pet.energy = Math.min(100, pet.energy + 5);
+          pet.hunger = Math.max(0, pet.hunger - 1);
+
+          // Acordar automaticamente quando energia cheia
+          if (pet.energy >= 100) {
+            pet.isSleeping = false;
+            showNotification('☀️', `${pet.name} acordou descansado!`);
+          }
+        } else {
+          // Acordado: perde stats gradualmente
+          pet.hunger = Math.max(0, pet.hunger - 2);
+          pet.happiness = Math.max(0, pet.happiness - 1);
+          pet.energy = Math.max(0, pet.energy - 1);
+
+          // Saúde diminui se muito faminto ou triste
+          if (pet.hunger < 20 || pet.happiness < 20) {
+            pet.health = Math.max(0, pet.health - 2);
+          }
+        }
+
+        saveGame();
+        updateMainScreen();
+      }, 10000); // 10 segundos
+    }
+
+    // ==================== NOTIFICAÇÕES ====================
+    function showNotification(icon, text) {
+      const notification = document.getElementById('notification');
+      notification.querySelector('.notification-icon').textContent = icon;
+      notification.querySelector('.notification-text').textContent = text;
+      notification.classList.add('show');
+
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    // ==================== INVENTÁRIO E LOJA ====================
+    function buyItem(itemName, price) {
+      if (gameState.inventory.coins < price) {
+        showNotification('🪙', 'Moedas insuficientes!');
+        return;
+      }
+
+      gameState.inventory.coins -= price;
+      gameState.inventory[itemName] = (gameState.inventory[itemName] || 0) + 1;
+
+      const itemNames = {
+        'food': 'Comida',
+        'premium-food': 'Comida Premium',
+        'medicine': 'Remédio',
+        'super-medicine': 'Super Remédio',
+        'toy': 'Brinquedo',
+        'energy-drink': 'Energético',
+        'xp-boost': 'XP Boost',
+        'lucky-charm': 'Amuleto da Sorte'
+      };
+
+      saveGame();
+      updateInventoryScreen();
+      showNotification('🛒', `Comprou ${itemNames[itemName] || itemName}!`);
+    }
+
+    function useItem(itemName) {
+      const pet = gameState.pet;
+      if (!pet) {
+        showNotification('❌', 'Você não tem um pet!');
+        return;
+      }
+
+      if (!gameState.inventory[itemName] || gameState.inventory[itemName] <= 0) {
+        showNotification('❌', 'Você não tem esse item!');
+        return;
+      }
+
+      let used = false;
+      let message = '';
+
+      switch (itemName) {
+        case 'food':
+          if (pet.hunger >= 100) {
+            showNotification('🍖', `${pet.name} não está com fome!`);
+            return;
+          }
+          pet.hunger = Math.min(100, pet.hunger + 30);
+          used = true;
+          message = `${pet.name} comeu! +30 Fome`;
+          break;
+
+        case 'premium-food':
+          if (pet.hunger >= 100 && pet.happiness >= 100) {
+            showNotification('🥩', `${pet.name} não precisa disso agora!`);
+            return;
+          }
+          pet.hunger = Math.min(100, pet.hunger + 60);
+          pet.happiness = Math.min(100, pet.happiness + 10);
+          used = true;
+          message = `${pet.name} adorou! +60 Fome, +10 Felicidade`;
+          break;
+
+        case 'medicine':
+          if (pet.health >= 100) {
+            showNotification('💊', `${pet.name} está saudável!`);
+            return;
+          }
+          pet.health = Math.min(100, pet.health + 40);
+          used = true;
+          message = `${pet.name} foi curado! +40 Saúde`;
+          break;
+
+        case 'super-medicine':
+          if (pet.health >= 100) {
+            showNotification('💉', `${pet.name} está saudável!`);
+            return;
+          }
+          pet.health = 100;
+          used = true;
+          message = `${pet.name} está 100% curado!`;
+          break;
+
+        case 'toy':
+          if (pet.happiness >= 100) {
+            showNotification('🎾', `${pet.name} já está muito feliz!`);
+            return;
+          }
+          pet.happiness = Math.min(100, pet.happiness + 40);
+          used = true;
+          message = `${pet.name} amou brincar! +40 Felicidade`;
+          break;
+
+        case 'energy-drink':
+          if (pet.energy >= 100) {
+            showNotification('⚡', `${pet.name} está cheio de energia!`);
+            return;
+          }
+          pet.energy = Math.min(100, pet.energy + 50);
+          used = true;
+          message = `${pet.name} ficou energizado! +50 Energia`;
+          break;
+
+        case 'xp-boost':
+          addXP(100);
+          used = true;
+          message = `${pet.name} ganhou +100 XP!`;
+          break;
+
+        case 'lucky-charm':
+          // Efeito especial: chance de dobrar próximas recompensas
+          showNotification('🍀', 'Amuleto ativado! (em breve...)');
+          return;
+      }
+
+      if (used) {
+        gameState.inventory[itemName]--;
+        saveGame();
+        updateInventoryScreen();
+        showNotification('✅', message);
+      }
+    }
+
+    function updateInventoryScreen() {
+      // Atualizar moedas
+      document.getElementById('inventory-coins').textContent = gameState.inventory.coins;
+
+      // Atualizar quantidade de cada item
+      const items = ['food', 'premium-food', 'medicine', 'super-medicine', 'toy', 'energy-drink', 'xp-boost', 'lucky-charm'];
+      items.forEach(item => {
+        const el = document.getElementById('inv-' + item);
+        if (el) {
+          el.textContent = gameState.inventory[item] || 0;
+        }
+      });
+
+      // Destacar itens com quantidade > 0
+      document.querySelectorAll('.inventory-item').forEach(itemEl => {
+        const itemName = itemEl.dataset.item;
+        const count = gameState.inventory[itemName] || 0;
+        if (count > 0) {
+          itemEl.style.borderColor = 'rgba(245, 158, 11, 0.5)';
+          itemEl.style.opacity = '1';
+        } else {
+          itemEl.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          itemEl.style.opacity = '0.5';
+        }
+      });
+    }
+
+    function updateStatsScreen() {
+      const pet = gameState.pet;
+      if (!pet) return;
+
+      // Info do Pet
+      document.getElementById('stats-pet-name').textContent = pet.name;
+      document.getElementById('stats-pet-type').textContent = pet.type.charAt(0).toUpperCase() + pet.type.slice(1);
+      document.getElementById('stats-pet-level').textContent = pet.level;
+      document.getElementById('stats-pet-rarity').textContent = pet.rarity.charAt(0).toUpperCase() + pet.rarity.slice(1);
+      document.getElementById('stats-pet-atk').textContent = pet.atk;
+      document.getElementById('stats-pet-def').textContent = pet.def;
+
+      // Estatísticas de Batalha
+      document.getElementById('stats-total-battles').textContent = gameState.stats.totalBattles;
+      document.getElementById('stats-wins').textContent = gameState.stats.wins;
+      document.getElementById('stats-losses').textContent = gameState.stats.losses;
+
+      // Taxa de vitória
+      const winrate = gameState.stats.totalBattles > 0
+        ? Math.round((gameState.stats.wins / gameState.stats.totalBattles) * 100)
+        : 0;
+      document.getElementById('stats-winrate').textContent = winrate + '%';
+
+      // Pets capturados
+      document.getElementById('stats-pets-collected').textContent = gameState.stats.petsCollected || 0;
+
+      // Tempo de jogo
+      const timePlayed = Date.now() - (pet.createdAt || Date.now());
+      const hours = Math.floor(timePlayed / 3600000);
+      const minutes = Math.floor((timePlayed % 3600000) / 60000);
+
+      if (hours > 0) {
+        document.getElementById('stats-time-played').textContent = `${hours}h ${minutes}min`;
+      } else {
+        document.getElementById('stats-time-played').textContent = `${minutes} minutos`;
+      }
+    }
+
+    // ==================== COLEÇÃO DE PETS ====================
+    function updateCollectionScreen() {
+      const pet = gameState.pet;
+      if (!pet) return;
+
+      // Garantir que collectedPets existe
+      if (!gameState.collectedPets) {
+        gameState.collectedPets = [];
+      }
+
+      console.log('[PolyPets] Atualizando coleção. Pets:', gameState.collectedPets.length);
+
+      // Pet principal - pixel art
+      renderPixelSprite(pet.key, document.getElementById('collection-main-pixel'), true, false);
+      document.getElementById('collection-main-name').textContent = pet.name;
+      document.getElementById('collection-main-info').textContent = `Nível ${pet.level} • ${pet.rarity.charAt(0).toUpperCase() + pet.rarity.slice(1)}`;
+
+      // Contador
+      const count = gameState.collectedPets.length;
+      document.getElementById('collection-count').textContent = count;
+
+      // Grid de pets capturados
+      const grid = document.getElementById('collection-grid');
+      const emptyMsg = document.getElementById('collection-empty');
+
+      // Limpar grid (exceto mensagem vazia)
+      grid.querySelectorAll('.collected-pet-card').forEach(el => el.remove());
+
+      if (count === 0) {
+        emptyMsg.style.display = 'block';
+      } else {
+        emptyMsg.style.display = 'none';
+
+        gameState.collectedPets.forEach((collectedPet, index) => {
+          console.log('[PolyPets] Renderizando pet:', collectedPet.name);
+
+          const card = document.createElement('div');
+          card.className = 'collected-pet-card inventory-item';
+          card.style.cursor = 'pointer';
+          card.style.padding = '15px';
+          card.style.minHeight = '100px';
+
+          // Determinar sprite key (pode ser pet original ou inimigo capturado)
+          const spriteKey = collectedPet.key || enemySpriteMap[collectedPet.name] || null;
+
+          if (spriteKey && pixelSprites[spriteKey]) {
+            const spriteContainer = document.createElement('div');
+            spriteContainer.className = 'pet-preview';
+            spriteContainer.style.height = '50px';
+            renderPixelSprite(spriteKey, spriteContainer, true, false);
+            card.appendChild(spriteContainer);
+          } else {
+            // Fallback para emoji
+            const emoji = document.createElement('span');
+            emoji.style.fontSize = '2.5rem';
+            emoji.style.display = 'block';
+            emoji.textContent = collectedPet.emoji || '❓';
+            card.appendChild(emoji);
+          }
+
+          const nameDiv = document.createElement('div');
+          nameDiv.style.cssText = 'font-size: 0.75rem; font-weight: bold; margin-top: 8px; color: #fff;';
+          nameDiv.textContent = collectedPet.name;
+          card.appendChild(nameDiv);
+
+          const levelDiv = document.createElement('div');
+          levelDiv.style.cssText = 'font-size: 0.7rem; color: #888;';
+          levelDiv.textContent = `Nv. ${collectedPet.level}`;
+          card.appendChild(levelDiv);
+
+          card.addEventListener('click', () => switchToPet(index));
+          grid.appendChild(card);
+        });
+      }
+    }
+
+    function switchToPet(collectionIndex) {
+      const collectedPet = gameState.collectedPets[collectionIndex];
+      if (!collectedPet) return;
+
+      // Confirmar troca
+      if (!confirm(`Deseja usar ${collectedPet.name} como seu pet principal?\n\nSeu pet atual será guardado na coleção.`)) {
+        return;
+      }
+
+      // Guardar pet atual na coleção
+      const currentPet = gameState.pet;
+      const savedPet = {
+        id: currentPet.createdAt || Date.now(),
+        key: currentPet.key,
+        name: currentPet.name,
+        emoji: currentPet.emoji,
+        type: currentPet.type,
+        level: currentPet.level,
+        rarity: currentPet.rarity,
+        atk: currentPet.atk,
+        def: currentPet.def,
+        maxHealth: currentPet.maxHealth,
+        capturedAt: Date.now()
+      };
+
+      // Remover pet escolhido da coleção
+      gameState.collectedPets.splice(collectionIndex, 1);
+
+      // Adicionar pet atual à coleção
+      gameState.collectedPets.push(savedPet);
+
+      // Criar novo pet principal a partir do capturado
+      // Se não tem key, tentar encontrar pelo nome do inimigo
+      const petKey = collectedPet.key || enemySpriteMap[collectedPet.name] || 'wolf';
+
+      gameState.pet = {
+        key: petKey,
+        name: collectedPet.name,
+        emoji: collectedPet.emoji,
+        type: collectedPet.type || 'selvagem',
+        level: collectedPet.level,
+        xp: 0,
+        xpToNext: Math.floor(100 * Math.pow(1.5, collectedPet.level - 1)),
+        rarity: collectedPet.rarity || 'common',
+        hunger: 100,
+        happiness: 100,
+        energy: 100,
+        health: 100,
+        maxHealth: collectedPet.maxHealth,
+        atk: collectedPet.atk,
+        def: collectedPet.def,
+        isSleeping: false,
+        createdAt: Date.now()
+      };
+
+      saveGame();
+      updateCollectionScreen();
+      showNotification('🔄', `Agora você está usando ${collectedPet.name}!`);
+    }
+
+    // ==================== RESET GAME ====================
+    function resetGame() {
+      if (confirm('🔄 Reiniciar o jogo?\n\nIsso vai apagar seu pet e todo o progresso!')) {
+        localStorage.removeItem('polyPetsDemo');
+        location.reload();
+      }
+    }
+
+    // ==================== INICIAR ====================
+    init();
+  </script>
+</body>
+</html>
