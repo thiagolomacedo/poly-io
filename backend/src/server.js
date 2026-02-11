@@ -635,7 +635,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 
     // Timeout de 30 segundos para evitar travamentos
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    const timeoutId = setTimeout(() => controller.abort(), 60000)
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -649,7 +649,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
           { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
           ...historico
         ],
-        max_tokens: 500,
+        max_tokens: 800,
         temperature: 0.7
       }),
       signal: controller.signal
@@ -670,7 +670,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 
         // Segunda tentativa
         const retryController = new AbortController()
-        const retryTimeoutId = setTimeout(() => retryController.abort(), 30000)
+        const retryTimeoutId = setTimeout(() => retryController.abort(), 60000)
 
         try {
           const retryResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -685,7 +685,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
                 { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
                 ...historico
               ],
-              max_tokens: 500,
+              max_tokens: 800,
               temperature: 0.7
             }),
             signal: retryController.signal
