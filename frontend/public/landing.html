@@ -297,20 +297,26 @@
 
     .ticker {
       display: flex;
-      animation: ticker-scroll 35s linear infinite;
-      will-change: transform;
+      overflow: hidden;
+      user-select: none;
     }
 
-    .ticker:hover {
+    .ticker-track {
+      display: flex;
+      flex-shrink: 0;
+      animation: scroll 40s linear infinite;
+    }
+
+    .ticker:hover .ticker-track {
       animation-play-state: paused;
     }
 
-    @keyframes ticker-scroll {
-      0% {
-        transform: translateX(0%);
+    @keyframes scroll {
+      from {
+        transform: translateX(0);
       }
-      100% {
-        transform: translateX(-50%);
+      to {
+        transform: translateX(-100%);
       }
     }
 
@@ -318,7 +324,6 @@
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      white-space: nowrap;
     }
 
     .ticker-item {
@@ -330,6 +335,7 @@
       text-transform: uppercase;
       letter-spacing: 0.15em;
       padding: 0 3rem;
+      flex-shrink: 0;
     }
 
     .ticker-logo {
@@ -1004,48 +1010,64 @@
   <!-- Ticker / Marquee -->
   <div class="ticker-wrapper">
     <div class="ticker">
-      <div class="ticker-content">
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+      <!-- Track 1 -->
+      <div class="ticker-track">
+        <div class="ticker-content">
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
         </div>
       </div>
-      <div class="ticker-content">
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
-        </div>
-        <div class="ticker-item">
-          <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
-          <span class="ticker-divider">•</span>
-          <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+      <!-- Track 2 (cópia idêntica) -->
+      <div class="ticker-track">
+        <div class="ticker-content">
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
+          <div class="ticker-item">
+            <span class="ticker-logo"><span>Poly</span><span>.io</span></span>
+            <span class="ticker-divider">•</span>
+            <span class="ticker-text ticker-glow">CHAT SEM FRONTEIRAS</span>
+          </div>
         </div>
       </div>
     </div>
