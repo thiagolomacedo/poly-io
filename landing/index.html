@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poly.io - Chat sem barreiras de idioma</title>
+  <meta name="description" content="Converse em tempo real com tradução automática. Cada pessoa fala sua língua, o Poly traduz.">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Poly.io - Chat sem barreiras de idioma">
+  <meta property="og:description" content="Converse em tempo real com tradução automática. Cada pessoa fala sua língua, o Poly traduz.">
+  <meta property="og:image" content="https://poly-io.vercel.app/og-image.png">
+  <meta property="og:url" content="https://poly-io.vercel.app">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --primary-light: #818cf8;
+      --bg-dark: #09090b;
+      --bg-card: #18181b;
+      --bg-card-hover: #27272a;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --border: #27272a;
+      --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      --gradient-2: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ==================== NAVIGATION ==================== */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 1rem 2rem;
+      background: rgba(9, 9, 11, 0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .nav-logo span:first-child { color: var(--text-primary); }
+    .nav-logo span:last-child { color: var(--primary); }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card);
+      border-color: var(--text-muted);
+    }
+
+    .btn-large {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+    }
+
+    /* ==================== HERO ==================== */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+      animation: pulse 15s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.1) rotate(5deg); opacity: 0.8; }
+    }
+
+    .hero-content {
+      max-width: 900px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .hero-badge-dot {
+      width: 8px;
+      height: 8px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 .highlight {
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(1.1rem, 2vw, 1.35rem);
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 4rem;
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat {
+      text-align: center;
+    }
+
+    .hero-stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .hero-stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ==================== MANIFESTO ==================== */
+    .manifesto {
+      padding: 8rem 2rem;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .manifesto-container {
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .manifesto-quote {
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+    }
+
+    .manifesto-quote::before {
+      content: '"';
+      color: var(--primary);
+    }
+
+    .manifesto-quote::after {
+      content: '"';
+      color: var(--primary);
+    }
+
+    .manifesto-explanation {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ==================== FEATURES ==================== */
+    .features {
+      padding: 8rem 2rem;
+    }
+
+    .features-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .section-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--gradient-1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .feature-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .feature-description {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* ==================== ROOMS SECTION ==================== */
+    .rooms {
+      padding: 8rem 2rem;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rooms-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .rooms-content h2 {
+      font-size: clamp(2rem, 4vw, 2.5rem);
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+    .rooms-quote {
+      font-size: 1.25rem;
+      color: var(--primary-light);
+      font-style: italic;
+      margin-bottom: 1.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--primary);
+    }
+
+    .rooms-description {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      line-height: 1.8;
+      margin-bottom: 2rem;
+    }
+
+    .rooms-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .rooms-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .rooms-list li::before {
+      content: '✓';
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .rooms-visual {
+      position: relative;
+    }
+
+    .room-card-demo {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transform: rotate(-2deg);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .room-card-demo:nth-child(2) {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      transform: rotate(3deg);
+      opacity: 0.7;
+    }
+
+    .room-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .room-card-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--gradient-1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .room-card-info h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .room-card-info span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .room-card-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .room-msg {
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      max-width: 80%;
+    }
+
+    .room-msg.sent {
+      background: var(--primary);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .room-msg.received {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+
+    .room-msg-flag {
+      font-size: 0.75rem;
+      margin-right: 0.5rem;
+    }
+
+    /* ==================== QUOTES SECTION ==================== */
+    .quotes {
+      padding: 8rem 2rem;
+    }
+
+    .quotes-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .quotes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+    }
+
+    .quote-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .quote-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .quote-card::before {
+      content: '"';
+      position: absolute;
+      top: 1rem;
+      left: 1.5rem;
+      font-size: 4rem;
+      color: var(--primary);
+      opacity: 0.2;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .quote-text {
+      font-size: 1.1rem;
+      font-weight: 500;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .quote-category {
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ==================== CTA SECTION ==================== */
+    .cta {
+      padding: 8rem 2rem;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+    }
+
+    .cta-container {
+      max-width: 700px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .cta h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .cta p {
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    /* ==================== FOOTER ==================== */
+    footer {
+      padding: 4rem 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .footer-logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .footer-logo span:first-child { color: var(--text-primary); }
+    .footer-logo span:last-child { color: var(--primary); }
+
+    .footer-tagline {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-bottom {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ==================== RESPONSIVE ==================== */
+    @media (max-width: 768px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero-stats {
+        gap: 2rem;
+      }
+
+      .rooms-container {
+        grid-template-columns: 1fr;
+      }
+
+      .rooms-visual {
+        order: -1;
+      }
+
+      .footer-container {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    /* ==================== ANIMATIONS ==================== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-container">
+      <a href="#" class="nav-logo">
+        <span>Poly</span><span>.io</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#salas">Salas</a>
+        <a href="#filosofia">Filosofia</a>
+        <a href="https://poly-io.vercel.app" class="btn btn-primary">Entrar</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge animate-in">
+        <span class="hero-badge-dot"></span>
+        <span>Tradução em tempo real</span>
+      </div>
+
+      <h1 class="animate-in delay-1">
+        Cada pessoa fala sua língua.<br>
+        <span class="highlight">O Poly traduz.</span>
+      </h1>
+
+      <p class="hero-subtitle animate-in delay-2">
+        Diferente de outras plataformas, no Poly.io você não entra numa sala onde todo mundo precisa falar inglês. Converse naturalmente — a tradução acontece automaticamente.
+      </p>
+
+      <div class="hero-cta animate-in delay-3">
+        <a href="https://poly-io.vercel.app" class="btn btn-primary btn-large">
+          Começar agora
+          <span>→</span>
+        </a>
+        <a href="#features" class="btn btn-secondary btn-large">
+          Como funciona
+        </a>
+      </div>
+
+      <div class="hero-stats animate-in delay-4">
+        <div class="hero-stat">
+          <div class="hero-stat-value">11</div>
+          <div class="hero-stat-label">Idiomas</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">100%</div>
+          <div class="hero-stat-label">Gratuito</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">0</div>
+          <div class="hero-stat-label">Dados armazenados</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Manifesto -->
+  <section class="manifesto">
+    <div class="manifesto-container">
+      <p class="manifesto-quote">
+        No Poly.io, conversas não ficam guardadas. Elas acontecem.
+      </p>
+      <p class="manifesto-explanation">
+        Mensagens expiram em 24 horas. Salas desaparecem quando param de ser usadas.
+        Aqui, o foco é estar presente — não acumular histórico.
+      </p>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="features-container">
+      <div class="section-header">
+        <span class="section-label">Features</span>
+        <h2 class="section-title">O idioma deixa de ser uma barreira</h2>
+        <p class="section-subtitle">E vira apenas um detalhe. Você foca na conversa, não na tradução.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🌐</div>
+          <h3 class="feature-title">Tradução Automática</h3>
+          <p class="feature-description">
+            Escreva em português, seu amigo recebe em japonês. Cada um no seu idioma, sem esforço.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⏳</div>
+          <h3 class="feature-title">Mensagens Efêmeras</h3>
+          <p class="feature-description">
+            Suas conversas expiram em 24 horas. Privacidade real, não promessas vazias.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎤</div>
+          <h3 class="feature-title">Voz para Texto</h3>
+          <p class="feature-description">
+            Fale em vez de digitar. O Poly transcreve e traduz automaticamente.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🚀</div>
+          <h3 class="feature-title">Salas Públicas</h3>
+          <p class="feature-description">
+            Crie uma sala sobre qualquer tema. Pessoas de todo o mundo, conversando em tempo real.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📹</div>
+          <h3 class="feature-title">Videochamadas</h3>
+          <p class="feature-description">
+            Chamadas de vídeo integradas via Jitsi. Gratuitas, sem limite de tempo.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3 class="feature-title">io - Assistente IA</h3>
+          <p class="feature-description">
+            Uma amiga virtual para conversar, tirar dúvidas e testar a tradução.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rooms Section -->
+  <section class="rooms" id="salas">
+    <div class="rooms-container">
+      <div class="rooms-content">
+        <h2>Salas no Poly.io não são páginas.<br>São encontros.</h2>
+
+        <p class="rooms-quote">
+          "Uma sala existe enquanto fizer sentido para alguém."
+        </p>
+
+        <p class="rooms-description">
+          Se ninguém está conversando, a sala deixa de existir. Não há histórico infinito,
+          não há posts antigos. Apenas conversas acontecendo agora.
+        </p>
+
+        <ul class="rooms-list">
+          <li>Máximo 20 pessoas por sala</li>
+          <li>Mensagens expiram em 1 hora</li>
+          <li>Tradução automática para cada participante</li>
+          <li>Moderação pelo criador da sala</li>
+          <li>Salas inativas são removidas em 30 dias</li>
+        </ul>
+      </div>
+
+      <div class="rooms-visual">
+        <div class="room-card-demo">
+          <div class="room-card-header">
+            <div class="room-card-avatar">💬</div>
+            <div class="room-card-info">
+              <h4>Tech Global</h4>
+              <span>12 participantes</span>
+            </div>
+          </div>
+          <div class="room-card-messages">
+            <div class="room-msg received">
+              <span class="room-msg-flag">🇯🇵</span>
+              Bom dia! Alguém aqui trabalha com Vue.js?
+            </div>
+            <div class="room-msg sent">
+              <span class="room-msg-flag">🇧🇷</span>
+              Eu! Estou usando no meu projeto atual.
+            </div>
+            <div class="room-msg received">
+              <span class="room-msg-flag">🇺🇸</span>
+              Same here! Vue 3 + TypeScript is amazing.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quotes/Philosophy Section -->
+  <section class="quotes" id="filosofia">
+    <div class="quotes-container">
+      <div class="section-header">
+        <span class="section-label">Filosofia</span>
+        <h2 class="section-title">Menos histórico, mais humanidade</h2>
+        <p class="section-subtitle">O Poly.io foi criado com propósito. Cada decisão reflete uma visão.</p>
+      </div>
+
+      <div class="quotes-grid">
+        <div class="quote-card">
+          <p class="quote-text">
+            O Poly.io é para quem quer estar agora, não para quem quer ler depois.
+          </p>
+          <span class="quote-category">Presença</span>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            Você não segue pessoas no Poly.io. Você entra em conversas.
+          </p>
+          <span class="quote-category">Comunidade</span>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            Global não é falar inglês. Global é cada um falar como é.
+          </p>
+          <span class="quote-category">Propósito</span>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            A internet ensinou a falar para muitos. O Poly.io ensina a conversar.
+          </p>
+          <span class="quote-category">Visão</span>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            Crie uma sala sobre o que você vive, não sobre o que você posta.
+          </p>
+          <span class="quote-category">Autenticidade</span>
+        </div>
+
+        <div class="quote-card">
+          <p class="quote-text">
+            Nada do que você diz no Poly.io fica armazenado.
+          </p>
+          <span class="quote-category">Privacidade</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta">
+    <div class="cta-container">
+      <h2>Pronto para conversar sem barreiras?</h2>
+      <p>Cadastre-se em segundos. É gratuito, sempre.</p>
+      <a href="https://poly-io.vercel.app" class="btn btn-primary btn-large">
+        Criar minha conta
+        <span>→</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-brand">
+        <a href="#" class="footer-logo">
+          <span>Poly</span><span>.io</span>
+        </a>
+        <span class="footer-tagline">Chat profissional sem barreiras de idioma</span>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://poly-io.vercel.app">App</a>
+        <a href="https://github.com/thiagolomacedo/poly-io">GitHub</a>
+        <a href="https://ousianic.com">Ousianic</a>
+      </div>
+
+      <div class="footer-bottom">
+        Powered by <a href="https://ousianic.com" style="color: var(--primary);">Ousianic</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
