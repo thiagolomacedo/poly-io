@@ -3045,13 +3045,8 @@ function copyFriendCode() {
 
 // Copiar link de convite
 function copyInviteLink() {
-  console.log('[DEBUG] copyInviteLink - codigo_amigo:', currentUser.value?.codigo_amigo)
-  if (!currentUser.value?.codigo_amigo) {
-    console.log('[DEBUG] codigo_amigo não encontrado!')
-    return
-  }
+  if (!currentUser.value?.codigo_amigo) return
   const link = `${window.location.origin}?invite=${currentUser.value.codigo_amigo}`
-  console.log('[DEBUG] Link gerado:', link)
   navigator.clipboard.writeText(link)
   linkCopied.value = true
   setTimeout(() => linkCopied.value = false, 2000)
