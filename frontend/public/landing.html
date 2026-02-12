@@ -601,6 +601,124 @@
       margin-right: 0.5rem;
     }
 
+    /* ==================== INSTALL SECTION ==================== */
+    .install {
+      padding: 8rem 2rem;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .install-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .install-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .install-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s;
+    }
+
+    .install-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .install-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .install-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .install-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .install-badge.green {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .install-badge.orange {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+
+    .install-steps {
+      list-style: none;
+      counter-reset: step;
+      padding: 0;
+      margin: 0;
+    }
+
+    .install-steps li {
+      counter-increment: step;
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .install-steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .install-steps li strong {
+      color: var(--text-primary);
+    }
+
+    .install-benefits {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .benefit-icon {
+      font-size: 1.25rem;
+    }
+
     /* ==================== QUOTES SECTION ==================== */
     .quotes {
       padding: 8rem 2rem;
@@ -817,6 +935,7 @@
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#salas">Salas</a>
+        <a href="#instalar">Instalar</a>
         <a href="#filosofia">Filosofia</a>
         <a href="https://poly-io.vercel.app" class="btn btn-primary">Entrar</a>
       </div>
@@ -1038,6 +1157,90 @@
               Same here! Vue 3 + TypeScript is amazing.
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install Section -->
+  <section class="install" id="instalar">
+    <div class="install-container">
+      <div class="section-header">
+        <span class="section-label">Instalar</span>
+        <h2 class="section-title">Leve o Poly.io no bolso</h2>
+        <p class="section-subtitle">Instale como app no seu celular ou computador. Sem loja, sem downloads pesados.</p>
+      </div>
+
+      <div class="install-grid">
+        <!-- Android -->
+        <div class="install-card">
+          <div class="install-icon">📱</div>
+          <h3 class="install-title">Android</h3>
+          <span class="install-badge green">Chrome</span>
+          <ol class="install-steps">
+            <li>Abra <strong>poly-io.vercel.app</strong> no Chrome</li>
+            <li>Toque no menu <strong>⋮</strong> (três pontinhos)</li>
+            <li>Selecione <strong>"Instalar app"</strong></li>
+            <li>Confirme e pronto!</li>
+          </ol>
+        </div>
+
+        <!-- iPhone -->
+        <div class="install-card">
+          <div class="install-icon">🍎</div>
+          <h3 class="install-title">iPhone / iPad</h3>
+          <span class="install-badge orange">Safari</span>
+          <ol class="install-steps">
+            <li>Abra <strong>poly-io.vercel.app</strong> no Safari</li>
+            <li>Toque no botão <strong>compartilhar</strong> (↑)</li>
+            <li>Selecione <strong>"Adicionar à Tela de Início"</strong></li>
+            <li>Toque em <strong>"Adicionar"</strong></li>
+          </ol>
+        </div>
+
+        <!-- Windows -->
+        <div class="install-card">
+          <div class="install-icon">💻</div>
+          <h3 class="install-title">Windows</h3>
+          <span class="install-badge green">Chrome / Edge</span>
+          <ol class="install-steps">
+            <li>Abra <strong>poly-io.vercel.app</strong></li>
+            <li>Clique no ícone <strong>⊕</strong> na barra de endereço</li>
+            <li>Ou menu → <strong>"Instalar Poly.io"</strong></li>
+            <li>Clique em <strong>"Instalar"</strong></li>
+          </ol>
+        </div>
+
+        <!-- macOS -->
+        <div class="install-card">
+          <div class="install-icon">🍏</div>
+          <h3 class="install-title">macOS</h3>
+          <span class="install-badge green">Chrome</span>
+          <ol class="install-steps">
+            <li>Abra <strong>poly-io.vercel.app</strong> no Chrome</li>
+            <li>Clique no ícone <strong>⊕</strong> na barra</li>
+            <li>Ou menu Chrome → <strong>"Instalar Poly.io..."</strong></li>
+            <li>Confirme a instalação</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="install-benefits">
+        <div class="benefit-item">
+          <span class="benefit-icon">⚡</span>
+          <span>Abre instantâneo</span>
+        </div>
+        <div class="benefit-item">
+          <span class="benefit-icon">📴</span>
+          <span>Funciona offline</span>
+        </div>
+        <div class="benefit-item">
+          <span class="benefit-icon">🔔</span>
+          <span>Notificações push</span>
+        </div>
+        <div class="benefit-item">
+          <span class="benefit-icon">🔄</span>
+          <span>Atualiza automático</span>
         </div>
       </div>
     </div>
