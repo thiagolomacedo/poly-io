@@ -798,6 +798,7 @@
           <div class="sidebar-header-top">
             <div class="logo-small">
               <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
+              <span class="app-version">v3.68</span>
             </div>
             <button class="btn-close-sidebar" @click="sidebarOpen = false">✕</button>
           </div>
@@ -1365,6 +1366,7 @@
             <div
               v-for="msg in messages"
               :key="msg.id"
+              :data-message-id="msg.id"
               class="message"
               :class="{
                 'sent': msg.euEnviei,
@@ -1378,8 +1380,20 @@
                 :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto) }"
                 :style="msg.euEnviei && !isOnlyEmoji(msg.texto) ? { backgroundColor: msg.bubbleColor || messageBubbleColor } : {}"
               >
+                <!-- Quote da mensagem respondida -->
+                <div
+                  v-if="msg.repliedToId"
+                  class="message-quote"
+                  @click.stop="scrollToMessage(msg.repliedToId)"
+                >
+                  <span class="quote-sender">{{ msg.repliedToSender }}</span>
+                  <span class="quote-text">{{ msg.repliedToText }}</span>
+                </div>
                 <!-- Menu de ações para mensagens enviadas -->
                 <div v-if="msg.euEnviei && msg.showMenu && !msg.isEditing" class="message-actions">
+                  <button class="btn-reply-msg" @click.stop="startReply(msg)">
+                    ↩️ Responder
+                  </button>
                   <button class="btn-edit-msg" @click.stop="startEditMessage(msg)">
                     ✏️ Editar
                   </button>
@@ -1389,6 +1403,9 @@
                 </div>
                 <!-- Menu de reações para mensagens recebidas -->
                 <div v-if="!msg.euEnviei && msg.showMenu" class="message-actions reaction-actions">
+                  <button class="btn-reply-msg" @click.stop="startReply(msg)">
+                    ↩️ Responder
+                  </button>
                   <button class="btn-react-msg" @click.stop="openEmojiPicker(msg)">
                     😊 Reagir
                   </button>
@@ -1501,6 +1518,14 @@
 
           <!-- Input de mensagem -->
           <div class="message-input">
+            <!-- Barra de resposta -->
+            <div v-if="replyingTo" class="reply-bar">
+              <div class="reply-preview">
+                <span class="reply-to-name">{{ replyingTo.sender }}</span>
+                <span class="reply-to-text">{{ replyingTo.texto }}</span>
+              </div>
+              <button class="cancel-reply" @click="cancelReply">✕</button>
+            </div>
             <div class="input-row">
               <input
                 v-model="newMessage"
@@ -1772,6 +1797,7 @@ const selectedConnection = ref(null)
 const idiomaRecepcao = ref(null) // null = usar idioma do perfil (padrão)
 const messages = ref([])
 const newMessage = ref('')
+const replyingTo = ref(null) // Mensagem sendo respondida
 const isSendingMessage = ref(false) // Previne cliques duplos
 const savedBubbleColor = localStorage.getItem('poly_bubble_color')
 console.log('[BubbleColor] Cor carregada do localStorage:', savedBubbleColor)
@@ -4306,6 +4332,7 @@ async function selectConnection(conn) {
   selectedConnection.value = conn
   idiomaRecepcao.value = null // Reset para idioma padrão ao mudar de conversa
   isOtherTyping.value = false // Reset indicador de digitação
+  replyingTo.value = null // Limpar reply ao mudar de conversa
   sidebarOpen.value = false
 
   // Zerar contador de não lidas para esta conexão
@@ -4356,7 +4383,10 @@ async function loadMessages() {
       editado: m.editado || false,
       lido: m.lido || false,
       reactions: m.reactions || [],
-      showOriginal: false
+      showOriginal: false,
+      repliedToId: m.repliedToId,
+      repliedToText: m.repliedToText,
+      repliedToSender: m.repliedToSender
     }))
     scrollToBottom()
 
@@ -4382,13 +4412,15 @@ async function sendMessage() {
   emitStoppedTyping()
 
   const texto = newMessage.value
+  const repliedToId = replyingTo.value?.id || null
   newMessage.value = '' // Limpa imediatamente para UX
+  replyingTo.value = null // Limpa reply
 
   try {
     await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ texto })
+      body: JSON.stringify({ texto, repliedToId })
     })
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
@@ -4460,7 +4492,10 @@ async function handleNewMessage(msg) {
     enviadoEm: msg.enviadoEm,
     lido: !euEnviei,
     showOriginal: false,
-    bubbleColor: euEnviei ? messageBubbleColor.value : null
+    bubbleColor: euEnviei ? messageBubbleColor.value : null,
+    repliedToId: msg.repliedToId,
+    repliedToText: msg.repliedToText,
+    repliedToSender: msg.repliedToSender
   })
   scrollToBottom()
 
@@ -4817,6 +4852,42 @@ async function saveEditMessage(msg) {
   } catch (error) {
     console.error('Erro ao editar mensagem:', error)
     alert('Erro ao editar mensagem')
+  }
+}
+
+// Iniciar resposta a uma mensagem
+function startReply(msg) {
+  // Fechar menus
+  messages.value.forEach(m => m.showMenu = false)
+
+  // Determinar o nome do remetente
+  const senderName = msg.euEnviei
+    ? currentUser.value.nome
+    : selectedConnection.value?.nome
+
+  replyingTo.value = {
+    id: msg.id,
+    texto: msg.textoOriginal || msg.texto,
+    sender: senderName
+  }
+
+  // Focar no input
+  const inputEl = document.querySelector('.message-input input[type="text"]')
+  if (inputEl) inputEl.focus()
+}
+
+// Cancelar resposta
+function cancelReply() {
+  replyingTo.value = null
+}
+
+// Scroll para mensagem original (quando clica no quote)
+function scrollToMessage(messageId) {
+  const el = document.querySelector(`[data-message-id="${messageId}"]`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('highlight-message')
+    setTimeout(() => el.classList.remove('highlight-message'), 2000)
   }
 }
 
@@ -6822,6 +6893,18 @@ body {
 .logo-small {
   font-size: 1.5rem;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-version {
+  font-size: 0.6rem;
+  color: #666;
+  font-weight: 400;
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .current-user {
@@ -7757,6 +7840,114 @@ body {
   display: flex;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+/* Botão de responder */
+.btn-reply-msg {
+  padding: 6px 10px;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-reply-msg:hover {
+  background: #444;
+}
+
+/* Quote da mensagem respondida */
+.message-quote {
+  background: rgba(99, 102, 241, 0.15);
+  border-left: 3px solid #6366f1;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 100%;
+  transition: background 0.2s;
+}
+
+.message-quote:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.quote-sender {
+  display: block;
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.quote-text {
+  display: block;
+  color: #aaa;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Barra de resposta (acima do input) */
+.reply-bar {
+  display: flex;
+  align-items: center;
+  background: #1a1a2e;
+  padding: 8px 12px;
+  border-left: 3px solid #6366f1;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  gap: 10px;
+}
+
+.reply-preview {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.reply-to-name {
+  display: block;
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.reply-to-text {
+  display: block;
+  color: #888;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cancel-reply {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+
+.cancel-reply:hover {
+  color: #fff;
+}
+
+/* Highlight quando clica no quote */
+.message.highlight-message .message-content {
+  animation: highlight-pulse 0.5s ease-out;
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+@keyframes highlight-pulse {
+  0% { transform: scale(1.02); }
+  100% { transform: scale(1); }
 }
 
 .btn-edit-msg {

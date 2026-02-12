@@ -146,6 +146,17 @@ async function initDatabase() {
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS editado BOOLEAN DEFAULT FALSE
     `)
 
+    // Colunas para responder mensagem específica (reply/quote)
+    await client.query(`
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS replied_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL
+    `)
+    await client.query(`
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS replied_to_text TEXT
+    `)
+    await client.query(`
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS replied_to_sender TEXT
+    `)
+
     // Tabela de reações em mensagens
     await client.query(`
       CREATE TABLE IF NOT EXISTS message_reactions (

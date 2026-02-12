@@ -1879,6 +1879,9 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         m.enviado_em,
         m.lido,
         m.editado,
+        m.replied_to_id,
+        m.replied_to_text,
+        m.replied_to_sender,
         u.nome as sender_nome
       FROM messages m
       JOIN users u ON m.sender_id = u.id
@@ -1936,7 +1939,10 @@ app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         lido: msg.lido,
         editado: msg.editado || false,
         euEnviei: msg.sender_id === req.userId,
-        reactions: reactionsMap[msg.id] || []
+        reactions: reactionsMap[msg.id] || [],
+        repliedToId: msg.replied_to_id,
+        repliedToText: msg.replied_to_text,
+        repliedToSender: msg.replied_to_sender
       }
     }))
 
@@ -2127,7 +2133,7 @@ app.post('/api/chat/forward', authMiddleware, async (req, res) => {
 
 // Enviar mensagem
 app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
-  const { texto } = req.body
+  const { texto, repliedToId } = req.body
 
   if (!texto || !texto.trim()) {
     return res.status(400).json({ error: 'Mensagem vazia' })
@@ -2161,12 +2167,33 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
 
     console.log(`[Chat] ${req.userId} → ${conn.destinatario_id}: "${texto}" → "${textoTraduzido}"`)
 
+    // Buscar dados da mensagem sendo respondida (se houver)
+    let repliedToText = null
+    let repliedToSender = null
+    if (repliedToId) {
+      const originalMsg = await pool.query(`
+        SELECT m.texto_original, u.nome as sender_name
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.id = $1 AND m.connection_id = $2
+      `, [repliedToId, req.params.connectionId])
+
+      if (originalMsg.rows.length > 0) {
+        // Limitar preview a 100 caracteres
+        repliedToText = originalMsg.rows[0].texto_original.substring(0, 100)
+        if (originalMsg.rows[0].texto_original.length > 100) {
+          repliedToText += '...'
+        }
+        repliedToSender = originalMsg.rows[0].sender_name
+      }
+    }
+
     // Salvar mensagem
     const msgResult = await pool.query(`
-      INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino, replied_to_id, replied_to_text, replied_to_sender)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id, enviado_em
-    `, [req.params.connectionId, req.userId, texto, idiomaOriginal, textoTraduzido, conn.destinatario_idioma])
+    `, [req.params.connectionId, req.userId, texto, idiomaOriginal, textoTraduzido, conn.destinatario_idioma, repliedToId || null, repliedToText, repliedToSender])
 
     const message = {
       id: msgResult.rows[0].id,
@@ -2175,7 +2202,10 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       texto: texto,
       textoTraduzido: textoTraduzido,
       idiomaOriginal: idiomaOriginal,
-      enviadoEm: msgResult.rows[0].enviado_em
+      enviadoEm: msgResult.rows[0].enviado_em,
+      repliedToId: repliedToId || null,
+      repliedToText: repliedToText,
+      repliedToSender: repliedToSender
     }
 
     // Emitir via Socket
