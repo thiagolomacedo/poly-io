@@ -798,7 +798,7 @@
           <div class="sidebar-header-top">
             <div class="logo-small">
               <span class="logo-poly">Poly</span><span class="logo-io">.io</span>
-              <span class="app-version">v3.68</span>
+              <span class="app-version">v4.0</span>
             </div>
             <button class="btn-close-sidebar" @click="sidebarOpen = false">✕</button>
           </div>
