@@ -287,7 +287,8 @@
 
     .ticker {
       display: flex;
-      animation: ticker-scroll 20s linear infinite;
+      animation: ticker-scroll 35s linear infinite;
+      will-change: transform;
     }
 
     .ticker:hover {
@@ -295,15 +296,18 @@
     }
 
     @keyframes ticker-scroll {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-50%); }
+      0% {
+        transform: translateX(0%);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
     }
 
     .ticker-content {
       display: flex;
       align-items: center;
-      gap: 4rem;
-      padding: 0 2rem;
+      flex-shrink: 0;
       white-space: nowrap;
     }
 
@@ -315,6 +319,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.15em;
+      padding: 0 3rem;
     }
 
     .ticker-logo {
