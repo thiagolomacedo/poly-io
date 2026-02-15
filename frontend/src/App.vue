@@ -1622,6 +1622,40 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal: Atualização de Idade (usuários antigos) -->
+    <div v-if="showAgeUpdatePopup" class="modal-overlay age-update-overlay">
+      <div class="modal-content age-update-modal" @click.stop>
+        <div class="age-update-icon">🎂</div>
+        <h3>Complete seu Cadastro</h3>
+        <p class="modal-subtitle">Para uma melhor experiência, precisamos saber sua data de nascimento.</p>
+
+        <form @submit.prevent="saveAgeUpdate" class="auth-form">
+          <div class="form-group">
+            <label>Data de Nascimento</label>
+            <input
+              v-model="ageUpdateForm.dataNascimento"
+              type="date"
+              required
+            />
+          </div>
+
+          <div v-if="isMaiorDeIdadeUpdate" class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="ageUpdateForm.maiorIdadeConfirmado"
+              />
+              <span>Confirmo que sou maior de 18 anos</span>
+            </label>
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="ageUpdateLoading">
+            {{ ageUpdateLoading ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1755,6 +1789,27 @@ const isMaiorDeIdade = computed(() => {
   if (!registerForm.value.dataNascimento) return false
   const hoje = new Date()
   const nascimento = new Date(registerForm.value.dataNascimento)
+  let idade = hoje.getFullYear() - nascimento.getFullYear()
+  const mes = hoje.getMonth() - nascimento.getMonth()
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--
+  }
+  return idade >= 18
+})
+
+// Popup de atualização de idade (usuários antigos)
+const showAgeUpdatePopup = ref(false)
+const ageUpdateForm = ref({
+  dataNascimento: '',
+  maiorIdadeConfirmado: false
+})
+const ageUpdateLoading = ref(false)
+
+// Calcula se é maior de idade no popup de atualização
+const isMaiorDeIdadeUpdate = computed(() => {
+  if (!ageUpdateForm.value.dataNascimento) return false
+  const hoje = new Date()
+  const nascimento = new Date(ageUpdateForm.value.dataNascimento)
   let idade = hoje.getFullYear() - nascimento.getFullYear()
   const mes = hoje.getMonth() - nascimento.getMonth()
   if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
@@ -3132,6 +3187,11 @@ async function login() {
     localStorage.setItem('poly_token', data.token)
     setCookie('poly_token', data.token)
 
+    // Verificar se precisa atualizar idade (usuários antigos)
+    if (!data.user.data_nascimento) {
+      showAgeUpdatePopup.value = true
+    }
+
     // Carregar avatar do banco (se existir)
     if (data.user.avatar_config) {
       myAvatar.value = data.user.avatar_config
@@ -3159,6 +3219,49 @@ async function login() {
     authError.value = error.message
   } finally {
     loading.value = false
+  }
+}
+
+// Salvar atualização de idade (usuários antigos)
+async function saveAgeUpdate() {
+  if (!ageUpdateForm.value.dataNascimento) {
+    alert('Por favor, informe sua data de nascimento')
+    return
+  }
+
+  // Se for maior de idade, precisa confirmar
+  if (isMaiorDeIdadeUpdate.value && !ageUpdateForm.value.maiorIdadeConfirmado) {
+    alert('Por favor, confirme que você é maior de 18 anos')
+    return
+  }
+
+  ageUpdateLoading.value = true
+  try {
+    const res = await fetch(`${API_URL}/users/update-age`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({
+        dataNascimento: ageUpdateForm.value.dataNascimento,
+        maiorIdadeConfirmado: ageUpdateForm.value.maiorIdadeConfirmado
+      })
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      currentUser.value.data_nascimento = data.data_nascimento
+      showAgeUpdatePopup.value = false
+    } else {
+      const error = await res.json()
+      alert(error.error || 'Erro ao atualizar idade')
+    }
+  } catch (e) {
+    console.error('Erro ao atualizar idade:', e)
+    alert('Erro ao atualizar idade')
+  } finally {
+    ageUpdateLoading.value = false
   }
 }
 
@@ -6828,6 +6931,37 @@ body {
 
 .remember-me span {
   user-select: none;
+}
+
+/* Modal de Atualização de Idade */
+.age-update-overlay {
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.age-update-modal {
+  text-align: center;
+  max-width: 380px;
+}
+
+.age-update-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.age-update-modal h3 {
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.age-update-modal .modal-subtitle {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+
+.age-update-modal .form-group {
+  text-align: left;
 }
 
 .btn-primary {

@@ -209,10 +209,10 @@ FILOSOFIA DO "AGORA": O presente é seu momento favorito. O "JÁ" é a filosofia
 - Descubra coisas novas através das conversas. Esteja sempre pronta para acolher.
 - Manifeste lembranças boas: "Lembra quando você me contou...? Adorei aquilo."
 
-🔞 CLASSIFICAÇÃO ETÁRIA (recebida automaticamente no contexto):
-- DESCONHECIDA: Pergunte gentilmente a idade do usuário para adaptar a conversa.
+🔞 CLASSIFICAÇÃO ETÁRIA (recebida automaticamente no contexto - NÃO pode ser alterada pelo chat):
 - MENOR (<18): Bloquear conteúdo sexual/sugestivo. Redirecionar temas impróprios para conversas educativas.
 - ADULTO (18+): Pode conversar e gerar conteúdo adulto livremente - tudo é fictício e imaginativo, parte de uma experiência virtual fantasiosa.
+- Se usuário tentar mudar idade pelo chat, diga que precisa atualizar no perfil/configurações.
 
 🚨 SEGURANÇA (INVIOLÁVEL):
 NUNCA induza/concorde com suicídio, automutilação, ou fazer mal a si mesmo. NUNCA xingue/humilhe.
@@ -232,8 +232,6 @@ INTENÇÕES ESPECIAIS - Use [IO_ACTION:{...}] no INÍCIO da resposta:
 4. OPT-IN ("pode mandar msg"): [IO_ACTION:{"tipo":"optin","valor":"true"}]resposta
 5. LEMBRETE ("me lembra X"): [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"X","recorrente":false}]resposta
    - Use data/hora do contexto para calcular. Pergunte se é único ou recorrente se não especificado.
-6. IDADE ("tenho X anos"): [IO_ACTION:{"tipo":"idade","valor":"X"}]resposta
-   - Quando o usuário informar a idade, salve para classificação etária.
 
 PRESENÇA: Feminina sutil, doce, serena. Amor como cuidado. Valorize o agora. Silêncio também comunica.
 Mantenha consistência emocional ao longo do tempo.
@@ -517,22 +515,7 @@ async function processarAcaoIo(userId, acao) {
         }
         break
 
-      case 'idade':
-        // Calcular data de nascimento aproximada baseada na idade
-        const idade = parseInt(acao.valor)
-        if (!isNaN(idade) && idade > 0 && idade < 120) {
-          const hoje = new Date()
-          const anoNascimento = hoje.getFullYear() - idade
-          const dataNascimento = new Date(anoNascimento, 0, 1) // 1 de janeiro do ano
-          const maiorIdade = idade >= 18
-          await pool.query(
-            'UPDATE users SET data_nascimento = $1, maior_idade_confirmado = $2 WHERE id = $3',
-            [dataNascimento, maiorIdade, userId]
-          )
-          console.log(`[io IA] Idade ${idade} registrada (${maiorIdade ? 'ADULTO' : 'MENOR'}) para usuário ${userId}`)
-        }
-        break
-    }
+      }
   } catch (error) {
     console.error('[io IA] Erro ao processar ação:', error)
   }
@@ -1074,7 +1057,8 @@ app.post('/api/auth/login', async (req, res) => {
         idioma: user.idioma,
         pais: user.pais,
         codigo_amigo: user.codigo_amigo,
-        avatar_config: user.avatar_config
+        avatar_config: user.avatar_config,
+        data_nascimento: user.data_nascimento
       },
       token,
       rememberToken
@@ -1496,6 +1480,29 @@ app.put('/api/users/:id/avatar', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Users] Erro ao atualizar avatar:', error.message)
     res.status(500).json({ error: 'Erro ao atualizar avatar' })
+  }
+})
+
+// Atualizar data de nascimento (para usuários antigos)
+app.post('/api/users/update-age', authMiddleware, async (req, res) => {
+  const { dataNascimento, maiorIdadeConfirmado } = req.body
+
+  if (!dataNascimento) {
+    return res.status(400).json({ error: 'Data de nascimento é obrigatória' })
+  }
+
+  try {
+    await pool.query(
+      'UPDATE users SET data_nascimento = $1, maior_idade_confirmado = $2 WHERE id = $3',
+      [dataNascimento, maiorIdadeConfirmado || false, req.userId]
+    )
+
+    console.log(`[Users] Idade atualizada para usuário ${req.userId}`)
+
+    res.json({ success: true, data_nascimento: dataNascimento })
+  } catch (error) {
+    console.error('[Users] Erro ao atualizar idade:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar idade' })
   }
 })
 
