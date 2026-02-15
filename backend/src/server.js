@@ -271,7 +271,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (userId) {
       try {
         const userResult = await pool.query(
-          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo FROM users WHERE id = $1',
+          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo, data_nascimento, maior_idade_confirmado FROM users WHERE id = $1',
           [userId]
         )
         if (userResult.rows[0]) {
@@ -279,12 +279,23 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
           const apelido = user.io_apelido || user.nome
           const idiomaUsuario = user.idioma || 'pt'
           const dataHora = getDataHoraUsuario(idiomaUsuario)
+          // Calcular idade e classificação etária
+          let classificacaoEtaria = 'desconhecida'
+          if (user.data_nascimento) {
+            const hoje = new Date()
+            const nascimento = new Date(user.data_nascimento)
+            let idade = hoje.getFullYear() - nascimento.getFullYear()
+            const mes = hoje.getMonth() - nascimento.getMonth()
+            if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) idade--
+            classificacaoEtaria = idade >= 18 ? 'ADULTO (18+)' : 'MENOR (<18)'
+          }
           // Guardar idioma do usuário para usar no processamento de ações
           ioUserLanguage.set(userId, idiomaUsuario)
           contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
 - Nome cadastrado: ${user.nome}
 - Como chamar: ${apelido}
 - Idioma/País: ${idiomaUsuario.toUpperCase()}
+- Classificação etária: ${classificacaoEtaria}${user.maior_idade_confirmado ? ' (confirmado)' : ''}
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'Primeira conversa - seja acolhedora mas NÃO bombardeie com perguntas.'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
@@ -928,10 +939,10 @@ async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
 
 // Cadastro
 app.post('/api/auth/register', async (req, res) => {
-  const { nome, email, senha, idioma, pais } = req.body
+  const { nome, email, senha, idioma, pais, dataNascimento, maiorIdadeConfirmado } = req.body
 
-  if (!nome || !email || !senha) {
-    return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' })
+  if (!nome || !email || !senha || !dataNascimento) {
+    return res.status(400).json({ error: 'Nome, email, senha e data de nascimento são obrigatórios' })
   }
 
   if (senha.length < 6) {
@@ -960,8 +971,8 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Criar usuário
     const result = await pool.query(
-      'INSERT INTO users (nome, email, senha_hash, idioma, pais, codigo_amigo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, idioma, pais, codigo_amigo, criado_em',
-      [nome.trim(), email.toLowerCase(), senhaHash, idioma || 'pt', pais || null, codigoAmigo]
+      'INSERT INTO users (nome, email, senha_hash, idioma, pais, codigo_amigo, data_nascimento, maior_idade_confirmado) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, nome, email, idioma, pais, codigo_amigo, criado_em, data_nascimento, maior_idade_confirmado',
+      [nome.trim(), email.toLowerCase(), senhaHash, idioma || 'pt', pais || null, codigoAmigo, dataNascimento || null, maiorIdadeConfirmado || false]
     )
 
     const user = result.rows[0]

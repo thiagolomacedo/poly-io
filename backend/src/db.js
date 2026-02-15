@@ -107,6 +107,16 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS io_modo_narrativo BOOLEAN DEFAULT FALSE
     `)
 
+    // ==================== VERIFICAÇÃO DE IDADE ====================
+    // Data de nascimento do usuário
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS data_nascimento DATE
+    `)
+    // Confirmação de maior de idade
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS maior_idade_confirmado BOOLEAN DEFAULT FALSE
+    `)
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários

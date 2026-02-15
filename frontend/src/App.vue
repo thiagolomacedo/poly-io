@@ -121,6 +121,25 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label>Data de Nascimento</label>
+            <input
+              v-model="registerForm.dataNascimento"
+              type="date"
+              required
+            />
+          </div>
+
+          <div v-if="isMaiorDeIdade" class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="registerForm.maiorIdadeConfirmado"
+              />
+              <span>Confirmo que sou maior de 18 anos</span>
+            </label>
+          </div>
+
           <button type="submit" class="btn-primary" :disabled="loading">
             {{ loading ? 'Criando...' : 'Criar Conta' }}
           </button>
@@ -1726,7 +1745,22 @@ const registerForm = ref({
   email: '',
   senha: '',
   idioma: 'pt',
-  pais: ''
+  pais: '',
+  dataNascimento: '',
+  maiorIdadeConfirmado: false
+})
+
+// Calcula se é maior de idade baseado na data de nascimento
+const isMaiorDeIdade = computed(() => {
+  if (!registerForm.value.dataNascimento) return false
+  const hoje = new Date()
+  const nascimento = new Date(registerForm.value.dataNascimento)
+  let idade = hoje.getFullYear() - nascimento.getFullYear()
+  const mes = hoje.getMonth() - nascimento.getMonth()
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--
+  }
+  return idade >= 18
 })
 
 // Estado de recuperação de senha
@@ -6748,6 +6782,31 @@ body {
 
 .form-row .form-group {
   flex: 1;
+}
+
+.checkbox-group {
+  margin-top: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+
+.checkbox-label span {
+  color: #10b981;
+  font-weight: 500;
 }
 
 .remember-me {
