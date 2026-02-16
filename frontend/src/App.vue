@@ -2178,16 +2178,7 @@ function getImagineTextBefore(text) {
   if (!text) return ''
   const idx = text.indexOf('[POLYIMG:')
   if (idx === -1) return text
-  let resultado = text.substring(0, idx).trim()
-  // Quebrar a cada 69 caracteres
-  if (resultado.length > 69) {
-    let quebrado = ''
-    for (let i = 0; i < resultado.length; i += 69) {
-      quebrado += resultado.substring(i, i + 69) + '\n'
-    }
-    return quebrado.trim()
-  }
-  return resultado
+  return text.substring(0, idx).trim()
 }
 
 // Extrai o prompt/descrição da imagem gerada (texto após [POLYIMG:...])
@@ -11513,7 +11504,9 @@ body {
     margin: 0 0 8px 0;
     font-size: 0.9rem;
     color: inherit;
-    white-space: pre-wrap;
+    max-width: 350px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .imagine-prompt {
