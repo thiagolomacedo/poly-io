@@ -3856,7 +3856,9 @@ function sendRoomMessage() {
   if (texto.toLowerCase().startsWith('/imagine ')) {
     const prompt = texto.substring(9).trim() // Remove '/imagine '
     if (prompt) {
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
+      // Seed único baseado no timestamp para evitar cache conflicts
+      const seed = Date.now()
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=flux&nologo=true`
       texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
     }
   }
@@ -4667,7 +4669,9 @@ async function sendMessage() {
   if (texto.trim().toLowerCase().startsWith('/imagine ')) {
     const prompt = texto.trim().substring(9).trim() // Remove '/imagine '
     if (prompt) {
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
+      // Seed único baseado no timestamp para evitar cache conflicts
+      const seed = Date.now()
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=flux&nologo=true`
       texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
     }
   }
