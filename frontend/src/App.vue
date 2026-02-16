@@ -1273,16 +1273,24 @@
               <div v-if="isImagineMessage(msg.texto)" class="message-bubble imagine-message" :style="{ color: msg.cor }">
                 <p class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
                 <div class="imagine-image-container">
-                  <img
-                    :src="getImagineUrl(msg.texto)"
-                    class="imagine-image"
-                    loading="lazy"
-                    @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
-                  />
-                  <div class="imagine-loading">
+                  <!-- Loading state -->
+                  <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
                     <span class="loading-spinner"></span>
-                    <span>Gerando...</span>
+                    <span>Gerando imagem...</span>
                   </div>
+                  <!-- Image loaded -->
+                  <template v-else>
+                    <img
+                      :src="getImagineUrl(msg.texto)"
+                      class="imagine-image"
+                      loading="lazy"
+                      @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
+                    />
+                    <div class="imagine-loading">
+                      <span class="loading-spinner"></span>
+                      <span>Carregando...</span>
+                    </div>
+                  </template>
                 </div>
               </div>
               <!-- Mensagem de texto normal na sala -->
@@ -1519,19 +1527,28 @@
                 <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
                   <p class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
                   <div class="imagine-image-container">
-                    <img
-                      :src="getImagineUrl(msg.texto)"
-                      class="imagine-image"
-                      loading="lazy"
-                      @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
-                      @error="handleImagineError($event)"
-                    />
-                    <div class="imagine-loading">
+                    <!-- Loading state -->
+                    <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
                       <span class="loading-spinner"></span>
                       <span>Gerando imagem...</span>
                     </div>
+                    <!-- Image loaded -->
+                    <template v-else>
+                      <img
+                        :src="getImagineUrl(msg.texto)"
+                        class="imagine-image"
+                        loading="lazy"
+                        @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
+                        @error="handleImagineError($event)"
+                      />
+                      <div class="imagine-loading">
+                        <span class="loading-spinner"></span>
+                        <span>Carregando...</span>
+                      </div>
+                    </template>
                   </div>
                   <a
+                    v-if="getImagineUrl(msg.texto) !== 'loading'"
                     :href="getImagineUrl(msg.texto)"
                     target="_blank"
                     class="imagine-download"
@@ -3847,19 +3864,59 @@ async function joinRoomByInvite(code) {
 }
 
 // Enviar mensagem na sala
-function sendRoomMessage() {
+async function sendRoomMessage() {
   if (!newRoomMessage.value.trim() || !selectedRoom.value || isRoomMuted.value) return
 
   let texto = newRoomMessage.value.trim()
+  newRoomMessage.value = '' // Limpa imediatamente
 
   // Detectar comando /imagine
   if (texto.toLowerCase().startsWith('/imagine ')) {
     const prompt = texto.substring(9).trim() // Remove '/imagine '
     if (prompt) {
-      // Seed único baseado no timestamp para evitar cache conflicts
-      const seed = Date.now()
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=flux&nologo=true`
-      texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
+      try {
+        // Mostrar mensagem de loading na sala
+        const loadingMsg = {
+          id: `loading-${Date.now()}`,
+          senderId: currentUser.value?.id,
+          senderNome: currentUser.value?.nome,
+          texto: `[POLYIMG:loading]🎨 ${prompt}`,
+          cor: roomMessageColor.value,
+          corNome: roomNameColor.value,
+          timestamp: new Date().toISOString(),
+          isLoading: true
+        }
+        roomMessages.value.push(loadingMsg)
+        scrollRoomToBottom()
+
+        // Chamar backend para gerar imagem
+        const res = await fetch(`${API_URL}/imagine`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ prompt })
+        })
+
+        // Remover mensagem de loading
+        roomMessages.value = roomMessages.value.filter(m => m.id !== loadingMsg.id)
+
+        if (!res.ok) {
+          const errorData = await res.json()
+          if (errorData.retry && errorData.estimated_time) {
+            alert(`Modelo carregando, tente novamente em ${Math.ceil(errorData.estimated_time)}s`)
+          } else {
+            alert('Erro ao gerar imagem. Tente novamente.')
+          }
+          return
+        }
+
+        const data = await res.json()
+        texto = `[POLYIMG:${data.imageUrl}]🎨 ${prompt}`
+      } catch (error) {
+        console.error('Erro ao gerar imagem:', error)
+        roomMessages.value = roomMessages.value.filter(m => !m.isLoading)
+        alert('Erro ao gerar imagem. Tente novamente.')
+        return
+      }
     }
   }
 
@@ -3869,8 +3926,6 @@ function sendRoomMessage() {
     cor: roomMessageColor.value,
     corNome: roomNameColor.value
   })
-
-  newRoomMessage.value = ''
 }
 
 // Digitando na sala
@@ -4669,10 +4724,49 @@ async function sendMessage() {
   if (texto.trim().toLowerCase().startsWith('/imagine ')) {
     const prompt = texto.trim().substring(9).trim() // Remove '/imagine '
     if (prompt) {
-      // Seed único baseado no timestamp para evitar cache conflicts
-      const seed = Date.now()
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&seed=${seed}&model=flux&nologo=true`
-      texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
+      try {
+        // Mostrar mensagem de loading
+        const loadingMsg = {
+          id: `loading-${Date.now()}`,
+          euEnviei: true,
+          texto: `[POLYIMG:loading]🎨 ${prompt}`,
+          textoOriginal: `[POLYIMG:loading]🎨 ${prompt}`,
+          enviadoEm: new Date().toISOString(),
+          isLoading: true
+        }
+        messages.value.push(loadingMsg)
+        scrollToBottom()
+
+        // Chamar backend para gerar imagem
+        const res = await fetch(`${API_URL}/imagine`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ prompt })
+        })
+
+        // Remover mensagem de loading
+        messages.value = messages.value.filter(m => m.id !== loadingMsg.id)
+
+        if (!res.ok) {
+          const errorData = await res.json()
+          if (errorData.retry && errorData.estimated_time) {
+            alert(`Modelo carregando, tente novamente em ${Math.ceil(errorData.estimated_time)}s`)
+          } else {
+            alert('Erro ao gerar imagem. Tente novamente.')
+          }
+          isSendingMessage.value = false
+          return
+        }
+
+        const data = await res.json()
+        texto = `[POLYIMG:${data.imageUrl}]🎨 ${prompt}`
+      } catch (error) {
+        console.error('Erro ao gerar imagem:', error)
+        messages.value = messages.value.filter(m => !m.isLoading)
+        alert('Erro ao gerar imagem. Tente novamente.')
+        isSendingMessage.value = false
+        return
+      }
     }
   }
 
@@ -6711,6 +6805,15 @@ function scrollToBottom() {
   nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
+}
+
+function scrollRoomToBottom() {
+  nextTick(() => {
+    const container = document.querySelector('.messages-area')
+    if (container) {
+      container.scrollTop = container.scrollHeight
     }
   })
 }
@@ -11422,27 +11525,29 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: rgba(0, 0, 0, 0.1);
-    color: #888;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
     font-size: 0.85rem;
+    border-radius: 8px;
   }
 
-  .imagine-image-container:has(.imagine-image[src]) .imagine-loading {
-    display: none;
-  }
-
-  .imagine-image:not([src]), .imagine-image[src=""] {
-    display: none;
-  }
-
-  .imagine-image-container:has(.imagine-image:not([src])) .imagine-loading,
-  .imagine-image-container:has(.imagine-image[src=""]) .imagine-loading {
+  .imagine-loading.active {
     display: flex;
+    position: relative;
+    min-height: 200px;
+  }
+
+  .imagine-image-container:has(.imagine-image:not([complete])) .imagine-loading:not(.active) {
+    display: flex;
+  }
+
+  .imagine-image-container:has(.imagine-image[complete]) .imagine-loading:not(.active) {
+    display: none;
   }
 
   .loading-spinner {

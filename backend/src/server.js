@@ -29,6 +29,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'poly-io-secret-key-change-in-produ
 const AZURE_KEY = process.env.AZURE_TRANSLATOR_KEY || ''
 const AZURE_REGION = process.env.AZURE_TRANSLATOR_REGION || 'eastus'
 const GROQ_API_KEY = process.env.GROQ_API_KEY || ''
+const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY || ''
 
 // ID do usuário IA "io" (será criado automaticamente se não existir)
 let IO_USER_ID = null
@@ -1926,6 +1927,74 @@ async function sendPushNotification(userId, payload) {
     return false
   }
 }
+
+// ==================== GERAÇÃO DE IMAGENS (Hugging Face) ====================
+
+app.post('/api/imagine', authMiddleware, async (req, res) => {
+  const { prompt } = req.body
+
+  if (!prompt || !prompt.trim()) {
+    return res.status(400).json({ error: 'Prompt é obrigatório' })
+  }
+
+  if (!HUGGINGFACE_API_KEY) {
+    return res.status(503).json({ error: 'Serviço de geração de imagens não configurado' })
+  }
+
+  try {
+    console.log(`[Imagine] Gerando imagem para: "${prompt.substring(0, 50)}..."`)
+
+    // Chamar Hugging Face Inference API
+    const response = await nodeFetch(
+      'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: prompt.trim(),
+          parameters: {
+            width: 512,
+            height: 512
+          }
+        })
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Imagine] Erro Hugging Face:', response.status, errorText)
+
+      // Se modelo está carregando, informar o usuário
+      if (response.status === 503) {
+        const errorData = JSON.parse(errorText)
+        if (errorData.estimated_time) {
+          return res.status(503).json({
+            error: 'Modelo carregando',
+            estimated_time: errorData.estimated_time,
+            retry: true
+          })
+        }
+      }
+
+      return res.status(response.status).json({ error: 'Erro ao gerar imagem' })
+    }
+
+    // Converter resposta para base64
+    const buffer = await response.buffer()
+    const base64 = buffer.toString('base64')
+    const imageUrl = `data:image/jpeg;base64,${base64}`
+
+    console.log(`[Imagine] Imagem gerada com sucesso (${buffer.length} bytes)`)
+    res.json({ imageUrl, prompt: prompt.trim() })
+
+  } catch (error) {
+    console.error('[Imagine] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao gerar imagem' })
+  }
+})
 
 // ==================== ROTAS DE CHAT ====================
 
