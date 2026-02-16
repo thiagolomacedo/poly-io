@@ -1525,25 +1525,29 @@
                   </button>
                 </div>
                 <!-- Mensagem de imagem gerada por IA (/imagine) -->
-                <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
-                  <p v-if="getImagineTextBefore(msg.texto)" class="imagine-text-before">{{ getImagineTextBefore(msg.texto) }}</p>
-                  <p class="imagine-prompt">🎨 {{ getImaginePrompt(msg.texto) }}</p>
-                  <div class="imagine-image-container">
-                    <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
-                      <span class="loading-spinner"></span>
-                      <span>Gerando imagem...</span>
+                <template v-else-if="isImagineMessage(msg.texto)">
+                  <!-- Texto da io (solto, como mensagem normal) -->
+                  <p v-if="getImagineTextBefore(msg.texto)" class="message-text">{{ getImagineTextBefore(msg.texto) }}</p>
+                  <!-- Imagem com descrição (caixa separada) -->
+                  <div class="imagine-message">
+                    <p class="imagine-prompt">🎨 {{ getImaginePrompt(msg.texto) }}</p>
+                    <div class="imagine-image-container">
+                      <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
+                        <span class="loading-spinner"></span>
+                        <span>Gerando imagem...</span>
+                      </div>
+                      <template v-else>
+                        <img
+                          :src="getImagineUrl(msg.texto)"
+                          class="imagine-image"
+                          loading="lazy"
+                          @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
+                          @error="handleImagineError($event)"
+                        />
+                      </template>
                     </div>
-                    <template v-else>
-                      <img
-                        :src="getImagineUrl(msg.texto)"
-                        class="imagine-image"
-                        loading="lazy"
-                        @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
-                        @error="handleImagineError($event)"
-                      />
-                    </template>
                   </div>
-                </div>
+                </template>
                 <!-- Mensagem de texto -->
                 <template v-else>
                   <p class="message-text" :class="{ 'emoji-large': isOnlyEmoji(msg.texto) }">{{ msg.texto }}</p>
