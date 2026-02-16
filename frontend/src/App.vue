@@ -871,6 +871,13 @@
             >
               {{ notificacaoGlobalMudo ? '🔇' : '🔔' }}
             </button>
+            <button
+              class="btn-theme-toggle"
+              @click="toggleTheme"
+              :title="darkMode ? 'Modo claro' : 'Modo escuro'"
+            >
+              {{ darkMode ? '☀️' : '🌙' }}
+            </button>
           </div>
         </div>
 
@@ -1898,6 +1905,7 @@ let typingTimeout = null // Timer para resetar o indicador
 
 // Configurações de notificação
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
+const darkMode = ref(localStorage.getItem('poly_theme') !== 'light') // dark por padrão
 const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
 
 // Modo narrativo da io (híbrido)
@@ -6258,6 +6266,20 @@ function toggleMuteAll() {
   localStorage.setItem('poly_mute_all', notificacaoGlobalMudo.value)
 }
 
+function toggleTheme() {
+  darkMode.value = !darkMode.value
+  localStorage.setItem('poly_theme', darkMode.value ? 'dark' : 'light')
+  applyTheme()
+}
+
+function applyTheme() {
+  if (darkMode.value) {
+    document.documentElement.classList.remove('light-theme')
+  } else {
+    document.documentElement.classList.add('light-theme')
+  }
+}
+
 function toggleMuteConnection(connectionId) {
   const index = conexoesMudas.value.indexOf(connectionId)
   if (index === -1) {
@@ -6591,6 +6613,9 @@ function updateApp() {
 // ==================== LIFECYCLE ====================
 
 onMounted(async () => {
+  // Aplicar tema salvo
+  applyTheme()
+
   // Aguardar Service Worker estar pronto (importante para PWA)
   if ('serviceWorker' in navigator) {
     try {
@@ -6770,6 +6795,55 @@ watch(messageBubbleColor, (newColor) => {
 </script>
 
 <style>
+/* ==================== VARIÁVEIS DE TEMA ==================== */
+:root {
+  /* Dark Theme (padrão) */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #111;
+  --bg-tertiary: #1a1a1a;
+  --bg-card: #111;
+  --bg-input: #1a1a1a;
+  --bg-hover: #222;
+  --bg-gradient: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+
+  --text-primary: #fff;
+  --text-secondary: #888;
+  --text-muted: #666;
+
+  --border-color: #222;
+  --border-light: #333;
+
+  --accent: #6366f1;
+  --accent-hover: #5558e3;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Light Theme */
+:root.light-theme {
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #fff;
+  --bg-tertiary: #f0f0f0;
+  --bg-card: #fff;
+  --bg-input: #f8f8f8;
+  --bg-hover: #e8e8e8;
+  --bg-gradient: linear-gradient(135deg, #f5f5f5 0%, #e8e8f0 100%);
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #666;
+  --text-muted: #999;
+
+  --border-color: #e0e0e0;
+  --border-light: #d0d0d0;
+
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6778,9 +6852,10 @@ watch(messageBubbleColor, (newColor) => {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #0a0a0a;
-  color: #fff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
 
 .app {
@@ -6793,18 +6868,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+  background: var(--bg-gradient);
   padding: 20px;
 }
 
 .auth-card {
-  background: #111;
-  border: 1px solid #222;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 40px;
   width: 100%;
   max-width: 420px;
   text-align: center;
+  box-shadow: var(--shadow-lg);
 }
 
 .logo {
@@ -6813,11 +6889,11 @@ body {
   margin-bottom: 8px;
 }
 
-.logo-poly { color: #fff; }
-.logo-io { color: #6366f1; }
+.logo-poly { color: var(--text-primary); }
+.logo-io { color: var(--accent); }
 
 .tagline {
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 32px;
 }
 
@@ -6830,18 +6906,18 @@ body {
 .auth-tabs button {
   flex: 1;
   padding: 12px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .auth-tabs button.active {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -6856,7 +6932,7 @@ body {
 .form-group label {
   display: block;
   font-size: 0.875rem;
-  color: #888;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -6864,18 +6940,18 @@ body {
 .form-group select {
   width: 100%;
   padding: 12px 14px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.9rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #6366f1;
+  border-color: var(--accent);
 }
 
 .form-row {
@@ -7046,15 +7122,15 @@ body {
 /* Sidebar */
 .sidebar {
   width: 300px;
-  background: #111;
-  border-right: 1px solid #222;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
 
 .sidebar-header {
   padding: 20px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header-top {
@@ -7068,10 +7144,10 @@ body {
   display: none;
   width: 32px;
   height: 32px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 1rem;
   cursor: pointer;
   align-items: center;
@@ -7079,8 +7155,8 @@ body {
 }
 
 .btn-close-sidebar:hover {
-  border-color: #f43f5e;
-  color: #f43f5e;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .logo-small {
@@ -7093,9 +7169,9 @@ body {
 
 .app-version {
   font-size: 0.6rem;
-  color: #666;
+  color: var(--text-muted);
   font-weight: 400;
-  background: #1a1a2e;
+  background: var(--bg-tertiary);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -7112,7 +7188,7 @@ body {
 }
 
 .current-user:hover {
-  background: #1a1a1a;
+  background: var(--bg-tertiary);
 }
 
 .current-user-avatar {
@@ -7199,20 +7275,38 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid #333;
-  background: #1a1a1a;
+  border: 1px solid var(--border-light);
+  background: var(--bg-tertiary);
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.2s;
 }
 
 .btn-mute-all:hover {
-  border-color: #555;
+  border-color: var(--border-color);
+  background: var(--bg-hover);
 }
 
 .btn-mute-all.muted {
-  background: #333;
-  border-color: #f59e0b;
+  background: var(--bg-hover);
+  border-color: var(--warning);
+}
+
+/* Botão toggle de tema */
+.btn-theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.btn-theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
 }
 
 /* Botão silenciar conexão */
@@ -7573,16 +7667,16 @@ body {
   display: flex;
   padding: 12px;
   gap: 8px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-nav button {
   flex: 1;
   padding: 10px 8px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.75rem;
   cursor: pointer;
   display: flex;
@@ -7594,8 +7688,8 @@ body {
 }
 
 .sidebar-nav button.active {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -7607,15 +7701,16 @@ body {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #333;
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 10px;
 }
 
 .badge.highlight {
-  background: #f43f5e;
+  background: var(--danger);
+  color: #fff;
 }
 
 /* Sidebar Content */
@@ -7635,7 +7730,7 @@ body {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #666;
+  color: var(--text-muted);
   margin: 12px 0 8px;
 }
 
@@ -7871,7 +7966,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
+  background: var(--bg-primary);
 }
 
 .no-chat {
@@ -7880,7 +7975,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .logo-big {
@@ -7922,10 +8017,11 @@ body {
 /* Chat Header */
 .chat-header {
   padding: 16px 24px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: var(--bg-secondary);
 }
 
 .chat-user {
@@ -7937,11 +8033,12 @@ body {
 .chat-user .name {
   font-weight: 600;
   display: block;
+  color: var(--text-primary);
 }
 
 .chat-user .status {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .chat-actions {
@@ -8466,8 +8563,9 @@ body {
 }
 
 .message.received .message-content {
-  background: #222;
+  background: var(--bg-hover);
   border-bottom-left-radius: 4px;
+  color: var(--text-primary);
 }
 
 .message-text {
@@ -8610,10 +8708,11 @@ body {
 
 .message-input {
   padding: 16px 24px;
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: var(--bg-secondary);
 }
 
 .input-row {
@@ -8624,16 +8723,16 @@ body {
 .input-row input {
   flex: 1;
   padding: 14px 20px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
   border-radius: 24px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.9rem;
   outline: none;
 }
 
 .input-row input:focus {
-  border-color: #6366f1;
+  border-color: var(--accent);
 }
 
 .buttons-row {
@@ -8648,7 +8747,7 @@ body {
 
 .btn-send {
   padding: 14px 24px;
-  background: #6366f1;
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 24px;
@@ -8658,7 +8757,7 @@ body {
 }
 
 .btn-send:hover:not(:disabled) {
-  background: #5558e3;
+  background: var(--accent-hover);
 }
 
 .btn-send:disabled {
@@ -8671,10 +8770,10 @@ body {
   position: relative;
   width: 48px;
   height: 48px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
   border-radius: 50%;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -8685,8 +8784,8 @@ body {
 }
 
 .btn-attach:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .file-input-hidden {
@@ -9032,8 +9131,8 @@ body {
 }
 
 .profile-modal {
-  background: #111;
-  border: 1px solid #333;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
   border-radius: 16px;
   padding: 30px;
   max-width: 400px;
@@ -9042,6 +9141,7 @@ body {
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-lg);
 }
 
 .profile-close {
@@ -9050,13 +9150,13 @@ body {
   right: 15px;
   background: none;
   border: none;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 1.2rem;
   cursor: pointer;
 }
 
 .profile-close:hover {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .profile-avatar-large {
@@ -9884,16 +9984,17 @@ body {
 }
 
 .modal-content {
-  background: #16213e;
+  background: var(--bg-card);
   padding: 24px;
   border-radius: 16px;
   width: 90%;
   max-width: 400px;
+  box-shadow: var(--shadow-lg);
 }
 
 .modal-content h3 {
   margin-bottom: 16px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .room-form .form-group {
@@ -9909,8 +10010,8 @@ body {
 .btn-secondary {
   flex: 1;
   padding: 10px;
-  background: #333;
-  color: #fff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   border: none;
   border-radius: 8px;
   cursor: pointer;
