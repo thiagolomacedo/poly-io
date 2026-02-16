@@ -571,6 +571,20 @@ async function processarAcaoIo(userId, acao) {
   }
 }
 
+// Corrige gírias em português antes de traduzir prompts de imagem
+function corrigirGiriasParaImagem(prompt) {
+  return prompt
+    // Gato/gata como animal (não pessoa bonita)
+    .replace(/\bgato\b/gi, 'gato animal felino')
+    .replace(/\bgata\b/gi, 'gata animal felino')
+    .replace(/\bgatos\b/gi, 'gatos animais felinos')
+    .replace(/\bgatas\b/gi, 'gatas animais felinos')
+    // Cachorro quente vs animal
+    .replace(/\bcachorro quente\b/gi, 'hot dog comida')
+    // Outras correções úteis
+    .replace(/\bpica-pau\b/gi, 'pássaro pica-pau woodpecker')
+}
+
 // Função para gerar imagem internamente (usada pela io)
 async function gerarImagemInterna(prompt) {
   if (!HUGGINGFACE_API_KEY) {
@@ -579,12 +593,15 @@ async function gerarImagemInterna(prompt) {
   }
 
   try {
+    // Corrigir gírias antes de traduzir
+    const promptCorrigido = corrigirGiriasParaImagem(prompt)
+
     // Traduzir prompt para inglês se necessário
-    const idiomaDetectado = detectarIdioma(prompt, 'pt')
-    let promptEnglish = prompt
+    const idiomaDetectado = detectarIdioma(promptCorrigido, 'pt')
+    let promptEnglish = promptCorrigido
 
     if (idiomaDetectado !== 'en') {
-      promptEnglish = await traduzirTexto(prompt, idiomaDetectado, 'en')
+      promptEnglish = await traduzirTexto(promptCorrigido, idiomaDetectado, 'en')
       console.log(`[io IA] Prompt traduzido: "${promptEnglish.substring(0, 50)}..."`)
     }
 
@@ -1999,13 +2016,16 @@ app.post('/api/imagine', authMiddleware, async (req, res) => {
   }
 
   try {
+    // Corrigir gírias antes de traduzir (ex: "gato" = animal, não pessoa bonita)
+    const promptCorrigido = corrigirGiriasParaImagem(prompt.trim())
+
     // Detectar idioma do prompt e traduzir para inglês se necessário
-    const idiomaDetectado = detectarIdioma(prompt.trim(), 'pt')
-    let promptEnglish = prompt.trim()
+    const idiomaDetectado = detectarIdioma(promptCorrigido, 'pt')
+    let promptEnglish = promptCorrigido
 
     if (idiomaDetectado !== 'en') {
       console.log(`[Imagine] Traduzindo prompt de ${idiomaDetectado} para en...`)
-      promptEnglish = await traduzirTexto(prompt.trim(), idiomaDetectado, 'en')
+      promptEnglish = await traduzirTexto(promptCorrigido, idiomaDetectado, 'en')
       console.log(`[Imagine] Prompt traduzido: "${promptEnglish.substring(0, 50)}..."`)
     }
 
