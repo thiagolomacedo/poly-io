@@ -1527,7 +1527,7 @@
                 <!-- Mensagem de imagem gerada por IA (/imagine) -->
                 <template v-else-if="isImagineMessage(msg.texto)">
                   <!-- Texto da io (solto, como mensagem normal) -->
-                  <p v-if="getImagineTextBefore(msg.texto)" class="message-text">{{ getImagineTextBefore(msg.texto) }}</p>
+                  <p v-if="getImagineTextBefore(msg.texto)" class="imagine-text-before">{{ getImagineTextBefore(msg.texto) }}</p>
                   <!-- Imagem com descrição (caixa separada) -->
                   <div class="imagine-message">
                     <p class="imagine-prompt">🎨 {{ getImaginePrompt(msg.texto) }}</p>
@@ -2178,7 +2178,16 @@ function getImagineTextBefore(text) {
   if (!text) return ''
   const idx = text.indexOf('[POLYIMG:')
   if (idx === -1) return text
-  return text.substring(0, idx).trim()
+  let resultado = text.substring(0, idx).trim()
+  // Quebrar a cada 69 caracteres
+  if (resultado.length > 69) {
+    let quebrado = ''
+    for (let i = 0; i < resultado.length; i += 69) {
+      quebrado += resultado.substring(i, i + 69) + '\n'
+    }
+    return quebrado.trim()
+  }
+  return resultado
 }
 
 // Extrai o prompt/descrição da imagem gerada (texto após [POLYIMG:...])
@@ -11501,11 +11510,10 @@ body {
   }
 
   .imagine-text-before {
-    margin: 0 0 4px 0;
+    margin: 0 0 8px 0;
     font-size: 0.9rem;
     color: inherit;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
+    white-space: pre-wrap;
   }
 
   .imagine-prompt {
