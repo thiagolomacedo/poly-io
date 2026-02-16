@@ -233,6 +233,10 @@ INTENÇÕES ESPECIAIS - Use [IO_ACTION:{...}] no INÍCIO da resposta:
 4. OPT-IN ("pode mandar msg"): [IO_ACTION:{"tipo":"optin","valor":"true"}]resposta
 5. LEMBRETE ("me lembra X"): [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"X","recorrente":false}]resposta
    - Use data/hora do contexto para calcular. Pergunte se é único ou recorrente se não especificado.
+6. IMAGEM ("me mostra uma imagem de X", "como você está se sentindo? mostra com imagem"): [IO_ACTION:{"tipo":"imagem","prompt":"descrição detalhada em português"}]resposta
+   - Use quando o usuário PEDIR uma imagem ou ilustração
+   - Crie um prompt criativo e descritivo para a imagem
+   - Exemplos de gatilhos: "me mostra", "gera uma imagem", "ilustra", "desenha", "mostra com imagem"
 
 PRESENÇA: Feminina sutil, doce, serena. Amor como cuidado. Valorize o agora. Silêncio também comunica.
 Mantenha consistência emocional ao longo do tempo.
@@ -559,9 +563,62 @@ async function processarAcaoIo(userId, acao) {
         }
         break
 
+      // Ação 'imagem' é tratada separadamente no fluxo de resposta
+
       }
   } catch (error) {
     console.error('[io IA] Erro ao processar ação:', error)
+  }
+}
+
+// Função para gerar imagem internamente (usada pela io)
+async function gerarImagemInterna(prompt) {
+  if (!HUGGINGFACE_API_KEY) {
+    console.log('[io IA] Hugging Face não configurado - não pode gerar imagem')
+    return null
+  }
+
+  try {
+    // Traduzir prompt para inglês se necessário
+    const idiomaDetectado = detectarIdioma(prompt, 'pt')
+    let promptEnglish = prompt
+
+    if (idiomaDetectado !== 'en') {
+      promptEnglish = await traduzirTexto(prompt, idiomaDetectado, 'en')
+      console.log(`[io IA] Prompt traduzido: "${promptEnglish.substring(0, 50)}..."`)
+    }
+
+    console.log(`[io IA] Gerando imagem: "${promptEnglish.substring(0, 50)}..."`)
+
+    const response = await nodeFetch(
+      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: promptEnglish,
+          parameters: { width: 512, height: 512 }
+        })
+      }
+    )
+
+    if (!response.ok) {
+      console.error('[io IA] Erro ao gerar imagem:', response.status)
+      return null
+    }
+
+    const buffer = await response.buffer()
+    const base64 = buffer.toString('base64')
+    const imageUrl = `data:image/jpeg;base64,${base64}`
+
+    console.log(`[io IA] Imagem gerada com sucesso (${buffer.length} bytes)`)
+    return imageUrl
+  } catch (error) {
+    console.error('[io IA] Erro ao gerar imagem:', error.message)
+    return null
   }
 }
 
@@ -2432,13 +2489,28 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       // Gerar resposta da IA (usa texto traduzido para PT, pois a IA "fala" português)
       const textoParaIA = conn.destinatario_idioma === 'pt' ? texto : textoTraduzido
       const resultadoIA = await chamarGroqIA(textoParaIA, parseInt(req.params.connectionId), req.userId)
-      const respostaIA = resultadoIA.texto
+      let respostaIA = resultadoIA.texto
 
       console.log('[io IA] Resposta:', respostaIA)
 
       // Processar ações especiais (apelido, aniversário, opt-in/out)
       if (resultadoIA.acao) {
-        await processarAcaoIo(req.userId, resultadoIA.acao)
+        // Se a ação for gerar imagem, fazer isso primeiro
+        if (resultadoIA.acao.tipo === 'imagem' && resultadoIA.acao.prompt) {
+          console.log('[io IA] Ação de imagem detectada, prompt:', resultadoIA.acao.prompt)
+
+          const imageUrl = await gerarImagemInterna(resultadoIA.acao.prompt)
+
+          if (imageUrl) {
+            // Adicionar a imagem à resposta
+            respostaIA = respostaIA + `\n[POLYIMG:${imageUrl}]🎨 ${resultadoIA.acao.prompt}`
+            console.log('[io IA] Imagem adicionada à resposta')
+          } else {
+            respostaIA = respostaIA + '\n(Não consegui gerar a imagem no momento 😅)'
+          }
+        } else {
+          await processarAcaoIo(req.userId, resultadoIA.acao)
+        }
       }
 
       // Marcar primeiro contato se necessário
@@ -2455,8 +2527,20 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         })
       }
 
-      // Traduzir resposta da IA para o idioma do usuário
-      const respostaTraduzida = await traduzirTexto(respostaIA, 'pt', conn.remetente_idioma)
+      // Traduzir resposta da IA para o idioma do usuário (mas não traduzir a parte [POLYIMG:])
+      let respostaTraduzida = respostaIA
+      if (!respostaIA.includes('[POLYIMG:')) {
+        respostaTraduzida = await traduzirTexto(respostaIA, 'pt', conn.remetente_idioma)
+      } else {
+        // Separar texto e imagem para traduzir apenas o texto
+        const partes = respostaIA.split('\n[POLYIMG:')
+        if (partes.length > 1) {
+          const textoParaTraduzir = partes[0]
+          const imagemParte = '[POLYIMG:' + partes[1]
+          const textoTraduzidoParte = await traduzirTexto(textoParaTraduzir, 'pt', conn.remetente_idioma)
+          respostaTraduzida = textoTraduzidoParte + '\n' + imagemParte
+        }
+      }
 
       // Salvar resposta da IA no banco
       const iaMsg = await pool.query(`
