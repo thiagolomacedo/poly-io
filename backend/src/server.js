@@ -1954,9 +1954,9 @@ app.post('/api/imagine', authMiddleware, async (req, res) => {
 
     console.log(`[Imagine] Gerando imagem para: "${promptEnglish.substring(0, 50)}..."`)
 
-    // Chamar Hugging Face Inference API (nova URL router)
+    // Chamar Hugging Face Inference API - FLUX.1 Schnell (rápido e alta qualidade)
     const response = await nodeFetch(
-      'https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0',
+      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
       {
         method: 'POST',
         headers: {
