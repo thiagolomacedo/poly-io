@@ -9353,7 +9353,7 @@ body {
   border: 1px solid var(--border-light);
   border-radius: 16px;
   padding: 30px;
-  max-width: 350px;
+  max-width: 400px;
   width: 100%;
   text-align: center;
   position: relative;
@@ -10206,7 +10206,7 @@ body {
   padding: 24px;
   border-radius: 16px;
   width: 90%;
-  max-width: 350px;
+  max-width: 400px;
   box-shadow: var(--shadow-lg);
 }
 
@@ -11486,25 +11486,25 @@ body {
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
   .message.imagine-msg {
-    max-width: 350px !important;
+    max-width: 400px !important;
   }
 
   .message-content.imagine-content {
-    max-width: 350px !important;
+    max-width: 400px !important;
   }
 
   .imagine-message {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 350px;
+    max-width: 400px;
   }
 
   .imagine-text-before {
     margin: 0 0 8px 0;
     font-size: 0.9rem;
     color: inherit;
-    max-width: 350px;
+    max-width: 400px;
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
@@ -11526,7 +11526,7 @@ body {
 
   .imagine-image {
     width: 100%;
-    max-width: 350px;
+    max-width: 400px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
