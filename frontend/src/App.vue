@@ -1526,15 +1526,12 @@
                 </div>
                 <!-- Mensagem de imagem gerada por IA (/imagine) -->
                 <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
-                  <p v-if="getImagineTextBefore(msg.texto)" class="imagine-text-before">{{ getImagineTextBefore(msg.texto) }}</p>
-                  <p v-if="getImaginePrompt(msg.texto)" class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
+                  <p class="imagine-prompt">🎨 {{ getImaginePrompt(msg.texto) }}</p>
                   <div class="imagine-image-container">
-                    <!-- Loading state -->
                     <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
                       <span class="loading-spinner"></span>
                       <span>Gerando imagem...</span>
                     </div>
-                    <!-- Image loaded -->
                     <template v-else>
                       <img
                         :src="getImagineUrl(msg.texto)"
@@ -1543,21 +1540,8 @@
                         @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
                         @error="handleImagineError($event)"
                       />
-                      <div class="imagine-loading">
-                        <span class="loading-spinner"></span>
-                        <span>Carregando...</span>
-                      </div>
                     </template>
                   </div>
-                  <a
-                    v-if="getImagineUrl(msg.texto) !== 'loading'"
-                    :href="getImagineUrl(msg.texto)"
-                    target="_blank"
-                    class="imagine-download"
-                    @click.stop
-                  >
-                    Abrir em nova aba
-                  </a>
                 </div>
                 <!-- Mensagem de texto -->
                 <template v-else>
@@ -11497,49 +11481,40 @@ body {
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
   .message.imagine-msg {
-    max-width: fit-content !important;
+    max-width: 400px !important;
   }
 
   .message-content.imagine-content {
-    max-width: fit-content !important;
+    max-width: 400px !important;
   }
 
   .imagine-message {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 512px;
+    max-width: 400px;
   }
 
-  .imagine-prompt,
-  .imagine-text-before {
+  .imagine-prompt {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: inherit;
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
 
-  .imagine-prompt {
-    font-style: italic;
-    opacity: 0.8;
-  }
-
   .imagine-image-container {
     position: relative;
-    min-height: 150px;
-    background: rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     overflow: hidden;
   }
 
   .imagine-image {
     width: 100%;
-    max-width: 512px;
+    max-width: 400px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
-    transition: opacity 0.3s;
   }
 
   .imagine-image:hover {
@@ -11547,40 +11522,24 @@ body {
   }
 
   .imagine-loading {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
     display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-    font-size: 0.85rem;
-    border-radius: 8px;
   }
 
   .imagine-loading.active {
     display: flex;
-    position: relative;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     min-height: 200px;
-  }
-
-  .imagine-image-container:has(.imagine-image:not([complete])) .imagine-loading:not(.active) {
-    display: flex;
-  }
-
-  .imagine-image-container:has(.imagine-image[complete]) .imagine-loading:not(.active) {
-    display: none;
+    color: #fff;
+    font-size: 0.85rem;
   }
 
   .loading-spinner {
     width: 24px;
     height: 24px;
-    border: 3px solid rgba(0, 0, 0, 0.1);
+    border: 3px solid rgba(255, 255, 255, 0.2);
     border-top-color: #667eea;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -11590,9 +11549,8 @@ body {
     to { transform: rotate(360deg); }
   }
 
-  .imagine-download {
-    font-size: 0.8rem;
-    color: #667eea;
+  .imagine-download-removed {
+    display: none;
     text-decoration: none;
   }
 
