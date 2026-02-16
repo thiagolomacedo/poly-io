@@ -1942,7 +1942,17 @@ app.post('/api/imagine', authMiddleware, async (req, res) => {
   }
 
   try {
-    console.log(`[Imagine] Gerando imagem para: "${prompt.substring(0, 50)}..."`)
+    // Detectar idioma do prompt e traduzir para inglês se necessário
+    const idiomaDetectado = detectarIdioma(prompt.trim(), 'pt')
+    let promptEnglish = prompt.trim()
+
+    if (idiomaDetectado !== 'en') {
+      console.log(`[Imagine] Traduzindo prompt de ${idiomaDetectado} para en...`)
+      promptEnglish = await traduzirTexto(prompt.trim(), idiomaDetectado, 'en')
+      console.log(`[Imagine] Prompt traduzido: "${promptEnglish.substring(0, 50)}..."`)
+    }
+
+    console.log(`[Imagine] Gerando imagem para: "${promptEnglish.substring(0, 50)}..."`)
 
     // Chamar Hugging Face Inference API (nova URL router)
     const response = await nodeFetch(
@@ -1954,7 +1964,7 @@ app.post('/api/imagine', authMiddleware, async (req, res) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          inputs: prompt.trim(),
+          inputs: promptEnglish,
           parameters: {
             width: 512,
             height: 512
