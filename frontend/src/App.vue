@@ -11499,7 +11499,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 300px;
+    max-width: 350px !important;
+    width: 350px;
   }
 
   .imagine-prompt {
@@ -11508,13 +11509,16 @@ body {
     color: inherit;
     font-style: italic;
     opacity: 0.8;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .imagine-text-before {
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
     font-size: 0.95rem;
     color: inherit;
-    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .imagine-image-container {
@@ -11527,7 +11531,7 @@ body {
 
   .imagine-image {
     width: 100%;
-    max-width: 300px;
+    max-width: 350px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
