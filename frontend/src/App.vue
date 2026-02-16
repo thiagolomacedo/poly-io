@@ -1356,6 +1356,15 @@
               />
             </div>
 
+            <!-- Botão gerar imagem -->
+            <button
+              class="room-imagine-btn"
+              @click="openImagineModal('room')"
+              title="Gerar imagem com IA"
+            >
+              🖌️
+            </button>
+
             <!-- Botão enviar -->
             <button
               class="room-send-btn"
@@ -1669,6 +1678,13 @@
               >
                 📞
               </button>
+              <button
+                class="btn-imagine"
+                @click="openImagineModal('chat')"
+                title="Gerar imagem com IA"
+              >
+                🖌️
+              </button>
               <button class="btn-send" @click="sendMessage" :disabled="!newMessage.trim() || isRecording || isSendingMessage">
                 Enviar
               </button>
@@ -1685,6 +1701,36 @@
         <div class="update-actions">
           <button @click="updateApp" class="btn-update">Atualizar</button>
           <button @click="showUpdatePrompt = false" class="btn-later">Depois</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Gerar Imagem com IA -->
+    <div v-if="showImagineModal" class="modal-overlay" @click="closeImagineModal">
+      <div class="modal-content imagine-modal" @click.stop>
+        <div class="imagine-modal-header">
+          <h3>🖌️ Gerar Imagem com IA</h3>
+          <button class="btn-close-modal" @click="closeImagineModal">✕</button>
+        </div>
+        <div class="imagine-modal-body">
+          <p class="imagine-hint">Descreva a imagem que você quer gerar:</p>
+          <textarea
+            v-model="imaginePrompt"
+            placeholder="Ex: um gato laranja dormindo em uma almofada azul..."
+            class="imagine-textarea"
+            rows="3"
+            @keyup.enter.ctrl="submitImagineModal"
+          ></textarea>
+        </div>
+        <div class="imagine-modal-footer">
+          <button class="btn-cancel" @click="closeImagineModal">Cancelar</button>
+          <button
+            class="btn-generate"
+            @click="submitImagineModal"
+            :disabled="!imaginePrompt.trim() || isGeneratingImage"
+          >
+            {{ isGeneratingImage ? 'Gerando...' : 'Gerar Imagem' }}
+          </button>
         </div>
       </div>
     </div>
@@ -2071,6 +2117,12 @@ const showForwardModal = ref(false)
 const forwardingMessage = ref(null)
 const forwardSearch = ref('')
 const selectedForwardContacts = ref([])
+
+// Modal de gerar imagem
+const showImagineModal = ref(false)
+const imaginePrompt = ref('')
+const imagineContext = ref('chat') // 'chat' ou 'room'
+const isGeneratingImage = ref(false)
 
 const createRoomForm = reactive({
   name: '',
@@ -4704,6 +4756,40 @@ async function loadMessages() {
   } catch (error) {
     console.error('Erro ao carregar mensagens:', error)
   }
+}
+
+// ==================== MODAL IMAGINE ====================
+function openImagineModal(context) {
+  imagineContext.value = context
+  imaginePrompt.value = ''
+  showImagineModal.value = true
+}
+
+function closeImagineModal() {
+  showImagineModal.value = false
+  imaginePrompt.value = ''
+  isGeneratingImage.value = false
+}
+
+async function submitImagineModal() {
+  const prompt = imaginePrompt.value.trim()
+  if (!prompt || isGeneratingImage.value) return
+
+  isGeneratingImage.value = true
+
+  if (imagineContext.value === 'chat') {
+    // Gerar imagem no chat privado
+    newMessage.value = `/imagine ${prompt}`
+    closeImagineModal()
+    await sendMessage()
+  } else if (imagineContext.value === 'room') {
+    // Gerar imagem na sala
+    newRoomMessage.value = `/imagine ${prompt}`
+    closeImagineModal()
+    await sendRoomMessage()
+  }
+
+  isGeneratingImage.value = false
 }
 
 async function sendMessage() {
@@ -9192,6 +9278,29 @@ body {
   cursor: not-allowed;
 }
 
+/* Botão de gerar imagem */
+.btn-imagine {
+  width: 48px;
+  height: 48px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 50%;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.btn-imagine:hover {
+  border-color: #a855f7;
+  color: #a855f7;
+  background: #1a1a2a;
+}
+
 /* Mensagem de áudio */
 .audio-message {
   display: flex;
@@ -9859,7 +9968,8 @@ body {
   .btn-attach,
   .btn-mic,
   .btn-speech,
-  .btn-call {
+  .btn-call,
+  .btn-imagine {
     width: 42px;
     height: 42px;
     font-size: 1.1rem;
@@ -10213,6 +10323,102 @@ body {
 .modal-content h3 {
   margin-bottom: 16px;
   color: var(--text-primary);
+}
+
+/* Modal Imagine (Gerar Imagem) */
+.imagine-modal {
+  max-width: 450px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.imagine-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #333;
+}
+
+.imagine-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.imagine-modal-body {
+  padding: 20px;
+}
+
+.imagine-hint {
+  margin: 0 0 12px 0;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.imagine-textarea {
+  width: 100%;
+  padding: 14px;
+  background: #1a1a2a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1rem;
+  resize: none;
+  font-family: inherit;
+}
+
+.imagine-textarea:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+}
+
+.imagine-textarea::placeholder {
+  color: #666;
+}
+
+.imagine-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #333;
+  justify-content: flex-end;
+}
+
+.imagine-modal-footer .btn-cancel {
+  padding: 10px 20px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.imagine-modal-footer .btn-cancel:hover {
+  background: #444;
+}
+
+.imagine-modal-footer .btn-generate {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.imagine-modal-footer .btn-generate:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+}
+
+.imagine-modal-footer .btn-generate:disabled {
+  background: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .room-form .form-group {
@@ -11208,6 +11414,31 @@ body {
   background: #0f0f1a;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.room-imagine-btn {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.room-imagine-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+}
+
+.room-imagine-btn:active {
+  transform: scale(0.98);
 }
 
 .room-send-btn {
