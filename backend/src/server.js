@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -288,6 +288,23 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
           }
           // Guardar idioma do usuário para usar no processamento de ações
           ioUserLanguage.set(userId, idiomaUsuario)
+
+          // Buscar memórias persistentes do usuário
+          const memories = await getIoMemories(userId, 20)
+          const memoriasTexto = memories.length > 0
+            ? `\n\n[MEMÓRIAS SOBRE ESTE USUÁRIO - USE NATURALMENTE]
+${memories.map(m => `- ${m.fact}`).join('\n')}
+
+IMPORTANTE: Quando o usuário compartilhar informações pessoais relevantes (profissão, hobbies, família, projetos, preferências), salve usando:
+[IO_ACTION:{"tipo":"memoria","fato":"descrição do fato","categoria":"personal|work|preference|other","importancia":1-3}]
+Importância: 1=normal, 2=importante, 3=muito importante
+NÃO salve informações triviais ou repetidas.`
+            : `\n\n[MEMÓRIA]
+Você ainda não sabe muito sobre este usuário. Quando ele compartilhar informações pessoais relevantes, salve usando:
+[IO_ACTION:{"tipo":"memoria","fato":"descrição do fato","categoria":"personal|work|preference|other","importancia":1-3}]`
+
+          const totalMemorias = await countIoMemories(userId)
+
           contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
 - Nome cadastrado: ${user.nome}
 - Como chamar: ${apelido}
@@ -296,12 +313,13 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'Primeira conversa - seja acolhedora mas NÃO bombardeie com perguntas.'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
+- Memórias salvas: ${totalMemorias}/${MEMORY_LIMIT}
 
 [DATA/HORA ATUAL NO FUSO HORÁRIO DO USUÁRIO - USE PARA CALCULAR LEMBRETES]
 - Data: ${dataHora.data}
 - Hora: ${dataHora.hora}
 - Ano: ${dataHora.ano}
-- Fuso: ${dataHora.timezone}`
+- Fuso: ${dataHora.timezone}${memoriasTexto}`
         }
       } catch (e) {
         console.error('[io IA] Erro ao buscar contexto:', e)
@@ -512,6 +530,31 @@ async function processarAcaoIo(userId, acao) {
           }
         } catch (e) {
           console.error('[io IA] Erro ao criar lembrete:', e)
+        }
+        break
+
+      case 'memoria':
+        // Salvar nova memória persistente
+        try {
+          const fato = acao.fato || acao.valor
+          const categoria = acao.categoria || 'general'
+          const importancia = parseInt(acao.importancia) || 1
+
+          if (fato && fato.length > 3) {
+            await saveIoMemory(userId, fato, categoria, importancia)
+          }
+        } catch (e) {
+          console.error('[io IA] Erro ao salvar memória:', e)
+        }
+        break
+
+      case 'limpar_memorias':
+        // Limpar todas as memórias do usuário (se ele pedir)
+        try {
+          const count = await clearIoMemories(userId)
+          console.log(`[io IA] Usuário ${userId} limpou todas as memórias (${count} removidas)`)
+        } catch (e) {
+          console.error('[io IA] Erro ao limpar memórias:', e)
         }
         break
 
@@ -2580,6 +2623,53 @@ app.delete('/api/chat/message/:messageId', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro ao excluir mensagem' })
   }
 })
+
+// ==================== ENDPOINTS DE MEMÓRIA DA IO ====================
+
+// Listar memórias do usuário
+app.get('/api/io/memories', authMiddleware, async (req, res) => {
+  try {
+    const memories = await getIoMemories(req.userId, 100)
+    const total = await countIoMemories(req.userId)
+    res.json({
+      memories,
+      total,
+      limit: MEMORY_LIMIT,
+      remaining: MEMORY_LIMIT - total
+    })
+  } catch (error) {
+    console.error('[io Memory] Erro ao listar memórias:', error.message)
+    res.status(500).json({ error: 'Erro ao listar memórias' })
+  }
+})
+
+// Deletar memória específica
+app.delete('/api/io/memories/:memoryId', authMiddleware, async (req, res) => {
+  try {
+    const success = await deleteIoMemory(req.userId, req.params.memoryId)
+    if (success) {
+      res.json({ message: 'Memória excluída' })
+    } else {
+      res.status(404).json({ error: 'Memória não encontrada' })
+    }
+  } catch (error) {
+    console.error('[io Memory] Erro ao excluir memória:', error.message)
+    res.status(500).json({ error: 'Erro ao excluir memória' })
+  }
+})
+
+// Limpar todas as memórias
+app.delete('/api/io/memories', authMiddleware, async (req, res) => {
+  try {
+    const count = await clearIoMemories(req.userId)
+    res.json({ message: `${count} memórias excluídas` })
+  } catch (error) {
+    console.error('[io Memory] Erro ao limpar memórias:', error.message)
+    res.status(500).json({ error: 'Erro ao limpar memórias' })
+  }
+})
+
+// ==================== FIM ENDPOINTS DE MEMÓRIA ====================
 
 // Editar uma mensagem (apenas o remetente pode editar)
 app.put('/api/chat/message/:messageId', authMiddleware, async (req, res) => {

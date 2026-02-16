@@ -233,6 +233,25 @@ async function initDatabase() {
     `)
     console.log('[DB] Tabela io_reminders OK')
 
+    // ==================== TABELA DE MEMÓRIAS DA IO ====================
+    // Memória persistente individual por usuário
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS io_memories (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        fact TEXT NOT NULL,
+        category VARCHAR(50) DEFAULT 'general',
+        importance INTEGER DEFAULT 1,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        atualizado_em TIMESTAMP DEFAULT NOW()
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_io_memories_user ON io_memories(user_id);
+      CREATE INDEX IF NOT EXISTS idx_io_memories_importance ON io_memories(importance DESC);
+    `)
+    console.log('[DB] Tabela io_memories OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -382,11 +401,135 @@ async function limparMensagensExpiradas() {
   }
 }
 
+// ==================== FUNÇÕES DE MEMÓRIA DA IO ====================
+
+// Limite de memórias por usuário (versão teste - sem planos pagos)
+const MEMORY_LIMIT = 50
+
+// Buscar memórias do usuário
+async function getIoMemories(userId, limit = 20) {
+  try {
+    const result = await pool.query(`
+      SELECT fact, category, importance, criado_em
+      FROM io_memories
+      WHERE user_id = $1
+      ORDER BY importance DESC, criado_em DESC
+      LIMIT $2
+    `, [userId, limit])
+    return result.rows
+  } catch (error) {
+    console.error('[io Memory] Erro ao buscar memórias:', error.message)
+    return []
+  }
+}
+
+// Salvar nova memória
+async function saveIoMemory(userId, fact, category = 'general', importance = 1) {
+  try {
+    // Verificar limite de memórias
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as total FROM io_memories WHERE user_id = $1',
+      [userId]
+    )
+    const total = parseInt(countResult.rows[0].total)
+
+    if (total >= MEMORY_LIMIT) {
+      // Apagar a memória mais antiga e menos importante
+      await pool.query(`
+        DELETE FROM io_memories
+        WHERE id = (
+          SELECT id FROM io_memories
+          WHERE user_id = $1
+          ORDER BY importance ASC, criado_em ASC
+          LIMIT 1
+        )
+      `, [userId])
+      console.log(`[io Memory] Limite atingido, memória antiga removida (user ${userId})`)
+    }
+
+    // Verificar se já existe fato similar (evitar duplicatas)
+    const existingResult = await pool.query(
+      'SELECT id FROM io_memories WHERE user_id = $1 AND LOWER(fact) = LOWER($2)',
+      [userId, fact]
+    )
+
+    if (existingResult.rows.length > 0) {
+      // Atualizar timestamp e importância se já existe
+      await pool.query(
+        'UPDATE io_memories SET atualizado_em = NOW(), importance = GREATEST(importance, $1) WHERE id = $2',
+        [importance, existingResult.rows[0].id]
+      )
+      console.log(`[io Memory] Memória atualizada: "${fact.substring(0, 50)}..." (user ${userId})`)
+      return { updated: true }
+    }
+
+    // Inserir nova memória
+    await pool.query(
+      'INSERT INTO io_memories (user_id, fact, category, importance) VALUES ($1, $2, $3, $4)',
+      [userId, fact, category, importance]
+    )
+    console.log(`[io Memory] Nova memória salva: "${fact.substring(0, 50)}..." (user ${userId})`)
+    return { created: true }
+  } catch (error) {
+    console.error('[io Memory] Erro ao salvar memória:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Deletar memória específica
+async function deleteIoMemory(userId, memoryId) {
+  try {
+    await pool.query(
+      'DELETE FROM io_memories WHERE id = $1 AND user_id = $2',
+      [memoryId, userId]
+    )
+    return true
+  } catch (error) {
+    console.error('[io Memory] Erro ao deletar memória:', error.message)
+    return false
+  }
+}
+
+// Limpar todas as memórias do usuário
+async function clearIoMemories(userId) {
+  try {
+    const result = await pool.query(
+      'DELETE FROM io_memories WHERE user_id = $1',
+      [userId]
+    )
+    console.log(`[io Memory] ${result.rowCount} memórias apagadas (user ${userId})`)
+    return result.rowCount
+  } catch (error) {
+    console.error('[io Memory] Erro ao limpar memórias:', error.message)
+    return 0
+  }
+}
+
+// Contar memórias do usuário
+async function countIoMemories(userId) {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as total FROM io_memories WHERE user_id = $1',
+      [userId]
+    )
+    return parseInt(result.rows[0].total)
+  } catch (error) {
+    return 0
+  }
+}
+
 module.exports = {
   pool,
   initDatabase,
   limparMensagensExpiradas,
   verificarSalasInativas,
   generateFriendCode,
-  generateRoomInviteCode
+  generateRoomInviteCode,
+  // Funções de memória da io
+  getIoMemories,
+  saveIoMemory,
+  deleteIoMemory,
+  clearIoMemories,
+  countIoMemories,
+  MEMORY_LIMIT
 }
