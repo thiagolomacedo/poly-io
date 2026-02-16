@@ -234,6 +234,15 @@
         @click="sidebarOpen = false"
       ></div>
 
+      <!-- Modal de Imagem Fullscreen -->
+      <div v-if="fullscreenImageUrl" class="fullscreen-image-overlay" @click="closeImageFullscreen">
+        <button class="fullscreen-close" @click="closeImageFullscreen">✕</button>
+        <img :src="fullscreenImageUrl" class="fullscreen-image" @click.stop />
+        <a :href="fullscreenImageUrl" target="_blank" class="fullscreen-download" @click.stop>
+          Abrir em nova aba
+        </a>
+      </div>
+
       <!-- Modal de Perfil -->
       <div v-if="showProfileModal" class="profile-modal-overlay" @click="showProfileModal = false">
         <div class="profile-modal" @click.stop>
@@ -1260,7 +1269,24 @@
                 <span class="sender-name" :style="{ color: msg.corNome }">{{ msg.senderNome }}</span>
                 <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
               </div>
-              <div class="message-bubble" :style="{ color: msg.cor }">
+              <!-- Mensagem de imagem gerada na sala -->
+              <div v-if="isImagineMessage(msg.texto)" class="message-bubble imagine-message" :style="{ color: msg.cor }">
+                <p class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
+                <div class="imagine-image-container">
+                  <img
+                    :src="getImagineUrl(msg.texto)"
+                    class="imagine-image"
+                    loading="lazy"
+                    @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
+                  />
+                  <div class="imagine-loading">
+                    <span class="loading-spinner"></span>
+                    <span>Gerando...</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Mensagem de texto normal na sala -->
+              <div v-else class="message-bubble" :style="{ color: msg.cor }">
                 {{ msg.texto }}
               </div>
               <button
@@ -1488,6 +1514,31 @@
                   <button class="btn-download" @click.stop="downloadFile(msg)">
                     Baixar
                   </button>
+                </div>
+                <!-- Mensagem de imagem gerada por IA (/imagine) -->
+                <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
+                  <p class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
+                  <div class="imagine-image-container">
+                    <img
+                      :src="getImagineUrl(msg.texto)"
+                      class="imagine-image"
+                      loading="lazy"
+                      @click.stop="openImageFullscreen(getImagineUrl(msg.texto))"
+                      @error="handleImagineError($event)"
+                    />
+                    <div class="imagine-loading">
+                      <span class="loading-spinner"></span>
+                      <span>Gerando imagem...</span>
+                    </div>
+                  </div>
+                  <a
+                    :href="getImagineUrl(msg.texto)"
+                    target="_blank"
+                    class="imagine-download"
+                    @click.stop
+                  >
+                    Abrir em nova aba
+                  </a>
                 </div>
                 <!-- Mensagem de texto -->
                 <template v-else>
@@ -2099,6 +2150,46 @@ function isOnlyEmoji(text) {
   // Conta quantos emojis tem (aproximado)
   const emojiCount = [...clean].filter(char => /[\u{1F300}-\u{1FAFF}]/u.test(char)).length
   return emojiCount > 0 && emojiCount <= 3
+}
+
+// Detecta se a mensagem contém imagem gerada por IA (/imagine)
+function isImagineMessage(text) {
+  if (!text) return false
+  return text.startsWith('[POLYIMG:')
+}
+
+// Extrai a URL da imagem gerada
+function getImagineUrl(text) {
+  if (!text) return null
+  const match = text.match(/^\[POLYIMG:(.*?)\]/)
+  return match ? match[1] : null
+}
+
+// Extrai o prompt/descrição da imagem gerada
+function getImaginePrompt(text) {
+  if (!text) return ''
+  return text.replace(/^\[POLYIMG:.*?\]/, '').trim()
+}
+
+// Abre imagem em tela cheia
+const fullscreenImageUrl = ref(null)
+function openImageFullscreen(url) {
+  fullscreenImageUrl.value = url
+}
+function closeImageFullscreen() {
+  fullscreenImageUrl.value = null
+}
+
+// Handler para erro ao carregar imagem do /imagine
+function handleImagineError(event) {
+  const img = event.target
+  const container = img.parentElement
+  if (container) {
+    const loading = container.querySelector('.imagine-loading')
+    if (loading) {
+      loading.innerHTML = '<span style="color: #ff6b6b;">Erro ao gerar imagem</span>'
+    }
+  }
 }
 
 function addToRecentEmojis(emoji) {
@@ -3759,9 +3850,20 @@ async function joinRoomByInvite(code) {
 function sendRoomMessage() {
   if (!newRoomMessage.value.trim() || !selectedRoom.value || isRoomMuted.value) return
 
+  let texto = newRoomMessage.value.trim()
+
+  // Detectar comando /imagine
+  if (texto.toLowerCase().startsWith('/imagine ')) {
+    const prompt = texto.substring(9).trim() // Remove '/imagine '
+    if (prompt) {
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
+      texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
+    }
+  }
+
   socket.emit('sala-mensagem', {
     roomId: selectedRoom.value.id,
-    texto: newRoomMessage.value.trim(),
+    texto: texto,
     cor: roomMessageColor.value,
     corNome: roomNameColor.value
   })
@@ -4556,10 +4658,19 @@ async function sendMessage() {
   // Parar indicador de digitação
   emitStoppedTyping()
 
-  const texto = newMessage.value
+  let texto = newMessage.value
   const repliedToId = replyingTo.value?.id || null
   newMessage.value = '' // Limpa imediatamente para UX
   replyingTo.value = null // Limpa reply
+
+  // Detectar comando /imagine
+  if (texto.trim().toLowerCase().startsWith('/imagine ')) {
+    const prompt = texto.trim().substring(9).trim() // Remove '/imagine '
+    if (prompt) {
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`
+      texto = `[POLYIMG:${imageUrl}]🎨 ${prompt}`
+    }
+  }
 
   try {
     await fetch(`${API_URL}/chat/${selectedConnection.value.connectionId}`, {
@@ -11264,6 +11375,151 @@ body {
       transform: translateY(0);
       opacity: 1;
     }
+  }
+
+  /* ==================== IMAGINE (Geração de Imagens) ==================== */
+  .imagine-message {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 300px;
+  }
+
+  .imagine-prompt {
+    margin: 0;
+    font-size: 0.9rem;
+    color: inherit;
+  }
+
+  .imagine-image-container {
+    position: relative;
+    min-height: 150px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .imagine-image {
+    width: 100%;
+    max-width: 300px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: block;
+    transition: opacity 0.3s;
+  }
+
+  .imagine-image:hover {
+    opacity: 0.9;
+  }
+
+  .imagine-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    color: #888;
+    font-size: 0.85rem;
+  }
+
+  .imagine-image-container:has(.imagine-image[src]) .imagine-loading {
+    display: none;
+  }
+
+  .imagine-image:not([src]), .imagine-image[src=""] {
+    display: none;
+  }
+
+  .imagine-image-container:has(.imagine-image:not([src])) .imagine-loading,
+  .imagine-image-container:has(.imagine-image[src=""]) .imagine-loading {
+    display: flex;
+  }
+
+  .loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .imagine-download {
+    font-size: 0.8rem;
+    color: #667eea;
+    text-decoration: none;
+  }
+
+  .imagine-download:hover {
+    text-decoration: underline;
+  }
+
+  /* Fullscreen Image Modal */
+  .fullscreen-image-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+  }
+
+  .fullscreen-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fullscreen-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .fullscreen-image {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .fullscreen-download {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .fullscreen-download:hover {
+    background: #5a6fd6;
   }
 }
 </style>

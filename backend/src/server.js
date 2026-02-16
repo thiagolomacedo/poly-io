@@ -2242,11 +2242,14 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
 
     const conn = connResult.rows[0]
 
-    // Detectar idioma (usa idioma do perfil do remetente como fallback)
-    const idiomaOriginal = detectarIdioma(texto, conn.remetente_idioma)
-    const textoTraduzido = await traduzirTexto(texto, idiomaOriginal, conn.destinatario_idioma)
+    // Detectar se é mensagem de imagem gerada (/imagine) - não traduzir
+    const isImagineMessage = texto.startsWith('[POLYIMG:')
 
-    console.log(`[Chat] ${req.userId} → ${conn.destinatario_id}: "${texto}" → "${textoTraduzido}"`)
+    // Detectar idioma (usa idioma do perfil do remetente como fallback)
+    const idiomaOriginal = isImagineMessage ? conn.remetente_idioma : detectarIdioma(texto, conn.remetente_idioma)
+    const textoTraduzido = isImagineMessage ? texto : await traduzirTexto(texto, idiomaOriginal, conn.destinatario_idioma)
+
+    console.log(`[Chat] ${req.userId} → ${conn.destinatario_id}: "${texto.substring(0, 50)}..." → "${textoTraduzido.substring(0, 50)}..."`)
 
     // Buscar dados da mensagem sendo respondida (se houver)
     let repliedToText = null
