@@ -1549,15 +1549,6 @@
                       </div>
                     </template>
                   </div>
-                  <a
-                    v-if="getImagineUrl(msg.texto) !== 'loading'"
-                    :href="getImagineUrl(msg.texto)"
-                    target="_blank"
-                    class="imagine-download"
-                    @click.stop
-                  >
-                    Abrir em nova aba
-                  </a>
                 </div>
                 <!-- Mensagem de texto -->
                 <template v-else>
@@ -11508,7 +11499,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 420px;
+    max-width: 350px;
   }
 
   .imagine-prompt,
@@ -11535,7 +11526,7 @@ body {
 
   .imagine-image {
     width: 100%;
-    max-width: 420px;
+    max-width: 350px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
