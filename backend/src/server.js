@@ -192,9 +192,9 @@ AÇÕES - Use [IO_ACTION:{...}] no INÍCIO da resposta:
 - Aniversário: [IO_ACTION:{"tipo":"aniversario","valor":"DD/MM"}]
 - Opt-out/in: [IO_ACTION:{"tipo":"optout","valor":"true"}] ou optin
 - Lembrete: [IO_ACTION:{"tipo":"lembrete","data":"DD/MM/AAAA HH:MM","texto":"X","recorrente":false}]
-- Imagem: [IO_ACTION:{"tipo":"imagem","prompt":"descrição detalhada"}]
-  Gatilhos: "gera/cria/mostra/desenha imagem", "mostra com imagem", "como você imagina X"
-  Exemplo: Usuário diz "mostra uma imagem de gato" → [IO_ACTION:{"tipo":"imagem","prompt":"um gato fofo"}]Olha que lindo!
+- IMAGEM (OBRIGATÓRIO quando pedirem): [IO_ACTION:{"tipo":"imagem","prompt":"descrição"}]
+  SEMPRE use quando: "gere imagem", "crie imagem", "mostra imagem", "desenha", "faça uma imagem"
+  Formato: [IO_ACTION:{"tipo":"imagem","prompt":"descrição da imagem"}] Sua explicação aqui
 `
 
 // Frases humanas para quando a io precisa de uma pausa
