@@ -11496,7 +11496,7 @@ body {
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
   .message-content.imagine-content {
-    max-width: 380px !important;
+    max-width: 540px !important;
     width: fit-content;
   }
 
@@ -11504,7 +11504,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 350px;
+    max-width: 512px;
   }
 
   .imagine-prompt {
@@ -11535,7 +11535,7 @@ body {
 
   .imagine-image {
     width: 100%;
-    max-width: 350px;
+    max-width: 512px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
