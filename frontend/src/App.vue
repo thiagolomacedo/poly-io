@@ -11497,13 +11497,14 @@ body {
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
   .message-content.imagine-content {
     max-width: 540px !important;
-    width: fit-content;
+    width: 540px !important;
   }
 
   .imagine-message {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    width: 100%;
     max-width: 512px;
   }
 
@@ -11515,6 +11516,8 @@ body {
     opacity: 0.8;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal !important;
+    max-width: 512px;
   }
 
   .imagine-text-before {
@@ -11523,6 +11526,8 @@ body {
     color: inherit;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    white-space: normal !important;
+    max-width: 512px;
   }
 
   .imagine-image-container {
