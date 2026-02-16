@@ -11509,6 +11509,7 @@ body {
     color: inherit;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    max-width: 350px !important;
   }
 
   .imagine-prompt {
