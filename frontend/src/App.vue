@@ -11508,7 +11508,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 512px;
+    max-width: 420px;
   }
 
   .imagine-prompt,
@@ -11535,7 +11535,7 @@ body {
 
   .imagine-image {
     width: 100%;
-    max-width: 512px;
+    max-width: 420px;
     border-radius: 8px;
     cursor: pointer;
     display: block;
