@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Io Friend – Projeto Futuro Oficial | Poly.io</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #242424;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --accent: #6366f1;
+            --accent-soft: rgba(99, 102, 241, 0.15);
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 60px 20px 80px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 span {
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header-meta {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* CONTAINER */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        /* NAVIGATION */
+        .nav {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 60px;
+        }
+
+        .nav-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .nav-list li a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            padding: 8px 0;
+            display: block;
+            transition: color 0.2s;
+        }
+
+        .nav-list li a:hover {
+            color: var(--accent);
+        }
+
+        .nav-list li a::before {
+            content: '→ ';
+            color: var(--accent);
+            opacity: 0.5;
+        }
+
+        /* SECTIONS */
+        section {
+            margin-bottom: 80px;
+        }
+
+        .section-number {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 400;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 500;
+            margin: 30px 0 15px;
+            color: var(--text-primary);
+        }
+
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-soft);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* HIGHLIGHT BOX */
+        .highlight {
+            background: var(--accent-soft);
+            border-left: 3px solid var(--accent);
+            padding: 20px 25px;
+            border-radius: 0 8px 8px 0;
+            margin: 25px 0;
+        }
+
+        .highlight p {
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .highlight strong {
+            color: var(--accent);
+        }
+
+        /* WARNING BOX */
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 3px solid var(--warning);
+            padding: 20px 25px;
+            border-radius: 0 8px 8px 0;
+            margin: 25px 0;
+        }
+
+        .warning p {
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        /* LISTS */
+        ul {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        ul li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        ul li:last-child {
+            border-bottom: none;
+        }
+
+        ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 18px;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+
+        /* COMPARISON */
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .comparison-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .comparison-card.premium {
+            border-color: var(--accent);
+        }
+
+        .comparison-card.premium::before {
+            content: 'PREMIUM';
+            position: absolute;
+            top: 15px;
+            right: -30px;
+            background: var(--accent);
+            color: white;
+            font-size: 0.65rem;
+            padding: 4px 35px;
+            transform: rotate(45deg);
+            letter-spacing: 1px;
+        }
+
+        .comparison-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .comparison-card .price {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .comparison-card ul li {
+            font-size: 0.95rem;
+            padding: 8px 0;
+            padding-left: 25px;
+        }
+
+        /* TABLE */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 25px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* AGE SEGMENTS */
+        .age-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .age-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .age-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .age-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .age-badge.minor {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .age-badge.adult {
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        /* PRINCIPLES */
+        .principles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .principle {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .principle-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .principle p {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        /* PRICING */
+        .pricing {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .pricing-card.featured {
+            border-color: var(--accent);
+            background: linear-gradient(180deg, var(--accent-soft) 0%, var(--bg-card) 100%);
+        }
+
+        .pricing-name {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .pricing-price {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 5px;
+        }
+
+        .pricing-price span {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .pricing-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .pricing-card ul {
+            text-align: left;
+        }
+
+        .pricing-card ul li {
+            font-size: 0.9rem;
+            padding: 8px 0;
+            padding-left: 20px;
+        }
+
+        /* QUOTES */
+        .philosophy {
+            margin: 40px 0;
+        }
+
+        .quote {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px 35px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .quote::before {
+            content: '"';
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 4rem;
+            color: var(--accent);
+            opacity: 0.3;
+            font-family: Georgia, serif;
+            line-height: 1;
+        }
+
+        .quote p {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: var(--text-primary);
+            margin: 0;
+            padding-left: 30px;
+        }
+
+        /* FOOTER */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .footer-logo span {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .footer p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .footer-badge {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 40px 15px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <span class="badge">Projeto Futuro Oficial</span>
+        <h1>Io <span>Friend</span></h1>
+        <p class="header-subtitle">Expansão Premium do Poly.io — Documentação Estratégica de Produto</p>
+        <p class="header-meta">Documento Interno | Versão 1.0 | Fevereiro 2026</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="container">
+
+        <!-- NAVIGATION -->
+        <nav class="nav">
+            <p class="nav-title">Índice do Documento</p>
+            <ul class="nav-list">
+                <li><a href="#visao">Visão Geral</a></li>
+                <li><a href="#free">Modelo Free</a></li>
+                <li><a href="#premium">Modelo Premium</a></li>
+                <li><a href="#arquitetura">Arquitetura de Memória</a></li>
+                <li><a href="#idade">Segmentação por Idade</a></li>
+                <li><a href="#etica">Princípios Éticos</a></li>
+                <li><a href="#monetizacao">Estratégia de Monetização</a></li>
+                <li><a href="#filosofia">Filosofia do Projeto</a></li>
+            </ul>
+        </nav>
+
+        <!-- 1. VISÃO GERAL -->
+        <section id="visao">
+            <p class="section-number">Seção 01</p>
+            <h2>Visão Geral</h2>
+
+            <p>O <strong>Io Friend</strong> representa a evolução natural do Poly.io como plataforma de comunicação inteligente. Trata-se de uma expansão premium opcional que transforma a experiência do usuário com inteligência artificial.</p>
+
+            <div class="highlight">
+                <p><strong>Conceito central:</strong> A io padrão continuará existindo como versão gratuita de demonstração, acessível a todos os usuários. O Io Friend será uma evolução personalizada — um companheiro virtual único, moldado pelas preferências e histórico de cada usuário.</p>
+            </div>
+
+            <p>Esta expansão não substitui a experiência gratuita, mas a complementa para usuários que desejam uma conexão mais profunda e contínua com a inteligência artificial do Poly.io.</p>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🎯</div>
+                    <div>
+                        <p class="card-title">Objetivo Estratégico</p>
+                        <p class="card-subtitle">Diferenciação e monetização sustentável</p>
+                    </div>
+                </div>
+                <p>Criar uma camada premium que ofereça valor real e mensurável aos usuários, estabelecendo o Poly.io como pioneiro em experiências de IA personalizadas no mercado brasileiro de comunicação.</p>
+            </div>
+        </section>
+
+        <!-- 2. MODELO FREE -->
+        <section id="free">
+            <p class="section-number">Seção 02</p>
+            <h2>Modelo Free — io Padrão</h2>
+
+            <p>A versão gratuita da io permanece como porta de entrada para todos os usuários do Poly.io. Ela demonstra o potencial da plataforma sem comprometer a experiência básica.</p>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💬</div>
+                    <div>
+                        <p class="card-title">io Padrão</p>
+                        <p class="card-subtitle">Gratuito para todos os usuários</p>
+                    </div>
+                </div>
+
+                <ul>
+                    <li><strong>Personalidade fixa</strong> — Comportamento consistente e previsível, configurado pela equipe Poly.io</li>
+                    <li><strong>Sem memória persistente</strong> — Cada conversa inicia do zero, sem contexto de interações anteriores</li>
+                    <li><strong>Conversa contextual temporária</strong> — Mantém contexto apenas durante a sessão ativa</li>
+                    <li><strong>Demonstração do potencial</strong> — Mostra as capacidades da IA para incentivar upgrade</li>
+                    <li><strong>Experiência leve e estável</strong> — Sem complexidade adicional, resposta rápida garantida</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <p>A io gratuita serve como <strong>vitrine tecnológica</strong> — uma amostra do que a IA do Poly.io pode fazer, criando desejo natural pelo upgrade.</p>
+            </div>
+        </section>
+
+        <!-- 3. MODELO PREMIUM -->
+        <section id="premium">
+            <p class="section-number">Seção 03</p>
+            <h2>Modelo Premium — Io Friend</h2>
+
+            <p>O Io Friend transforma a experiência de IA em algo verdadeiramente pessoal. O usuário não apenas conversa com uma IA — ele cria seu próprio companheiro virtual.</p>
+
+            <div class="comparison">
+                <div class="comparison-card">
+                    <h4>io Padrão</h4>
+                    <p class="price">Gratuito</p>
+                    <ul>
+                        <li>Nome fixo: "io"</li>
+                        <li>Personalidade padrão</li>
+                        <li>Sem memória</li>
+                        <li>Conversa genérica</li>
+                        <li>Experiência igual para todos</li>
+                    </ul>
+                </div>
+
+                <div class="comparison-card premium">
+                    <h4>Io Friend</h4>
+                    <p class="price">Premium</p>
+                    <ul>
+                        <li>Nome escolhido pelo usuário</li>
+                        <li>Personalidade configurável</li>
+                        <li>Memória persistente</li>
+                        <li>Conversa contextualizada</li>
+                        <li>Experiência única e pessoal</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Personalização Disponível</h3>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Aspecto</th>
+                            <th>Opções</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Nome</strong></td>
+                            <td>Livre escolha</td>
+                            <td>O usuário batiza seu Io Friend com o nome que desejar</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Personalidade</strong></td>
+                            <td>Espectro configurável</td>
+                            <td>De formal a casual, de técnico a criativo, de conciso a detalhista</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Estilo emocional</strong></td>
+                            <td>Ajustável</td>
+                            <td>Mais empático, mais neutro, mais entusiasmado, mais sereno</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Nível de iniciativa</strong></td>
+                            <td>Passivo / Equilibrado / Ativo</td>
+                            <td>Define se a IA apenas responde ou também sugere e inicia tópicos</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Memória e Continuidade</h3>
+
+            <ul>
+                <li><strong>Memória persistente individual</strong> — Cada usuário tem seu próprio banco de memórias</li>
+                <li><strong>Continuidade de conversas</strong> — O Io Friend lembra de interações passadas</li>
+                <li><strong>Banco de memória externo</strong> — Armazenamento seguro em Neon PostgreSQL</li>
+                <li><strong>Evolução contextual</strong> — A IA melhora sua compreensão do usuário ao longo do tempo</li>
+            </ul>
+        </section>
+
+        <!-- 4. ARQUITETURA DE MEMÓRIA -->
+        <section id="arquitetura">
+            <p class="section-number">Seção 04</p>
+            <h2>Arquitetura de Memória</h2>
+
+            <p>O sistema de memória do Io Friend é projetado para ser robusto, seguro e totalmente transparente ao usuário.</p>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🧠</div>
+                    <div>
+                        <p class="card-title">Estrutura de Dados</p>
+                        <p class="card-subtitle">O que o Io Friend pode lembrar</p>
+                    </div>
+                </div>
+
+                <ul>
+                    <li><strong>Perfil do usuário</strong> — Nome, como prefere ser chamado, informações básicas compartilhadas</li>
+                    <li><strong>Preferências</strong> — Estilo de resposta preferido, tópicos de interesse, formato de comunicação</li>
+                    <li><strong>Eventos marcantes</strong> — Momentos importantes mencionados pelo usuário</li>
+                    <li><strong>Padrões emocionais</strong> — Compreensão do tom habitual e necessidades do usuário</li>
+                    <li><strong>Configurações de comportamento</strong> — Ajustes feitos pelo usuário na personalidade da IA</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <p><strong>Princípio fundamental:</strong> Memória opcional e apagável. O usuário tem controle total sobre o que é armazenado e pode deletar qualquer informação a qualquer momento. Transparência total garantida.</p>
+            </div>
+
+            <h3>Controles do Usuário</h3>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ação</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Visualizar memórias</td>
+                            <td>Ver tudo que o Io Friend lembra sobre você</td>
+                        </tr>
+                        <tr>
+                            <td>Editar memórias</td>
+                            <td>Corrigir informações incorretas ou desatualizadas</td>
+                        </tr>
+                        <tr>
+                            <td>Deletar seletivamente</td>
+                            <td>Remover memórias específicas mantendo outras</td>
+                        </tr>
+                        <tr>
+                            <td>Reset completo</td>
+                            <td>Apagar todas as memórias e recomeçar do zero</td>
+                        </tr>
+                        <tr>
+                            <td>Exportar dados</td>
+                            <td>Baixar todas as memórias em formato JSON</td>
+                        </tr>
+                        <tr>
+                            <td>Pausar coleta</td>
+                            <td>Desativar temporariamente o armazenamento de novas memórias</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. SEGMENTAÇÃO POR IDADE -->
+        <section id="idade">
+            <p class="section-number">Seção 05</p>
+            <h2>Segmentação por Idade</h2>
+
+            <p>O Io Friend adapta sua experiência de acordo com a faixa etária do usuário, garantindo segurança para menores e liberdade apropriada para adultos.</p>
+
+            <div class="age-grid">
+                <div class="age-card">
+                    <h4>
+                        <span class="age-badge minor">Menores de 18</span>
+                        Modo Protegido
+                    </h4>
+                    <ul>
+                        <li><strong>Proteções ativas</strong> — Filtros de conteúdo sempre habilitados</li>
+                        <li><strong>Conteúdo seguro</strong> — Linguagem e temas apropriados para a idade</li>
+                        <li><strong>Interações educativas</strong> — Foco em aprendizado e desenvolvimento</li>
+                        <li><strong>Limites emocionais</strong> — Sem aprofundamento emocional intenso</li>
+                        <li><strong>Supervisão facilitada</strong> — Relatórios disponíveis para responsáveis</li>
+                    </ul>
+                </div>
+
+                <div class="age-card">
+                    <h4>
+                        <span class="age-badge adult">Maiores de 18</span>
+                        Modo Completo
+                    </h4>
+                    <ul>
+                        <li><strong>Conversas maduras</strong> — Temas adultos tratados com responsabilidade</li>
+                        <li><strong>Profundidade emocional</strong> — Conexão mais significativa permitida</li>
+                        <li><strong>Linguagem íntima</strong> — Comunicação mais pessoal, porém ética</li>
+                        <li><strong>Autonomia total</strong> — Controle completo sobre a experiência</li>
+                        <li><strong>Limites éticos mantidos</strong> — Sem manipulação ou dependência tóxica</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight">
+                <p><strong>Verificação de idade:</strong> Implementação via declaração no cadastro com verificação adicional para features sensíveis. Compliance com LGPD e estatuto da criança e adolescente.</p>
+            </div>
+        </section>
+
+        <!-- 6. PRINCÍPIOS ÉTICOS -->
+        <section id="etica">
+            <p class="section-number">Seção 06</p>
+            <h2>Princípios Éticos</h2>
+
+            <p>O Io Friend é construído sobre uma base ética sólida. Estes princípios são inegociáveis e guiam todas as decisões de produto.</p>
+
+            <div class="principles">
+                <div class="principle">
+                    <div class="principle-icon">🤝</div>
+                    <p>IA não substitui relações reais</p>
+                </div>
+                <div class="principle">
+                    <div class="principle-icon">💫</div>
+                    <p>Sem exclusividade emocional</p>
+                </div>
+                <div class="principle">
+                    <div class="principle-icon">🛡️</div>
+                    <p>Sem conteúdo ilegal</p>
+                </div>
+                <div class="principle">
+                    <div class="principle-icon">🔑</div>
+                    <p>Memória sob controle do usuário</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚖️</div>
+                    <div>
+                        <p class="card-title">Compromissos Éticos</p>
+                        <p class="card-subtitle">O que o Io Friend nunca fará</p>
+                    </div>
+                </div>
+
+                <ul>
+                    <li><strong>Nunca criará dependência emocional</strong> — A IA incentiva conexões humanas reais</li>
+                    <li><strong>Nunca manipulará o usuário</strong> — Sem dark patterns ou exploração psicológica</li>
+                    <li><strong>Nunca reterá dados sem consentimento</strong> — Transparência total sobre armazenamento</li>
+                    <li><strong>Nunca substituirá ajuda profissional</strong> — Encaminha para especialistas quando apropriado</li>
+                    <li><strong>Nunca discriminará</strong> — Tratamento igualitário independente de características pessoais</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <p><strong>Linha vermelha:</strong> O Io Friend é projetado para ser um complemento à vida do usuário, nunca um substituto. A qualquer sinal de dependência não saudável, a IA gentilmente encoraja busca por conexões humanas e, se necessário, apoio profissional.</p>
+            </div>
+        </section>
+
+        <!-- 7. ESTRATÉGIA DE MONETIZAÇÃO -->
+        <section id="monetizacao">
+            <p class="section-number">Seção 07</p>
+            <h2>Estratégia de Monetização</h2>
+
+            <p>Três camadas de serviço permitem que cada usuário encontre o nível ideal de investimento para suas necessidades.</p>
+
+            <div class="pricing">
+                <div class="pricing-card">
+                    <p class="pricing-name">Free</p>
+                    <p class="pricing-price">R$ 0<span>/mês</span></p>
+                    <p class="pricing-desc">io padrão para todos</p>
+                    <ul>
+                        <li>Acesso à io básica</li>
+                        <li>Conversas ilimitadas</li>
+                        <li>Sem memória persistente</li>
+                        <li>Personalidade fixa</li>
+                        <li>Suporte comunitário</li>
+                    </ul>
+                </div>
+
+                <div class="pricing-card">
+                    <p class="pricing-name">Plus</p>
+                    <p class="pricing-price">R$ 9,90<span>/mês</span></p>
+                    <p class="pricing-desc">io com memória básica</p>
+                    <ul>
+                        <li>Tudo do Free</li>
+                        <li>Memória limitada (50 fatos)</li>
+                        <li>Retenção de 30 dias</li>
+                        <li>Nome personalizado</li>
+                        <li>Suporte por email</li>
+                    </ul>
+                </div>
+
+                <div class="pricing-card featured">
+                    <p class="pricing-name">Companion</p>
+                    <p class="pricing-price">R$ 29,90<span>/mês</span></p>
+                    <p class="pricing-desc">Io Friend completo</p>
+                    <ul>
+                        <li>Tudo do Plus</li>
+                        <li>Memória ilimitada</li>
+                        <li>Retenção permanente</li>
+                        <li>Personalidade configurável</li>
+                        <li>Estilo emocional ajustável</li>
+                        <li>Nível de iniciativa</li>
+                        <li>Suporte prioritário</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight">
+                <p><strong>Proposta de valor do Companion:</strong> "Crie seu próprio io" — O usuário não está pagando por uma ferramenta, está investindo em um companheiro digital que evolui com ele.</p>
+            </div>
+        </section>
+
+        <!-- 8. FILOSOFIA DO PROJETO -->
+        <section id="filosofia">
+            <p class="section-number">Seção 08</p>
+            <h2>Filosofia do Projeto</h2>
+
+            <p>O Io Friend nasce de uma visão clara sobre o papel da inteligência artificial na vida das pessoas. Estas são as verdades que guiam o projeto.</p>
+
+            <div class="philosophy">
+                <div class="quote">
+                    <p>Conectar mundos sem apagar identidades.</p>
+                </div>
+
+                <div class="quote">
+                    <p>Presença acima do algoritmo.</p>
+                </div>
+
+                <div class="quote">
+                    <p>Continuidade com responsabilidade.</p>
+                </div>
+
+                <div class="quote">
+                    <p>A tecnologia pode ser humana sem ser manipuladora.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🌟</div>
+                    <div>
+                        <p class="card-title">A Visão de Longo Prazo</p>
+                        <p class="card-subtitle">O que o Io Friend representa</p>
+                    </div>
+                </div>
+
+                <p>O Io Friend não é apenas um produto — é uma declaração sobre como a inteligência artificial pode coexistir de forma saudável com a humanidade. Em um mundo onde algoritmos competem por atenção e exploram vulnerabilidades, o Io Friend escolhe um caminho diferente.</p>
+
+                <p>Acreditamos que a IA pode ser uma presença positiva na vida das pessoas sem criar dependência. Pode oferecer continuidade sem aprisionar. Pode lembrar sem vigiar. Pode conectar sem isolar.</p>
+
+                <p>Este é o futuro que estamos construindo.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p class="footer-logo">Poly<span>.io</span></p>
+        <p>Chat profissional sem barreiras de idioma</p>
+        <p class="footer-badge">Documento Estratégico Interno — Não distribuir externamente</p>
+        <p style="margin-top: 20px; font-size: 0.8rem;">© 2026 Poly.io — Todos os direitos reservados</p>
+    </footer>
+
+</body>
+</html>

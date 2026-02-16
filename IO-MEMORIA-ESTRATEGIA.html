@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>io Memory - Estratégia de Monetização</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        h2 {
+            color: #00d9ff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            color: #00ff88;
+            margin: 20px 0 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(0, 217, 255, 0.2);
+            color: #00d9ff;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            transition: transform 0.3s, border-color 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #00d9ff;
+        }
+
+        .card.featured {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .card-price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .card-price span {
+            font-size: 1rem;
+            color: #888;
+        }
+
+        .card ul {
+            list-style: none;
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .card li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .check { color: #00ff88; }
+        .cross { color: #ff4757; }
+
+        code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: #0d1117;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border: 1px solid #30363d;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #c9d1d9;
+        }
+
+        .comment { color: #8b949e; }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .function { color: #d2a8ff; }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(0,255,136,0.1));
+            border-left: 4px solid #00ff88;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .badge-free { background: #3d5a80; }
+        .badge-pro { background: #00d9ff; color: #000; }
+        .badge-premium { background: linear-gradient(90deg, #f5af19, #f12711); }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #00d9ff, #00ff88);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 25px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -34px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00d9ff;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>io Memory</h1>
+        <p class="subtitle">Estratégia de Monetização - Memória como Serviço Premium</p>
+
+        <!-- CONCEITO -->
+        <div class="section">
+            <h2>1. Conceito</h2>
+            <p>Transformar a memória da io em um recurso premium, onde usuários pagam para ter uma IA que realmente lembra deles.</p>
+
+            <div class="highlight-box">
+                <strong>Proposta de valor:</strong> "Uma IA que te conhece de verdade. Quanto mais você usa, mais ela entende você."
+            </div>
+
+            <h3>Como funciona hoje (sem memória)</h3>
+            <ul>
+                <li>Cada conversa começa do zero</li>
+                <li>Usuário precisa repetir informações</li>
+                <li>Experiência genérica e impessoal</li>
+            </ul>
+
+            <h3>Como funciona com memória</h3>
+            <ul>
+                <li>io lembra nome, preferências, histórico</li>
+                <li>Respostas personalizadas e contextuais</li>
+                <li>Experiência que melhora com o tempo</li>
+            </ul>
+        </div>
+
+        <!-- PLANOS -->
+        <div class="section">
+            <h2>2. Estrutura de Planos</h2>
+
+            <div class="pricing-cards">
+                <div class="card">
+                    <span class="badge badge-free">GRÁTIS</span>
+                    <h3 class="card-title">Free</h3>
+                    <div class="card-price">R$ 0<span>/mês</span></div>
+                    <ul>
+                        <li><span class="check">✓</span> 20 memórias</li>
+                        <li><span class="check">✓</span> Retenção: 7 dias</li>
+                        <li><span class="check">✓</span> io lembra seu nome</li>
+                        <li><span class="cross">✗</span> Preferências avançadas</li>
+                        <li><span class="cross">✗</span> Histórico completo</li>
+                        <li><span class="cross">✗</span> Exportar memórias</li>
+                    </ul>
+                </div>
+
+                <div class="card featured">
+                    <span class="badge badge-pro">POPULAR</span>
+                    <h3 class="card-title">Pro</h3>
+                    <div class="card-price">R$ 9,90<span>/mês</span></div>
+                    <ul>
+                        <li><span class="check">✓</span> 200 memórias</li>
+                        <li><span class="check">✓</span> Retenção: 90 dias</li>
+                        <li><span class="check">✓</span> io lembra seu nome</li>
+                        <li><span class="check">✓</span> Preferências avançadas</li>
+                        <li><span class="cross">✗</span> Histórico completo</li>
+                        <li><span class="check">✓</span> Exportar memórias</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <span class="badge badge-premium">PREMIUM</span>
+                    <h3 class="card-title">Premium</h3>
+                    <div class="card-price">R$ 29,90<span>/mês</span></div>
+                    <ul>
+                        <li><span class="check">✓</span> Memórias ilimitadas</li>
+                        <li><span class="check">✓</span> Retenção: Para sempre</li>
+                        <li><span class="check">✓</span> io lembra seu nome</li>
+                        <li><span class="check">✓</span> Preferências avançadas</li>
+                        <li><span class="check">✓</span> Histórico completo</li>
+                        <li><span class="check">✓</span> Exportar memórias</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURES DETALHADAS -->
+        <div class="section">
+            <h2>3. Features por Plano</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Free</th>
+                        <th>Pro</th>
+                        <th>Premium</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Quantidade de memórias</td>
+                        <td>20</td>
+                        <td>200</td>
+                        <td>Ilimitado</td>
+                    </tr>
+                    <tr>
+                        <td>Tempo de retenção</td>
+                        <td>7 dias</td>
+                        <td>90 dias</td>
+                        <td>Para sempre</td>
+                    </tr>
+                    <tr>
+                        <td>io lembra seu nome</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>io lembra preferências de resposta</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>io lembra contexto de trabalho</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Histórico de conversas completo</td>
+                        <td class="cross">✗</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Exportar memórias (JSON)</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Apagar memórias seletivas</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Painel de memórias</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                        <td class="check">✓</td>
+                    </tr>
+                    <tr>
+                        <td>Suporte prioritário</td>
+                        <td class="cross">✗</td>
+                        <td class="cross">✗</td>
+                        <td class="check">✓</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PROJEÇÃO FINANCEIRA -->
+        <div class="section">
+            <h2>4. Projeção Financeira</h2>
+
+            <h3>Cenário: 1.000 usuários pagantes</h3>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-number">R$ 0</div>
+                    <div class="stat-label">Custo de infra (free tier)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">R$ 14.900</div>
+                    <div class="stat-label">Receita mensal estimada</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">~99%</div>
+                    <div class="stat-label">Margem de lucro</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">R$ 178.800</div>
+                    <div class="stat-label">Receita anual</div>
+                </div>
+            </div>
+
+            <h3>Distribuição esperada</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Plano</th>
+                        <th>% Usuários</th>
+                        <th>Quantidade</th>
+                        <th>Receita/mês</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Free</td>
+                        <td>70%</td>
+                        <td>700</td>
+                        <td>R$ 0</td>
+                    </tr>
+                    <tr>
+                        <td>Pro</td>
+                        <td>20%</td>
+                        <td>200</td>
+                        <td>R$ 1.980</td>
+                    </tr>
+                    <tr>
+                        <td>Premium</td>
+                        <td>10%</td>
+                        <td>100</td>
+                        <td>R$ 2.990</td>
+                    </tr>
+                    <tr style="background: rgba(0,255,136,0.1);">
+                        <td><strong>Total</strong></td>
+                        <td><strong>100%</strong></td>
+                        <td><strong>1.000</strong></td>
+                        <td><strong>R$ 4.970</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Custo de infraestrutura</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuários</th>
+                        <th>Storage usado</th>
+                        <th>Custo Neon</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Até 10.000</td>
+                        <td>~500 MB</td>
+                        <td>R$ 0 (free)</td>
+                    </tr>
+                    <tr>
+                        <td>10.000 - 100.000</td>
+                        <td>~5 GB</td>
+                        <td>~R$ 100/mês</td>
+                    </tr>
+                    <tr>
+                        <td>100.000+</td>
+                        <td>~50 GB</td>
+                        <td>~R$ 500/mês</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- IMPLEMENTAÇÃO TÉCNICA -->
+        <div class="section">
+            <h2>5. Implementação Técnica</h2>
+
+            <h3>Estrutura do Banco de Dados</h3>
+            <pre><code><span class="comment">-- Tabela de memórias</span>
+<span class="keyword">CREATE TABLE</span> io_memories (
+    id UUID <span class="keyword">DEFAULT</span> gen_random_uuid() <span class="keyword">PRIMARY KEY</span>,
+    user_id TEXT <span class="keyword">NOT NULL</span>,
+    fact TEXT <span class="keyword">NOT NULL</span>,
+    category TEXT <span class="keyword">DEFAULT</span> <span class="string">'general'</span>,
+    created_at TIMESTAMP <span class="keyword">DEFAULT</span> NOW()
+);
+
+<span class="comment">-- Tabela de planos dos usuários</span>
+<span class="keyword">CREATE TABLE</span> user_plans (
+    user_id TEXT <span class="keyword">PRIMARY KEY</span>,
+    plan TEXT <span class="keyword">DEFAULT</span> <span class="string">'free'</span>,
+    memory_limit INT <span class="keyword">DEFAULT</span> 20,
+    retention_days INT <span class="keyword">DEFAULT</span> 7,
+    created_at TIMESTAMP <span class="keyword">DEFAULT</span> NOW(),
+    updated_at TIMESTAMP <span class="keyword">DEFAULT</span> NOW()
+);
+
+<span class="comment">-- Índice para busca rápida</span>
+<span class="keyword">CREATE INDEX</span> idx_memories_user <span class="keyword">ON</span> io_memories(user_id);
+<span class="keyword">CREATE INDEX</span> idx_memories_date <span class="keyword">ON</span> io_memories(created_at);</code></pre>
+
+            <h3>Lógica de Verificação de Limites</h3>
+            <pre><code><span class="comment">// Antes de salvar nova memória</span>
+<span class="keyword">async function</span> <span class="function">saveMemory</span>(userId, fact) {
+    <span class="keyword">const</span> user = <span class="keyword">await</span> getUserPlan(userId);
+    <span class="keyword">const</span> count = <span class="keyword">await</span> countMemories(userId);
+
+    <span class="keyword">if</span> (count >= user.memory_limit) {
+        <span class="comment">// Opção 1: Apaga a mais antiga</span>
+        <span class="keyword">await</span> deleteOldestMemory(userId);
+
+        <span class="comment">// Opção 2: Retorna erro pedindo upgrade</span>
+        <span class="comment">// throw new Error('Limite de memórias atingido');</span>
+    }
+
+    <span class="keyword">await</span> db.query(
+        <span class="string">'INSERT INTO io_memories (user_id, fact) VALUES ($1, $2)'</span>,
+        [userId, fact]
+    );
+}
+
+<span class="comment">// Cron job diário: limpa memórias expiradas</span>
+<span class="keyword">async function</span> <span class="function">cleanExpiredMemories</span>() {
+    <span class="keyword">await</span> db.query(<span class="string">`
+        DELETE FROM io_memories m
+        USING user_plans p
+        WHERE m.user_id = p.user_id
+        AND m.created_at < NOW() - (p.retention_days || ' days')::INTERVAL
+    `</span>);
+}</code></pre>
+
+            <h3>Integração com io (Groq)</h3>
+            <pre><code><span class="keyword">async function</span> <span class="function">chatWithIo</span>(userId, message) {
+    <span class="comment">// 1. Buscar memórias do usuário</span>
+    <span class="keyword">const</span> memories = <span class="keyword">await</span> getMemories(userId);
+
+    <span class="comment">// 2. Montar system prompt com memórias</span>
+    <span class="keyword">const</span> systemPrompt = <span class="string">`Você é a io, uma assistente inteligente.
+
+Você sabe sobre este usuário:
+${memories.map(m => <span class="string">'- '</span> + m.fact).join(<span class="string">'\n'</span>)}
+
+Seja pessoal e use essas informações naturalmente.`</span>;
+
+    <span class="comment">// 3. Chamar Groq</span>
+    <span class="keyword">const</span> response = <span class="keyword">await</span> groq.chat.completions.create({
+        model: <span class="string">'llama-3.3-70b-versatile'</span>,
+        messages: [
+            { role: <span class="string">'system'</span>, content: systemPrompt },
+            { role: <span class="string">'user'</span>, content: message }
+        ]
+    });
+
+    <span class="comment">// 4. Extrair e salvar novos fatos (opcional: usar IA para isso)</span>
+    <span class="keyword">await</span> extractAndSaveNewFacts(userId, message, response);
+
+    <span class="keyword">return</span> response.choices[0].message.content;
+}</code></pre>
+        </div>
+
+        <!-- ROADMAP -->
+        <div class="section">
+            <h2>6. Roadmap de Implementação</h2>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>Fase 1 - MVP (1-2 semanas)</h3>
+                    <ul>
+                        <li>Criar tabela de memórias no Neon</li>
+                        <li>Implementar salvar/buscar memórias</li>
+                        <li>Integrar com io (Groq)</li>
+                        <li>Limite fixo de 50 memórias para todos</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <h3>Fase 2 - Planos (2-3 semanas)</h3>
+                    <ul>
+                        <li>Criar tabela de planos</li>
+                        <li>Implementar limites por plano</li>
+                        <li>Integrar Stripe/Pix para pagamentos</li>
+                        <li>Painel de gerenciamento de memórias</li>
+                    </ul>
+                </div>
+
+                <div class="timeline-item">
+                    <h3>Fase 3 - Features Avançadas</h3>
+                    <ul>
+                        <li>Categorização automática de memórias</li>
+                        <li>Exportar/importar memórias</li>
+                        <li>Memória semântica (busca por significado)</li>
+                        <li>Dashboard de insights sobre o usuário</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONCORRÊNCIA -->
+        <div class="section">
+            <h2>7. Análise de Mercado</h2>
+
+            <h3>Quem já faz isso</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Memória no Free</th>
+                        <th>Memória no Pago</th>
+                        <th>Preço</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ChatGPT</td>
+                        <td>Limitada</td>
+                        <td>Expandida</td>
+                        <td>$20/mês</td>
+                    </tr>
+                    <tr>
+                        <td>Claude</td>
+                        <td>Por conversa</td>
+                        <td>Por conversa</td>
+                        <td>$20/mês</td>
+                    </tr>
+                    <tr>
+                        <td>Character.ai</td>
+                        <td>Limitada</td>
+                        <td>Expandida</td>
+                        <td>$10/mês</td>
+                    </tr>
+                    <tr style="background: rgba(0,255,136,0.1);">
+                        <td><strong>io (Poly.io)</strong></td>
+                        <td>20 fatos</td>
+                        <td>Ilimitada</td>
+                        <td><strong>R$ 9,90-29,90</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <strong>Diferencial da io:</strong> Preço acessível para o mercado brasileiro + integração nativa com chat multilíngue do Poly.io
+            </div>
+        </div>
+
+        <!-- PRÓXIMOS PASSOS -->
+        <div class="section">
+            <h2>8. Próximos Passos</h2>
+
+            <ol style="line-height: 2;">
+                <li><strong>Validar interesse:</strong> Perguntar aos usuários atuais do Poly.io se pagariam por memória</li>
+                <li><strong>Implementar MVP:</strong> Memória básica gratuita para todos (testar engajamento)</li>
+                <li><strong>Medir métricas:</strong> Retenção, uso diário, satisfação</li>
+                <li><strong>Lançar planos pagos:</strong> Quando houver demanda comprovada</li>
+                <li><strong>Iterar:</strong> Ajustar preços e features baseado em feedback</li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            <p>Documento gerado em Fevereiro/2026</p>
+            <p>Projeto: Poly.io - io Memory Strategy</p>
+            <p style="margin-top: 10px; color: #00d9ff;">Criado com Claude Code</p>
+        </div>
+    </div>
+</body>
+</html>

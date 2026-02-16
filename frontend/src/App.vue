@@ -1525,7 +1525,8 @@
                 </div>
                 <!-- Mensagem de imagem gerada por IA (/imagine) -->
                 <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
-                  <p class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
+                  <p v-if="getImagineTextBefore(msg.texto)" class="imagine-text-before">{{ getImagineTextBefore(msg.texto) }}</p>
+                  <p v-if="getImaginePrompt(msg.texto)" class="imagine-prompt">{{ getImaginePrompt(msg.texto) }}</p>
                   <div class="imagine-image-container">
                     <!-- Loading state -->
                     <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
@@ -2172,20 +2173,29 @@ function isOnlyEmoji(text) {
 // Detecta se a mensagem contém imagem gerada por IA (/imagine)
 function isImagineMessage(text) {
   if (!text) return false
-  return text.startsWith('[POLYIMG:')
+  return text.includes('[POLYIMG:')
 }
 
 // Extrai a URL da imagem gerada
 function getImagineUrl(text) {
   if (!text) return null
-  const match = text.match(/^\[POLYIMG:(.*?)\]/)
+  const match = text.match(/\[POLYIMG:(.*?)\]/)
   return match ? match[1] : null
 }
 
-// Extrai o prompt/descrição da imagem gerada
+// Extrai o texto antes da imagem (para mensagens da io)
+function getImagineTextBefore(text) {
+  if (!text) return ''
+  const idx = text.indexOf('[POLYIMG:')
+  if (idx === -1) return text
+  return text.substring(0, idx).trim()
+}
+
+// Extrai o prompt/descrição da imagem gerada (texto após [POLYIMG:...])
 function getImaginePrompt(text) {
   if (!text) return ''
-  return text.replace(/^\[POLYIMG:.*?\]/, '').trim()
+  const match = text.match(/\[POLYIMG:.*?\](.*)/)
+  return match ? match[1].trim() : ''
 }
 
 // Abre imagem em tela cheia
@@ -11494,8 +11504,17 @@ body {
 
   .imagine-prompt {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: inherit;
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  .imagine-text-before {
+    margin: 0 0 8px 0;
+    font-size: 0.95rem;
+    color: inherit;
+    white-space: pre-wrap;
   }
 
   .imagine-image-container {
