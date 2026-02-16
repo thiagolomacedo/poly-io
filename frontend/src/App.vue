@@ -1437,7 +1437,7 @@
             >
               <div
                 class="message-content"
-                :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto) }"
+                :class="{ 'emoji-only-content': isOnlyEmoji(msg.texto), 'imagine-content': isImagineMessage(msg.texto) }"
                 :style="msg.euEnviei && !isOnlyEmoji(msg.texto) ? { backgroundColor: msg.bubbleColor || messageBubbleColor } : {}"
               >
                 <!-- Quote da mensagem respondida -->
@@ -11495,12 +11495,16 @@ body {
   }
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
+  .message-content.imagine-content {
+    max-width: 380px !important;
+    width: fit-content;
+  }
+
   .imagine-message {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-width: 350px !important;
-    width: 350px;
+    max-width: 350px;
   }
 
   .imagine-prompt {
