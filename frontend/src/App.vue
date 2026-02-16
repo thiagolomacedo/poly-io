@@ -1431,7 +1431,8 @@
               :class="{
                 'sent': msg.euEnviei,
                 'received': !msg.euEnviei,
-                'emoji-only': isOnlyEmoji(msg.texto)
+                'emoji-only': isOnlyEmoji(msg.texto),
+                'imagine-msg': isImagineMessage(msg.texto)
               }"
               @click="toggleMessageMenu(msg)"
             >
@@ -11495,9 +11496,12 @@ body {
   }
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
-  .message-content.imagine-content {
+  .message.imagine-msg {
     max-width: 540px !important;
-    width: 540px !important;
+  }
+
+  .message-content.imagine-content {
+    max-width: 512px !important;
   }
 
   .imagine-message {
