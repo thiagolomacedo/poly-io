@@ -1526,6 +1526,7 @@
                 </div>
                 <!-- Mensagem de imagem gerada por IA (/imagine) -->
                 <div v-else-if="isImagineMessage(msg.texto)" class="imagine-message">
+                  <p v-if="getImagineTextBefore(msg.texto)" class="imagine-text-before">{{ getImagineTextBefore(msg.texto) }}</p>
                   <p class="imagine-prompt">🎨 {{ getImaginePrompt(msg.texto) }}</p>
                   <div class="imagine-image-container">
                     <div v-if="getImagineUrl(msg.texto) === 'loading'" class="imagine-loading active">
@@ -11495,12 +11496,21 @@ body {
     max-width: 400px;
   }
 
+  .imagine-text-before {
+    margin: 0 0 4px 0;
+    font-size: 0.9rem;
+    color: inherit;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
   .imagine-prompt {
     margin: 0;
     font-size: 0.85rem;
     color: inherit;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    opacity: 0.8;
   }
 
   .imagine-image-container {
