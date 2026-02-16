@@ -11497,41 +11497,32 @@ body {
 
   /* ==================== IMAGINE (Geração de Imagens) ==================== */
   .message.imagine-msg {
-    max-width: 540px !important;
+    max-width: fit-content !important;
   }
 
   .message-content.imagine-content {
-    max-width: 512px !important;
+    max-width: fit-content !important;
   }
 
   .imagine-message {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
     max-width: 512px;
+  }
+
+  .imagine-prompt,
+  .imagine-text-before {
+    margin: 0;
+    font-size: 0.9rem;
+    color: inherit;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .imagine-prompt {
-    margin: 0;
-    font-size: 0.85rem;
-    color: inherit;
     font-style: italic;
     opacity: 0.8;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal !important;
-    max-width: 512px;
-  }
-
-  .imagine-text-before {
-    margin: 0 0 4px 0;
-    font-size: 0.95rem;
-    color: inherit;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal !important;
-    max-width: 512px;
   }
 
   .imagine-image-container {
