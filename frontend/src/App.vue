@@ -1680,14 +1680,6 @@
                 {{ isListening ? '⏹' : '🗣' }}
               </button>
               <button
-                class="btn-call"
-                @click="startAudioCall"
-                :disabled="selectedConnection?.status === 'offline'"
-                :title="selectedConnection?.status === 'offline' ? 'Usuário offline' : 'Ligação de voz'"
-              >
-                📞
-              </button>
-              <button
                 class="btn-imagine"
                 @click="openImagineModal('chat')"
                 title="Gerar imagem com IA"
