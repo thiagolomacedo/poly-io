@@ -1513,13 +1513,23 @@
                   <span v-if="msg.transcrevendo" class="transcribing-indicator">⏳</span>
                   <div v-if="msg.transcricao" class="transcription-result">
                     <p class="transcription-text">{{ msg.traducaoAudio || msg.transcricao }}</p>
-                    <button
-                      v-if="msg.traducaoAudio && msg.traducaoAudio !== msg.transcricao"
-                      class="btn-original-audio"
-                      @click.stop="msg.showOriginalAudio = !msg.showOriginalAudio"
-                    >
-                      {{ msg.showOriginalAudio ? '🔄' : '🌐' }}
-                    </button>
+                    <div class="transcription-buttons">
+                      <button
+                        v-if="msg.traducaoAudio && msg.traducaoAudio !== msg.transcricao"
+                        class="btn-original-audio"
+                        @click.stop="msg.showOriginalAudio = !msg.showOriginalAudio"
+                      >
+                        {{ msg.showOriginalAudio ? '🔄' : '🌐' }}
+                      </button>
+                      <button
+                        class="btn-speak-transcription"
+                        :class="{ speaking: speakingMessageId === 'audio-' + msg.id }"
+                        @click.stop="speakTranscription(msg)"
+                        :title="speakingMessageId === 'audio-' + msg.id ? 'Parar' : 'Ouvir transcrição'"
+                      >
+                        {{ speakingMessageId === 'audio-' + msg.id ? '⏹️' : '🔊' }}
+                      </button>
+                    </div>
                     <p v-if="msg.showOriginalAudio" class="original-audio-text">
                       Original: {{ msg.transcricao }}
                     </p>
@@ -2299,6 +2309,32 @@ function speakMessage(msg) {
   utterance.onerror = () => {
     speakingMessageId.value = null
   }
+
+  speechSynthesis.speak(utterance)
+}
+
+// TTS para transcrição de áudio
+function speakTranscription(msg) {
+  const id = 'audio-' + msg.id
+
+  if (speakingMessageId.value === id) {
+    speechSynthesis.cancel()
+    speakingMessageId.value = null
+    return
+  }
+
+  speechSynthesis.cancel()
+
+  const texto = msg.traducaoAudio || msg.transcricao || ''
+  if (!texto.trim()) return
+
+  const utterance = new SpeechSynthesisUtterance(texto)
+  utterance.lang = ttsLangMap[currentUser.value?.idioma] || 'pt-BR'
+  utterance.rate = 0.9
+
+  utterance.onstart = () => { speakingMessageId.value = id }
+  utterance.onend = () => { speakingMessageId.value = null }
+  utterance.onerror = () => { speakingMessageId.value = null }
 
   speechSynthesis.speak(utterance)
 }
@@ -9434,18 +9470,31 @@ body {
   line-height: 1.4;
 }
 
-.btn-original-audio {
+.transcription-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-original-audio,
+.btn-speak-transcription {
   background: none;
   border: none;
   cursor: pointer;
   padding: 2px 6px;
   font-size: 0.9rem;
-  margin-top: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
-.btn-original-audio:hover {
+.btn-original-audio:hover,
+.btn-speak-transcription:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+}
+
+.btn-speak-transcription.speaking {
+  color: #22c55e;
+  animation: pulse 1s infinite;
 }
 
 .original-audio-text {
