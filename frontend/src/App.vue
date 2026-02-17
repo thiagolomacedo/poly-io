@@ -1567,6 +1567,15 @@
                   >
                     {{ msg.showOriginal ? '🔄' : '🌐' }}
                   </button>
+                  <button
+                    v-if="!msg.euEnviei && !isOnlyEmoji(msg.texto)"
+                    class="btn-speak"
+                    :class="{ speaking: speakingMessageId === msg.id }"
+                    @click.stop="speakMessage(msg)"
+                    :title="speakingMessageId === msg.id ? 'Parar' : 'Ouvir mensagem'"
+                  >
+                    {{ speakingMessageId === msg.id ? '⏹️' : '🔊' }}
+                  </button>
                   <p v-if="msg.showOriginal" class="original-text">
                     Original: {{ msg.textoOriginal }}
                   </p>
@@ -2259,6 +2268,47 @@ function handleImagineError(event) {
       loading.innerHTML = '<span style="color: #ff6b6b;">Erro ao gerar imagem</span>'
     }
   }
+}
+
+// TTS - Text-to-Speech (ouvir mensagem traduzida)
+const speakingMessageId = ref(null)
+const ttsLangMap = {
+  pt: 'pt-BR', en: 'en-US', es: 'es-ES', fr: 'fr-FR',
+  de: 'de-DE', it: 'it-IT', ja: 'ja-JP', ko: 'ko-KR',
+  zh: 'zh-CN', ru: 'ru-RU', ar: 'ar-SA'
+}
+
+function speakMessage(msg) {
+  // Se já está falando essa mensagem, para
+  if (speakingMessageId.value === msg.id) {
+    speechSynthesis.cancel()
+    speakingMessageId.value = null
+    return
+  }
+
+  // Para qualquer fala anterior
+  speechSynthesis.cancel()
+
+  const texto = msg.texto || ''
+  if (!texto.trim()) return
+
+  const utterance = new SpeechSynthesisUtterance(texto)
+  utterance.lang = ttsLangMap[currentUser.value?.idioma] || 'pt-BR'
+  utterance.rate = 0.9
+
+  utterance.onstart = () => {
+    speakingMessageId.value = msg.id
+  }
+
+  utterance.onend = () => {
+    speakingMessageId.value = null
+  }
+
+  utterance.onerror = () => {
+    speakingMessageId.value = null
+  }
+
+  speechSynthesis.speak(utterance)
 }
 
 function addToRecentEmojis(emoji) {
@@ -8931,6 +8981,33 @@ body {
   cursor: pointer;
   padding: 4px 0;
   text-decoration: underline;
+}
+
+.btn-speak {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-speak:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-speak.speaking {
+  color: #22c55e;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .btn-show-original {
