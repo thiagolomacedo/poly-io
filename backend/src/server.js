@@ -2047,6 +2047,9 @@ app.post('/api/imagine', authMiddleware, async (req, res) => {
 // Buscar histórico de mensagens
 app.get('/api/chat/:connectionId', authMiddleware, async (req, res) => {
   try {
+    // Limpar mensagens expiradas em background (garante limpeza mesmo com cold starts)
+    limparMensagensExpiradas().catch(() => {})
+
     // Idioma de destino personalizado (opcional - se não passar, usa o padrão do perfil)
     const idiomaDestino = req.query.idiomaDestino
 
