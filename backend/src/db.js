@@ -106,6 +106,10 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS io_modo_narrativo BOOLEAN DEFAULT FALSE
     `)
+    // Última conversa com a io (consciência temporal)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS io_ultima_conversa TIMESTAMP
+    `)
 
     // ==================== VERIFICAÇÃO DE IDADE ====================
     // Data de nascimento do usuário

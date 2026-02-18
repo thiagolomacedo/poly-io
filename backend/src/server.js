@@ -128,6 +128,26 @@ function parseDateUsuario(dataStr, idioma = 'pt') {
   return dataUTC
 }
 
+// Helper para calcular tempo decorrido de forma legível
+function tempoDecorrido(dataAnterior) {
+  if (!dataAnterior) return null
+  const agora = new Date()
+  const anterior = new Date(dataAnterior)
+  const diffMs = agora - anterior
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHoras = Math.floor(diffMin / 60)
+  const diffDias = Math.floor(diffHoras / 24)
+
+  if (diffMin < 5) return 'agora há pouco'
+  if (diffMin < 60) return `há ${diffMin} minutos`
+  if (diffHoras === 1) return 'há 1 hora'
+  if (diffHoras < 24) return `há ${diffHoras} horas`
+  if (diffDias === 1) return 'há 1 dia'
+  if (diffDias < 7) return `há ${diffDias} dias`
+  if (diffDias < 30) return `há ${Math.floor(diffDias / 7)} semanas`
+  return `há ${Math.floor(diffDias / 30)} meses`
+}
+
 // Inicializar Express
 const app = express()
 const server = http.createServer(app)
@@ -212,7 +232,7 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
     if (userId) {
       try {
         const userResult = await pool.query(
-          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo, data_nascimento, maior_idade_confirmado FROM users WHERE id = $1',
+          'SELECT nome, idioma, io_apelido, io_aniversario, io_primeiro_contato, io_proativo, io_ultima_conversa, data_nascimento, maior_idade_confirmado FROM users WHERE id = $1',
           [userId]
         )
         if (userResult.rows[0]) {
@@ -255,7 +275,7 @@ Você ainda não sabe muito sobre este usuário. Quando ele compartilhar informa
 - Idioma/País: ${idiomaUsuario.toUpperCase()}
 - Classificação etária: ${classificacaoEtaria}${user.maior_idade_confirmado ? ' (confirmado)' : ''}
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
-- Primeiro contato: ${user.io_primeiro_contato ? 'Já conversamos antes' : 'Primeira conversa - seja acolhedora mas NÃO bombardeie com perguntas.'}
+- Última conversa: ${tempoDecorrido(user.io_ultima_conversa) || 'Primeira vez - seja acolhedora'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
 - Memórias salvas: ${totalMemorias}/${MEMORY_LIMIT}
 
@@ -578,15 +598,15 @@ async function gerarImagemInterna(prompt) {
   }
 }
 
-// Marcar primeiro contato realizado
-async function marcarPrimeiroContatoIo(userId) {
+// Marcar contato com a io (primeiro contato + timestamp)
+async function marcarContatoIo(userId) {
   try {
     await pool.query(
-      'UPDATE users SET io_primeiro_contato = TRUE WHERE id = $1',
+      'UPDATE users SET io_primeiro_contato = TRUE, io_ultima_conversa = NOW() WHERE id = $1',
       [userId]
     )
   } catch (error) {
-    console.error('[io IA] Erro ao marcar primeiro contato:', error)
+    console.error('[io IA] Erro ao marcar contato:', error)
   }
 }
 
@@ -2473,7 +2493,7 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       }
 
       // Marcar primeiro contato se necessário
-      await marcarPrimeiroContatoIo(req.userId)
+      await marcarContatoIo(req.userId)
 
       // Parar indicador de digitação
       if (digitandoInterval) {
