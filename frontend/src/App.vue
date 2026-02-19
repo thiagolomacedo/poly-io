@@ -1473,6 +1473,14 @@
               >
                 📹
               </button>
+              <button
+                v-if="selectedConnection?.kofi_url"
+                class="btn-icon btn-tip"
+                @click="openTipModal"
+                title="Enviar apoio via Ko-fi"
+              >
+                ☕
+              </button>
               <button class="btn-icon" @click="exportChat" title="Exportar conversa">
                 📥
               </button>
@@ -1835,6 +1843,33 @@
             {{ ageUpdateLoading ? 'Salvando...' : 'Salvar' }}
           </button>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal de Gorjeta Ko-fi -->
+    <div v-if="showTipModal" class="modal-overlay" @click="showTipModal = false">
+      <div class="modal-content tip-modal" @click.stop>
+        <button class="modal-close" @click="showTipModal = false">✕</button>
+        <div class="tip-icon">☕</div>
+        <h3>Apoiar {{ tipTargetUser?.nome }}</h3>
+        <p class="tip-subtitle">Envie um café para mostrar seu apoio!</p>
+
+        <div class="tip-options">
+          <button class="tip-option" @click="sendTip(1)">
+            <span class="tip-emoji">☕</span>
+            <span class="tip-label">1 café</span>
+          </button>
+          <button class="tip-option" @click="sendTip(3)">
+            <span class="tip-emoji">☕☕</span>
+            <span class="tip-label">3 cafés</span>
+          </button>
+          <button class="tip-option" @click="sendTip(5)">
+            <span class="tip-emoji">☕☕☕</span>
+            <span class="tip-label">5 cafés</span>
+          </button>
+        </div>
+
+        <p class="tip-info">Você será redirecionado para o Ko-fi de {{ tipTargetUser?.nome }}</p>
       </div>
     </div>
   </div>
@@ -2429,6 +2464,10 @@ const kofiUrlInput = ref('')
 const codeCopied = ref(false)
 const linkCopied = ref(false)
 const editingName = ref(false)
+
+// Modal de Gorjeta Ko-fi
+const showTipModal = ref(false)
+const tipTargetUser = ref(null)
 const nameInput = ref('')
 const nameInputRef = ref(null)
 
@@ -3473,6 +3512,27 @@ async function removeKofi() {
   } catch (e) {
     console.error('Erro ao remover Ko-fi:', e)
   }
+}
+
+// Abrir modal de gorjeta Ko-fi
+function openTipModal() {
+  tipTargetUser.value = selectedConnection.value
+  showTipModal.value = true
+}
+
+// Enviar gorjeta (redireciona para Ko-fi)
+function sendTip(coffees) {
+  if (!tipTargetUser.value?.kofi_url) return
+
+  // Fecha o modal
+  showTipModal.value = false
+
+  // Envia mensagem de apoio no chat
+  const tipMessage = `☕ Estou te enviando ${coffees} café${coffees > 1 ? 's' : ''} no Ko-fi! 💜`
+  sendMessage(tipMessage)
+
+  // Abre o Ko-fi em nova aba
+  window.open(tipTargetUser.value.kofi_url, '_blank')
 }
 
 // Helper para obter info da rede social
@@ -10541,6 +10601,101 @@ body {
 
 .btn-video:not(:disabled):hover {
   background: #22c55e !important;
+}
+
+/* Botão de gorjeta Ko-fi */
+.btn-tip {
+  background: #ff5e5b !important;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.btn-tip:hover {
+  background: #ff7875 !important;
+  transform: scale(1.1);
+}
+
+/* Modal de Gorjeta Ko-fi */
+.tip-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.tip-modal {
+  background: linear-gradient(145deg, #1a1a2e 0%, #16162a 100%);
+  border: 1px solid #6366f1;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(99, 102, 241, 0.3);
+}
+
+.tip-modal h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.tip-modal .tip-subtitle {
+  color: #888;
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+
+.tip-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.tip-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.tip-option {
+  flex: 1;
+  padding: 16px 12px;
+  background: #252540;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tip-option:hover {
+  border-color: #ff5e5b;
+  background: #2a2a4a;
+  transform: translateY(-2px);
+}
+
+.tip-emoji {
+  font-size: 1.5rem;
+}
+
+.tip-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #ff5e5b;
+}
+
+.tip-info {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 12px;
 }
 
 /* Mobile: ajustar modal de chamada */
