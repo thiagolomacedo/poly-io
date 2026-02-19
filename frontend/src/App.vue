@@ -1812,19 +1812,17 @@
             </div>
           </div>
 
-          <!-- Aviso de expiração -->
-          <div class="expiration-notice">
-            As mensagens expiram automaticamente após 24 horas.
-            <button @click="exportChat">Baixar conversa</button>
-          </div>
-
-          <!-- Banner de experimento -->
-          <div v-if="selectedConnection?.is_experimenting" class="experiment-banner">
-            <span>🧪 Experimentando <strong>{{ selectedConnection.nome }}</strong></span>
-            <div class="experiment-actions">
-              <button class="btn-adopt" @click="adoptIoFriend">💜 Usar como minha io</button>
-              <button class="btn-stop-experiment" @click="stopExperimenting">✕ Parar</button>
-            </div>
+          <!-- Aviso de expiração + Banner de experimento -->
+          <div class="expiration-notice" :class="{ 'experimenting': selectedConnection?.is_experimenting }">
+            <template v-if="selectedConnection?.is_experimenting">
+              🧪 Experimentando <strong>{{ selectedConnection.nome }}</strong>
+              <button class="btn-adopt-inline" @click="adoptIoFriend">💜 Adotar</button>
+              <button class="btn-stop-inline" @click="stopExperimenting">✕</button>
+            </template>
+            <template v-else>
+              As mensagens expiram automaticamente após 24 horas.
+              <button @click="exportChat">Baixar conversa</button>
+            </template>
           </div>
 
           <!-- Mensagens -->
@@ -9818,6 +9816,35 @@ body {
   cursor: pointer;
   text-decoration: underline;
   font-size: 0.75rem;
+}
+
+.expiration-notice.experimenting {
+  background: linear-gradient(135deg, #f59e0b20, #d9770620);
+  border-bottom: 1px solid #f59e0b40;
+  color: #f59e0b;
+}
+
+.btn-adopt-inline {
+  background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
+  border: none !important;
+  color: #fff !important;
+  padding: 4px 12px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  text-decoration: none !important;
+  margin-left: 8px;
+}
+
+.btn-stop-inline {
+  background: #333 !important;
+  border: 1px solid #555 !important;
+  color: #999 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 0.75rem !important;
+  text-decoration: none !important;
 }
 
 /* Messages */
