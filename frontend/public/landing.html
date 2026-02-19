@@ -234,6 +234,16 @@
       100% { background-position: 0% 50%; }
     }
 
+    /* General highlight class (can be used anywhere) */
+    .highlight {
+      background: linear-gradient(90deg, #6366f1, #8b5cf6, #d946ef, #6366f1);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientMove 4s ease infinite;
+    }
+
     .typing-text {
       display: inline-block;
       overflow: hidden;
@@ -1520,7 +1530,7 @@
     <div class="io-friends-container">
       <div class="section-header">
         <span class="section-label">io Friends</span>
-        <h2 class="section-title">Crie sua companheira de IA</h2>
+        <h2 class="section-title">Crie sua <span class="highlight">io Friend</span></h2>
         <p class="section-subtitle">Personalize, compartilhe e ganhe reconhecimento da comunidade.</p>
       </div>
 
