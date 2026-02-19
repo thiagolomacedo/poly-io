@@ -1773,6 +1773,11 @@
                 <span class="status" :class="[selectedConnection.status || 'offline']">{{ getStatusLabel(selectedConnection.status) }}</span>
               </div>
             </div>
+            <!-- Botões de experimento ao lado do nome -->
+            <div v-if="selectedConnection?.is_experimenting" class="experiment-header-btns">
+              <button class="btn-adopt-header" @click.stop="adoptIoFriend">💜 Adotar</button>
+              <button class="btn-stop-header" @click.stop="stopExperimenting">✕</button>
+            </div>
             <div class="chat-actions">
               <select
                 v-model="idiomaRecepcao"
@@ -1812,17 +1817,10 @@
             </div>
           </div>
 
-          <!-- Aviso de expiração + Banner de experimento -->
-          <div class="expiration-notice" :class="{ 'experimenting': selectedConnection?.is_experimenting }">
-            <template v-if="selectedConnection?.is_experimenting">
-              🧪 Experimentando <strong>{{ selectedConnection.nome }}</strong>
-              <button class="btn-adopt-inline" @click="adoptIoFriend">💜 Adotar</button>
-              <button class="btn-stop-inline" @click="stopExperimenting">✕</button>
-            </template>
-            <template v-else>
-              As mensagens expiram automaticamente após 24 horas.
-              <button @click="exportChat">Baixar conversa</button>
-            </template>
+          <!-- Aviso de expiração -->
+          <div class="expiration-notice">
+            As mensagens expiram automaticamente após 24 horas.
+            <button @click="exportChat">Baixar conversa</button>
           </div>
 
           <!-- Mensagens -->
@@ -9836,15 +9834,44 @@ body {
   margin-left: 8px;
 }
 
-.btn-stop-inline {
-  background: #333 !important;
-  border: 1px solid #555 !important;
-  color: #999 !important;
-  padding: 4px 8px !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  font-size: 0.75rem !important;
-  text-decoration: none !important;
+/* Botões de experimento no header */
+.experiment-header-btns {
+  display: flex;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.btn-adopt-header {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-adopt-header:hover {
+  background: linear-gradient(135deg, #9333ea, #6d28d9);
+  transform: scale(1.02);
+}
+
+.btn-stop-header {
+  background: #333;
+  border: 1px solid #555;
+  color: #999;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-stop-header:hover {
+  background: #444;
+  color: #fff;
 }
 
 /* Messages */
