@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -1663,6 +1663,51 @@ app.get('/api/io-friends/public/:id', async (req, res) => {
   }
 })
 
+// Adicionar io friend pública à lista do usuário
+app.post('/api/io-friends/public/:id/add', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+    const result = await addPublicIoFriend(req.userId, ioFriendId)
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    res.json({ success: true, message: 'io friend adicionada com sucesso!' })
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao adicionar:', error.message)
+    res.status(500).json({ error: 'Erro ao adicionar io friend' })
+  }
+})
+
+// Remover io friend pública da lista do usuário
+app.delete('/api/io-friends/public/:id/remove', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+    const result = await removePublicIoFriend(req.userId, ioFriendId)
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    res.json({ success: true, message: 'io friend removida com sucesso!' })
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao remover:', error.message)
+    res.status(500).json({ error: 'Erro ao remover io friend' })
+  }
+})
+
+// Listar io friends públicas adicionadas pelo usuário
+app.get('/api/io-friends/my-public', authMiddleware, async (req, res) => {
+  try {
+    const ioFriends = await getUserPublicIoFriends(req.userId)
+    res.json({ ioFriends })
+  } catch (error) {
+    console.error('[io Friends Públicas] Erro ao listar minhas:', error.message)
+    res.status(500).json({ error: 'Erro ao listar io friends' })
+  }
+})
+
 // Gerar avatar para io friend via IA
 app.post('/api/io-friend/generate-avatar', authMiddleware, async (req, res) => {
   try {
@@ -2030,7 +2075,32 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
       return conn
     })
 
-    res.json(connections)
+    // Buscar io friends públicas adicionadas pelo usuário
+    const publicIoFriends = await getUserPublicIoFriends(req.userId)
+
+    // Adicionar io friends públicas como conexões virtuais
+    const publicIoFriendConnections = publicIoFriends.map(pif => ({
+      connection_id: `public_io_${pif.id}`, // ID virtual para identificar
+      conectado_em: pif.adicionado_em,
+      user_id: null, // Não é um usuário real
+      nome: pif.nome,
+      email: `public_io_${pif.id}@poly.io`, // Email virtual
+      idioma: 'pt',
+      pais: 'BR',
+      avatar_config: null,
+      kofi_url: null,
+      unread_count: 0,
+      is_public_io_friend: true,
+      public_io_friend_id: pif.id,
+      io_friend_avatar: pif.avatar_base64 || null,
+      perfil_publico: pif.perfil_publico,
+      criador_nome: pif.criador_nome
+    }))
+
+    // Combinar conexões normais com io friends públicas
+    const allConnections = [...connections, ...publicIoFriendConnections]
+
+    res.json(allConnections)
   } catch (error) {
     console.error('[Connections] Erro ao listar:', error.message)
     res.status(500).json({ error: 'Erro ao listar conexões' })
@@ -2912,6 +2982,135 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     console.error('[Chat] Erro ao enviar:', error.message)
     res.status(500).json({ error: 'Erro ao enviar mensagem' })
   }
+})
+
+// ==================== CHAT COM IO FRIENDS PÚBLICAS ====================
+
+// Histórico de conversas com io friends públicas (em memória, por usuário+ioFriend)
+const publicIoConversationHistory = new Map() // `${userId}_${ioFriendId}` -> [{role, content}]
+
+// Enviar mensagem para io friend pública
+app.post('/api/chat/public-io/:ioFriendId', authMiddleware, async (req, res) => {
+  const { texto } = req.body
+  const ioFriendId = parseInt(req.params.ioFriendId)
+
+  if (!texto || !texto.trim()) {
+    return res.status(400).json({ error: 'Mensagem vazia' })
+  }
+
+  try {
+    // Verificar se o usuário adicionou essa io friend
+    const ioFriend = await getUserPublicIoFriendById(req.userId, ioFriendId)
+
+    if (!ioFriend) {
+      return res.status(404).json({ error: 'io friend não encontrada ou não adicionada' })
+    }
+
+    console.log(`[Public io Friend Chat] User ${req.userId} → ${ioFriend.nome}: "${texto.substring(0, 50)}..."`)
+
+    // Gerar chave única para histórico
+    const historyKey = `${req.userId}_${ioFriendId}`
+
+    // Emitir "está digitando..." para simular resposta humana
+    const userSocketId = usuariosOnline.get(req.userId)
+    if (userSocketId) {
+      io.to(userSocketId).emit('public-io-digitando', {
+        ioFriendId,
+        digitando: true
+      })
+    }
+
+    // Aguardar 3 segundos simulando digitação
+    await new Promise(resolve => setTimeout(resolve, 3000))
+
+    // Gerar prompt personalizado para a io friend pública
+    const promptPersonalizado = gerarPromptIoFriend(ioFriend)
+
+    // Buscar ou criar histórico
+    if (!publicIoConversationHistory.has(historyKey)) {
+      publicIoConversationHistory.set(historyKey, [])
+    }
+    const history = publicIoConversationHistory.get(historyKey)
+
+    // Adicionar mensagem do usuário ao histórico
+    history.push({ role: 'user', content: texto })
+
+    // Limitar histórico a últimas 20 mensagens
+    while (history.length > 20) {
+      history.shift()
+    }
+
+    // Chamar IA com prompt personalizado
+    let respostaIA = 'Desculpe, não consegui responder agora. Tente novamente!'
+
+    if (GROQ_API_KEY) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: promptPersonalizado },
+              ...history
+            ],
+            max_tokens: 500,
+            temperature: 0.9
+          })
+        })
+
+        const data = await response.json()
+        if (data.choices?.[0]?.message?.content) {
+          respostaIA = data.choices[0].message.content.trim()
+        }
+      } catch (iaError) {
+        console.error('[Public io Friend] Erro na IA:', iaError.message)
+      }
+    }
+
+    // Adicionar resposta ao histórico
+    history.push({ role: 'assistant', content: respostaIA })
+
+    // Parar indicador de digitação
+    if (userSocketId) {
+      io.to(userSocketId).emit('public-io-digitando', {
+        ioFriendId,
+        digitando: false
+      })
+    }
+
+    console.log(`[Public io Friend Chat] ${ioFriend.nome} → User ${req.userId}: "${respostaIA.substring(0, 50)}..."`)
+
+    // Emitir resposta via Socket
+    io.to(userSocketId).emit('public-io-mensagem', {
+      ioFriendId,
+      texto: respostaIA,
+      enviadoEm: new Date().toISOString()
+    })
+
+    res.json({
+      resposta: respostaIA,
+      enviadoEm: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('[Public io Friend Chat] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao enviar mensagem' })
+  }
+})
+
+// Limpar histórico de conversa com io friend pública
+app.delete('/api/chat/public-io/:ioFriendId/history', authMiddleware, async (req, res) => {
+  const ioFriendId = parseInt(req.params.ioFriendId)
+  const historyKey = `${req.userId}_${ioFriendId}`
+
+  publicIoConversationHistory.delete(historyKey)
+  console.log(`[Public io Friend] Histórico limpo para user ${req.userId}, io friend ${ioFriendId}`)
+
+  res.json({ success: true })
 })
 
 // Exportar conversa em TXT

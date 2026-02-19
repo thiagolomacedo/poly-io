@@ -297,6 +297,20 @@ async function initDatabase() {
     console.log('[DB] Tabela io_friends OK')
     // TODO: Migrar para Cloudinary quando escalar (armazenamento de imagens)
 
+    // ==================== TABELA USER_PUBLIC_IO_FRIENDS (Io Friends Públicas Adicionadas) ====================
+    // Relacionamento: usuário pode adicionar várias io friends públicas de outros usuários
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_public_io_friends (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        io_friend_id INTEGER REFERENCES io_friends(id) ON DELETE CASCADE,
+        adicionado_em TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, io_friend_id)
+      )
+    `)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_user_public_io_friends_user ON user_public_io_friends(user_id)`)
+    console.log('[DB] Tabela user_public_io_friends OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -756,6 +770,124 @@ async function countPublicIoFriends() {
   }
 }
 
+// ==================== FUNÇÕES IO FRIENDS PÚBLICAS ADICIONADAS ====================
+
+// Adicionar io friend pública à lista do usuário
+async function addPublicIoFriend(userId, ioFriendId) {
+  try {
+    // Verificar se a io friend existe e é pública
+    const ioFriend = await pool.query(
+      'SELECT id, user_id FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      [ioFriendId]
+    )
+    if (ioFriend.rows.length === 0) {
+      return { error: 'io friend não encontrada ou não é pública' }
+    }
+
+    // Não pode adicionar sua própria io friend
+    if (ioFriend.rows[0].user_id === userId) {
+      return { error: 'Você não pode adicionar sua própria io friend' }
+    }
+
+    // Verificar se já adicionou
+    const existing = await pool.query(
+      'SELECT id FROM user_public_io_friends WHERE user_id = $1 AND io_friend_id = $2',
+      [userId, ioFriendId]
+    )
+    if (existing.rows.length > 0) {
+      return { error: 'Você já adicionou esta io friend' }
+    }
+
+    // Adicionar
+    await pool.query(
+      'INSERT INTO user_public_io_friends (user_id, io_friend_id) VALUES ($1, $2)',
+      [userId, ioFriendId]
+    )
+
+    console.log(`[io Friend Pública] User ${userId} adicionou io friend ${ioFriendId}`)
+    return { added: true }
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao adicionar:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Remover io friend pública da lista do usuário
+async function removePublicIoFriend(userId, ioFriendId) {
+  try {
+    const result = await pool.query(
+      'DELETE FROM user_public_io_friends WHERE user_id = $1 AND io_friend_id = $2 RETURNING id',
+      [userId, ioFriendId]
+    )
+
+    if (result.rows.length === 0) {
+      return { error: 'io friend não encontrada na sua lista' }
+    }
+
+    console.log(`[io Friend Pública] User ${userId} removeu io friend ${ioFriendId}`)
+    return { removed: true }
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao remover:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Listar io friends públicas adicionadas pelo usuário
+async function getUserPublicIoFriends(userId) {
+  try {
+    const result = await pool.query(`
+      SELECT
+        iof.id,
+        iof.nome,
+        iof.genero,
+        iof.perfil_publico,
+        iof.avatar_base64,
+        iof.personalidade,
+        iof.estilo_comunicacao,
+        iof.tom_emocional,
+        iof.nivel_iniciativa,
+        iof.usa_emojis,
+        iof.caracteristicas_extras,
+        iof.cenario,
+        iof.exemplos_dialogo,
+        upif.adicionado_em,
+        u.id as criador_id,
+        u.nome as criador_nome
+      FROM user_public_io_friends upif
+      JOIN io_friends iof ON upif.io_friend_id = iof.id
+      JOIN users u ON iof.user_id = u.id
+      WHERE upif.user_id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+      ORDER BY upif.adicionado_em DESC
+    `, [userId])
+
+    return result.rows
+  } catch (error) {
+    console.error('[io Friends Públicas] Erro ao listar do usuário:', error.message)
+    return []
+  }
+}
+
+// Buscar io friend pública específica adicionada pelo usuário (para chat)
+async function getUserPublicIoFriendById(userId, ioFriendId) {
+  try {
+    const result = await pool.query(`
+      SELECT
+        iof.*,
+        u.id as criador_id,
+        u.nome as criador_nome
+      FROM user_public_io_friends upif
+      JOIN io_friends iof ON upif.io_friend_id = iof.id
+      JOIN users u ON iof.user_id = u.id
+      WHERE upif.user_id = $1 AND iof.id = $2 AND iof.publico = TRUE AND iof.ativo = TRUE
+    `, [userId, ioFriendId])
+
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao buscar:', error.message)
+    return null
+  }
+}
+
 module.exports = {
   pool,
   initDatabase,
@@ -778,5 +910,10 @@ module.exports = {
   // Funções io friends públicas
   getPublicIoFriends,
   getPublicIoFriendById,
-  countPublicIoFriends
+  countPublicIoFriends,
+  // Funções io friends públicas adicionadas pelo usuário
+  addPublicIoFriend,
+  removePublicIoFriend,
+  getUserPublicIoFriends,
+  getUserPublicIoFriendById
 }

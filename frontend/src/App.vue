@@ -733,6 +733,7 @@
               v-for="bot in publicIoFriends"
               :key="bot.id"
               class="explore-card"
+              :class="{ 'explore-card-added': isPublicIoFriendAdded(bot.id) }"
             >
               <div class="explore-card-avatar">
                 <img
@@ -750,12 +751,28 @@
                 <div class="explore-card-creator">
                   <small>Criado por {{ bot.criador_nome }}</small>
                 </div>
+
+                <button
+                  v-if="!isPublicIoFriendAdded(bot.id)"
+                  class="btn-add-public-io"
+                  @click="addPublicIoFriend(bot)"
+                  :disabled="addingPublicIoFriend"
+                >
+                  {{ addingPublicIoFriend === bot.id ? '⏳ Adicionando...' : '➕ Adicionar' }}
+                </button>
+                <button
+                  v-else
+                  class="btn-chat-public-io"
+                  @click="startChatWithPublicIoFriend(bot)"
+                >
+                  💬 Conversar
+                </button>
               </div>
             </div>
           </div>
 
           <div class="explore-footer">
-            <p class="explore-tip">💡 Em breve: adicionar conexões públicas e conversar com elas!</p>
+            <p class="explore-tip">💡 Adicione conexões IA e converse com personagens únicos!</p>
           </div>
         </div>
       </div>
@@ -2812,6 +2829,12 @@ const ioFriendForm = ref({
 const publicIoFriends = ref([])
 const loadingPublicIoFriends = ref(false)
 const showExploreModal = ref(false)
+const myPublicIoFriends = ref([]) // io friends públicas que o usuário adicionou
+const addingPublicIoFriend = ref(null) // id da io friend sendo adicionada
+
+// Chat com io friend pública
+const publicIoChatHistory = ref({}) // { ioFriendId: [{role, content, timestamp}] }
+const publicIoTyping = ref(null) // id da io friend que está "digitando"
 
 // Tipos de redes sociais disponíveis
 const redesSociais = {
@@ -4084,6 +4107,123 @@ function getGeneroLabel(genero) {
   return generos[genero] || genero
 }
 
+// Verificar se io friend pública já foi adicionada
+function isPublicIoFriendAdded(ioFriendId) {
+  return myPublicIoFriends.value.some(pif => pif.id === ioFriendId)
+}
+
+// Adicionar io friend pública
+async function addPublicIoFriend(bot) {
+  addingPublicIoFriend.value = bot.id
+
+  try {
+    const res = await fetch(`${API_URL}/io-friends/public/${bot.id}/add`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao adicionar')
+      return
+    }
+
+    // Adicionar à lista local
+    myPublicIoFriends.value.push(bot)
+
+    // Recarregar conexões para mostrar a nova io friend
+    await loadConnections()
+
+    alert(`${bot.nome} adicionada com sucesso! 🎉`)
+  } catch (e) {
+    console.error('[Public io Friend] Erro ao adicionar:', e)
+    alert('Erro ao adicionar conexão')
+  } finally {
+    addingPublicIoFriend.value = null
+  }
+}
+
+// Iniciar chat com io friend pública
+function startChatWithPublicIoFriend(bot) {
+  // Fechar modal de explorar
+  showExploreModal.value = false
+
+  // Encontrar a conexão da io friend pública na lista
+  const conn = connections.value.find(c => c.is_public_io_friend && c.public_io_friend_id === bot.id)
+
+  if (conn) {
+    selectedConnection.value = conn
+    loadMessages(conn)
+  } else {
+    alert('Recarregue a página para ver a conexão')
+  }
+}
+
+// Carregar minhas io friends públicas adicionadas
+async function loadMyPublicIoFriends() {
+  try {
+    const res = await fetch(`${API_URL}/io-friends/my-public`, {
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      myPublicIoFriends.value = data.ioFriends || []
+      console.log(`[Public io Friends] Carregadas ${myPublicIoFriends.value.length} adicionadas`)
+    }
+  } catch (e) {
+    console.error('[Public io Friends] Erro ao carregar minhas:', e)
+  }
+}
+
+// Enviar mensagem para io friend pública
+async function sendMessageToPublicIoFriend(texto) {
+  if (!selectedConnection.value?.is_public_io_friend) return
+
+  const ioFriendId = selectedConnection.value.public_io_friend_id
+
+  // Adicionar mensagem do usuário ao histórico local
+  if (!publicIoChatHistory.value[ioFriendId]) {
+    publicIoChatHistory.value[ioFriendId] = []
+  }
+
+  publicIoChatHistory.value[ioFriendId].push({
+    role: 'user',
+    content: texto,
+    timestamp: new Date().toISOString()
+  })
+
+  // Simular indicador de digitação
+  publicIoTyping.value = ioFriendId
+
+  try {
+    const res = await fetch(`${API_URL}/chat/public-io/${ioFriendId}`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ texto })
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      // Adicionar resposta ao histórico local
+      publicIoChatHistory.value[ioFriendId].push({
+        role: 'assistant',
+        content: data.resposta,
+        timestamp: data.enviadoEm
+      })
+    }
+  } catch (e) {
+    console.error('[Public io Friend Chat] Erro:', e)
+  } finally {
+    publicIoTyping.value = null
+  }
+}
+
 // Abrir modal de gorjeta Ko-fi
 function openTipModal() {
   tipTargetUser.value = selectedConnection.value
@@ -5222,6 +5362,9 @@ async function initializeApp() {
   // Carregar io friend do usuário (se existir)
   await loadIoFriend()
 
+  // Carregar io friends públicas adicionadas pelo usuário
+  await loadMyPublicIoFriends()
+
   // Inicializar IndexedDB para arquivos pendentes
   try {
     await initIndexedDB()
@@ -5515,6 +5658,12 @@ async function selectConnection(conn) {
   replyingTo.value = null // Limpar reply ao mudar de conversa
   sidebarOpen.value = false
 
+  // Se é io friend pública, apenas carregar mensagens
+  if (conn.is_public_io_friend) {
+    await loadMessages()
+    return
+  }
+
   // Zerar contador de não lidas para esta conexão
   const connId = conn.connectionId.toString()
   if (unreadCounts.value[connId]) {
@@ -5539,6 +5688,24 @@ async function selectConnection(conn) {
 
 async function loadMessages() {
   if (!selectedConnection.value) return
+
+  // Se é io friend pública, carregar do histórico local
+  if (selectedConnection.value.is_public_io_friend) {
+    const ioFriendId = selectedConnection.value.public_io_friend_id
+    const history = publicIoChatHistory.value[ioFriendId] || []
+
+    messages.value = history.map((msg, index) => ({
+      id: `${msg.role}-${index}`,
+      euEnviei: msg.role === 'user',
+      texto: msg.content,
+      textoOriginal: msg.content,
+      enviadoEm: msg.timestamp || new Date().toISOString(),
+      senderName: msg.role === 'assistant' ? selectedConnection.value.nome : undefined
+    }))
+
+    scrollToBottom()
+    return
+  }
 
   try {
     // Monta URL com idioma de recepção se diferente do padrão
@@ -5619,6 +5786,48 @@ async function submitImagineModal() {
 async function sendMessage() {
   if (!newMessage.value.trim() || !selectedConnection.value) return
   if (isSendingMessage.value) return // Previne cliques duplos
+
+  // Se é io friend pública, usar função específica
+  if (selectedConnection.value.is_public_io_friend) {
+    isSendingMessage.value = true
+    const texto = newMessage.value.trim()
+    newMessage.value = ''
+
+    // Adicionar mensagem do usuário ao chat local imediatamente
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      euEnviei: true,
+      texto: texto,
+      textoOriginal: texto,
+      enviadoEm: new Date().toISOString()
+    }
+    messages.value.push(userMsg)
+    scrollToBottom()
+
+    // Enviar para API e receber resposta
+    await sendMessageToPublicIoFriend(texto)
+
+    // Adicionar resposta da IA ao chat
+    const ioFriendId = selectedConnection.value.public_io_friend_id
+    const history = publicIoChatHistory.value[ioFriendId] || []
+    const lastResponse = history[history.length - 1]
+
+    if (lastResponse && lastResponse.role === 'assistant') {
+      const iaMsg = {
+        id: `ia-${Date.now()}`,
+        euEnviei: false,
+        texto: lastResponse.content,
+        textoOriginal: lastResponse.content,
+        enviadoEm: lastResponse.timestamp,
+        senderName: selectedConnection.value.nome
+      }
+      messages.value.push(iaMsg)
+      scrollToBottom()
+    }
+
+    isSendingMessage.value = false
+    return
+  }
 
   isSendingMessage.value = true
 
@@ -11770,6 +11979,54 @@ body {
 .explore-card-creator {
   color: #6b7280;
   font-size: 0.8rem;
+}
+
+.btn-add-public-io {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-add-public-io:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9333ea, #6d28d9);
+  transform: translateY(-1px);
+}
+
+.btn-add-public-io:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-chat-public-io {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-chat-public-io:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+}
+
+.explore-card-added {
+  border-color: #10b981;
+  background: #1e1e2e;
 }
 
 .explore-footer {
