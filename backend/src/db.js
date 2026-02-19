@@ -287,6 +287,13 @@ async function initDatabase() {
     // Migração: adicionar colunas de avatar se não existirem
     await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS avatar_prompt TEXT`)
     await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS avatar_base64 TEXT`)
+    // Migração: adicionar colunas para bots públicos
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS genero VARCHAR(20) DEFAULT 'feminino'`)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS perfil_publico TEXT`)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS cenario TEXT`)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS exemplos_dialogo TEXT`)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS publico BOOLEAN DEFAULT FALSE`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_io_friends_publico ON io_friends(publico) WHERE publico = TRUE`)
     console.log('[DB] Tabela io_friends OK')
     // TODO: Migrar para Cloudinary quando escalar (armazenamento de imagens)
 
@@ -587,8 +594,8 @@ async function createIoFriend(userId, config) {
     }
 
     const result = await pool.query(`
-      INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64, genero, perfil_publico, cenario, exemplos_dialogo, publico)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `, [
       userId,
@@ -600,7 +607,12 @@ async function createIoFriend(userId, config) {
       config.usa_emojis !== false,
       config.caracteristicas_extras || null,
       config.avatar_prompt || null,
-      config.avatar_base64 || null
+      config.avatar_base64 || null,
+      config.genero || 'feminino',
+      config.perfil_publico || null,
+      config.cenario || null,
+      config.exemplos_dialogo || null,
+      config.publico || false
     ])
 
     console.log(`[io Friend] Criada para user ${userId}: "${config.nome}"`)
@@ -625,6 +637,11 @@ async function updateIoFriend(userId, config) {
         caracteristicas_extras = COALESCE($8, caracteristicas_extras),
         avatar_prompt = COALESCE($9, avatar_prompt),
         avatar_base64 = COALESCE($10, avatar_base64),
+        genero = COALESCE($11, genero),
+        perfil_publico = COALESCE($12, perfil_publico),
+        cenario = COALESCE($13, cenario),
+        exemplos_dialogo = COALESCE($14, exemplos_dialogo),
+        publico = COALESCE($15, publico),
         atualizado_em = NOW()
       WHERE user_id = $1
       RETURNING *
@@ -638,7 +655,12 @@ async function updateIoFriend(userId, config) {
       config.usa_emojis,
       config.caracteristicas_extras,
       config.avatar_prompt,
-      config.avatar_base64
+      config.avatar_base64,
+      config.genero,
+      config.perfil_publico,
+      config.cenario,
+      config.exemplos_dialogo,
+      config.publico
     ])
 
     if (result.rows.length === 0) {
@@ -671,6 +693,69 @@ async function deleteIoFriend(userId) {
   }
 }
 
+// ==================== FUNÇÕES IO FRIENDS PÚBLICAS ====================
+
+// Listar io friends públicas (para explorar)
+async function getPublicIoFriends(limit = 50, offset = 0) {
+  try {
+    const result = await pool.query(`
+      SELECT
+        iof.id,
+        iof.nome,
+        iof.genero,
+        iof.perfil_publico,
+        iof.avatar_base64,
+        iof.criado_em,
+        u.id as criador_id,
+        u.nome as criador_nome,
+        u.avatar_config as criador_avatar
+      FROM io_friends iof
+      JOIN users u ON iof.user_id = u.id
+      WHERE iof.publico = TRUE AND iof.ativo = TRUE
+      ORDER BY iof.criado_em DESC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset])
+
+    console.log(`[io Friends Públicas] Listadas: ${result.rows.length}`)
+    return result.rows
+  } catch (error) {
+    console.error('[io Friends Públicas] Erro ao listar:', error.message)
+    return []
+  }
+}
+
+// Buscar io friend pública por ID (para adicionar/conversar)
+async function getPublicIoFriendById(ioFriendId) {
+  try {
+    const result = await pool.query(`
+      SELECT
+        iof.*,
+        u.id as criador_id,
+        u.nome as criador_nome
+      FROM io_friends iof
+      JOIN users u ON iof.user_id = u.id
+      WHERE iof.id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+    `, [ioFriendId])
+
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao buscar:', error.message)
+    return null
+  }
+}
+
+// Contar io friends públicas
+async function countPublicIoFriends() {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as total FROM io_friends WHERE publico = TRUE AND ativo = TRUE'
+    )
+    return parseInt(result.rows[0].total)
+  } catch (error) {
+    return 0
+  }
+}
+
 module.exports = {
   pool,
   initDatabase,
@@ -689,5 +774,9 @@ module.exports = {
   getIoFriend,
   createIoFriend,
   updateIoFriend,
-  deleteIoFriend
+  deleteIoFriend,
+  // Funções io friends públicas
+  getPublicIoFriends,
+  getPublicIoFriendById,
+  countPublicIoFriends
 }

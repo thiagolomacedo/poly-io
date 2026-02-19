@@ -453,6 +453,15 @@
             {{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}
           </button>
 
+          <!-- Botão Explorar io Friends Públicas -->
+          <button
+            v-if="profileUser?.id === currentUser?.id"
+            class="btn-explore"
+            @click="openExploreModal"
+          >
+            🔍 Explorar Conexões IA
+          </button>
+
           <!-- Botão Adicionar Conexão (só para outros usuários sem conexão) -->
           <button
             v-if="profileUser?.id !== currentUser?.id && !isConnectedOrPending(profileUser?.id)"
@@ -604,6 +613,82 @@
               ></textarea>
             </div>
 
+            <!-- Gênero -->
+            <div class="form-group">
+              <label>Gênero</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.genero" value="feminino" />
+                  <span>♀️ Feminino</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.genero" value="masculino" />
+                  <span>♂️ Masculino</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.genero" value="nao_binario" />
+                  <span>⚧️ Não-binário</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.genero" value="outro" />
+                  <span>🤖 Outro</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Cenário -->
+            <div class="form-group">
+              <label>Cenário/Contexto (opcional)</label>
+              <textarea
+                v-model="ioFriendForm.cenario"
+                placeholder="Descreva o ambiente onde ela existe... Ex: Uma biblioteca mágica flutuante entre as nuvens, cheia de livros antigos"
+                maxlength="1500"
+                rows="2"
+              ></textarea>
+              <small class="form-hint">Contexto que influencia as respostas</small>
+            </div>
+
+            <!-- Exemplos de Diálogo -->
+            <div class="form-group">
+              <label>Exemplos de diálogo (opcional)</label>
+              <textarea
+                v-model="ioFriendForm.exemplos_dialogo"
+                placeholder="Mostre como ela fala...&#10;Usuário: Oi!&#10;Personagem: Olá, querido! ✨ Estava te esperando..."
+                maxlength="2500"
+                rows="4"
+              ></textarea>
+              <small class="form-hint">Ajuda a IA a entender o estilo de conversa</small>
+            </div>
+
+            <!-- Seção Público -->
+            <div class="form-group public-section">
+              <label>Tornar público</label>
+              <p class="public-hint">Ao tornar público, outros usuários poderão descobrir e conversar com sua conexão</p>
+
+              <div v-if="ioFriendForm.publico" class="form-group">
+                <label>Descrição pública *</label>
+                <textarea
+                  v-model="ioFriendForm.perfil_publico"
+                  placeholder="Descreva sua conexão para outros usuários... Ex: Uma mentora digital com alma gentil, perfeita para conversas reflexivas"
+                  maxlength="1000"
+                  rows="3"
+                  :required="ioFriendForm.publico"
+                ></textarea>
+                <small class="form-hint">{{ ioFriendForm.perfil_publico.length }}/1000 - Isso aparece na página Explorar</small>
+              </div>
+
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.publico" :value="true" />
+                  <span>🌐 Tornar público</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.publico" :value="false" />
+                  <span>🔒 Manter privado</span>
+                </label>
+              </div>
+            </div>
+
             <div class="modal-buttons">
               <button type="submit" class="btn-primary" :disabled="savingIoFriend">
                 {{ savingIoFriend ? 'Salvando...' : (ioFriend ? 'Salvar' : 'Criar') }}
@@ -624,6 +709,54 @@
           <p class="io-friend-tip">
             💡 Sua conexão terá memória e lembranças sobre você, igual a io padrão.
           </p>
+        </div>
+      </div>
+
+      <!-- Modal: Explorar io Friends Públicas -->
+      <div v-if="showExploreModal" class="modal-overlay" @click="showExploreModal = false">
+        <div class="modal-content explore-modal" @click.stop>
+          <button class="modal-close" @click="showExploreModal = false">✕</button>
+          <h3>🔍 Explorar Conexões IA</h3>
+          <p class="explore-subtitle">Descubra personagens criados pela comunidade</p>
+
+          <div v-if="loadingPublicIoFriends" class="explore-loading">
+            <span class="loading-spinner">⏳</span> Carregando...
+          </div>
+
+          <div v-else-if="publicIoFriends.length === 0" class="explore-empty">
+            <p>🤖 Nenhuma conexão pública ainda.</p>
+            <p class="explore-empty-hint">Seja o primeiro a criar e compartilhar!</p>
+          </div>
+
+          <div v-else class="explore-grid">
+            <div
+              v-for="bot in publicIoFriends"
+              :key="bot.id"
+              class="explore-card"
+            >
+              <div class="explore-card-avatar">
+                <img
+                  v-if="bot.avatar_base64"
+                  :src="bot.avatar_base64"
+                  :alt="bot.nome"
+                />
+                <span v-else class="avatar-placeholder-large">🤖</span>
+              </div>
+
+              <div class="explore-card-info">
+                <h4 class="explore-card-name">{{ bot.nome }}</h4>
+                <span class="explore-card-gender">{{ getGeneroLabel(bot.genero) }}</span>
+                <p class="explore-card-desc">{{ bot.perfil_publico || 'Sem descrição' }}</p>
+                <div class="explore-card-creator">
+                  <small>Criado por {{ bot.criador_nome }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="explore-footer">
+            <p class="explore-tip">💡 Em breve: adicionar conexões públicas e conversar com elas!</p>
+          </div>
         </div>
       </div>
 
@@ -2667,8 +2800,18 @@ const ioFriendForm = ref({
   usa_emojis: true,
   caracteristicas_extras: '',
   avatar_prompt: '',
-  avatar_base64: ''
+  avatar_base64: '',
+  genero: 'feminino',
+  perfil_publico: '',
+  cenario: '',
+  exemplos_dialogo: '',
+  publico: false
 })
+
+// Explorar io friends públicas
+const publicIoFriends = ref([])
+const loadingPublicIoFriends = ref(false)
+const showExploreModal = ref(false)
 
 // Tipos de redes sociais disponíveis
 const redesSociais = {
@@ -3754,7 +3897,12 @@ function openIoFriendModal() {
       usa_emojis: ioFriend.value.usa_emojis !== false,
       caracteristicas_extras: ioFriend.value.caracteristicas_extras || '',
       avatar_prompt: ioFriend.value.avatar_prompt || '',
-      avatar_base64: ioFriend.value.avatar_base64 || ''
+      avatar_base64: ioFriend.value.avatar_base64 || '',
+      genero: ioFriend.value.genero || 'feminino',
+      perfil_publico: ioFriend.value.perfil_publico || '',
+      cenario: ioFriend.value.cenario || '',
+      exemplos_dialogo: ioFriend.value.exemplos_dialogo || '',
+      publico: ioFriend.value.publico || false
     }
   } else {
     // Form vazio para criar
@@ -3767,7 +3915,12 @@ function openIoFriendModal() {
       usa_emojis: true,
       caracteristicas_extras: '',
       avatar_prompt: '',
-      avatar_base64: ''
+      avatar_base64: '',
+      genero: 'feminino',
+      perfil_publico: '',
+      cenario: '',
+      exemplos_dialogo: '',
+      publico: false
     }
   }
   showIoFriendModal.value = true
@@ -3891,6 +4044,44 @@ async function removeIoFriend() {
   } finally {
     savingIoFriend.value = false
   }
+}
+
+// ==================== EXPLORAR IO FRIENDS PÚBLICAS ====================
+
+// Carregar io friends públicas
+async function loadPublicIoFriends() {
+  loadingPublicIoFriends.value = true
+
+  try {
+    const res = await fetch(`${API_URL}/io-friends/public`)
+    const data = await res.json()
+
+    if (res.ok) {
+      publicIoFriends.value = data.ioFriends || []
+      console.log(`[Explorar] Carregadas ${publicIoFriends.value.length} io friends públicas`)
+    }
+  } catch (e) {
+    console.error('[Explorar] Erro ao carregar:', e)
+  } finally {
+    loadingPublicIoFriends.value = false
+  }
+}
+
+// Abrir modal de explorar
+function openExploreModal() {
+  showExploreModal.value = true
+  loadPublicIoFriends()
+}
+
+// Obter label do gênero
+function getGeneroLabel(genero) {
+  const generos = {
+    'feminino': '♀️ Feminino',
+    'masculino': '♂️ Masculino',
+    'nao_binario': '⚧️ Não-binário',
+    'outro': '🤖 Outro'
+  }
+  return generos[genero] || genero
 }
 
 // Abrir modal de gorjeta Ko-fi
@@ -11459,6 +11650,159 @@ body {
 
 .btn-io-friend:hover {
   opacity: 0.9;
+}
+
+.btn-explore {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-explore:hover {
+  opacity: 0.9;
+}
+
+/* Modal Explorar */
+.explore-modal {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.explore-subtitle {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+}
+
+.explore-loading {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+}
+
+.explore-empty {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+}
+
+.explore-empty-hint {
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
+.explore-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.explore-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #1e1e2e;
+  border-radius: 12px;
+  border: 1px solid #333;
+  transition: border-color 0.2s;
+}
+
+.explore-card:hover {
+  border-color: #a855f7;
+}
+
+.explore-card-avatar {
+  flex-shrink: 0;
+}
+
+.explore-card-avatar img {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.avatar-placeholder-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: #333;
+  border-radius: 12px;
+  font-size: 2rem;
+}
+
+.explore-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.explore-card-name {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.explore-card-gender {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.explore-card-desc {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: #d1d5db;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.explore-card-creator {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.explore-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+
+.explore-tip {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+/* Seção pública no form */
+.public-section {
+  padding: 16px;
+  background: #1a1a2e;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.public-hint {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 .btn-danger {

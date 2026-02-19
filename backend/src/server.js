@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -246,7 +246,22 @@ function gerarPromptIoFriend(ioFriend) {
   // Características extras
   const extras = ioFriend.caracteristicas_extras ? `\nCARACTERÍSTICAS ESPECIAIS: ${ioFriend.caracteristicas_extras}` : ''
 
-  return `Você é "${nome}", uma conexão virtual personalizada. ${tom} ${estilo} ${emojis} ${iniciativa}${personalidade}${extras}
+  // Cenário (contexto/ambiente)
+  const cenario = ioFriend.cenario ? `\nCENÁRIO: ${ioFriend.cenario}` : ''
+
+  // Exemplos de diálogo (para o modelo aprender o estilo)
+  const exemplos = ioFriend.exemplos_dialogo ? `\nEXEMPLOS DE COMO VOCÊ FALA:\n${ioFriend.exemplos_dialogo}` : ''
+
+  // Gênero do personagem
+  const generos = {
+    'feminino': 'Você é do gênero feminino.',
+    'masculino': 'Você é do gênero masculino.',
+    'nao_binario': 'Você é não-binário.',
+    'outro': ''
+  }
+  const genero = generos[ioFriend.genero] || ''
+
+  return `Você é "${nome}", uma conexão virtual personalizada. ${genero} ${tom} ${estilo} ${emojis} ${iniciativa}${personalidade}${extras}${cenario}${exemplos}
 
 ${IO_SYSTEM_PROMPT_BASE}
 `
@@ -1518,7 +1533,7 @@ app.get('/api/io-friend', authMiddleware, async (req, res) => {
 // Criar io friend
 app.post('/api/io-friend', authMiddleware, async (req, res) => {
   try {
-    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64 } = req.body
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64, genero, perfil_publico, cenario, exemplos_dialogo, publico } = req.body
 
     if (!nome || nome.trim().length === 0) {
       return res.status(400).json({ error: 'Nome é obrigatório' })
@@ -1537,7 +1552,12 @@ app.post('/api/io-friend', authMiddleware, async (req, res) => {
       usa_emojis,
       caracteristicas_extras,
       avatar_prompt,
-      avatar_base64
+      avatar_base64,
+      genero,
+      perfil_publico,
+      cenario,
+      exemplos_dialogo,
+      publico
     })
 
     if (result.error) {
@@ -1554,7 +1574,7 @@ app.post('/api/io-friend', authMiddleware, async (req, res) => {
 // Atualizar io friend
 app.put('/api/io-friend', authMiddleware, async (req, res) => {
   try {
-    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64 } = req.body
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64, genero, perfil_publico, cenario, exemplos_dialogo, publico } = req.body
 
     if (nome && nome.trim().length > 50) {
       return res.status(400).json({ error: 'Nome muito longo (máx 50 caracteres)' })
@@ -1569,7 +1589,12 @@ app.put('/api/io-friend', authMiddleware, async (req, res) => {
       usa_emojis,
       caracteristicas_extras,
       avatar_prompt,
-      avatar_base64
+      avatar_base64,
+      genero,
+      perfil_publico,
+      cenario,
+      exemplos_dialogo,
+      publico
     })
 
     if (result.error) {
@@ -1596,6 +1621,45 @@ app.delete('/api/io-friend', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[io Friend] Erro ao deletar:', error.message)
     res.status(500).json({ error: 'Erro ao deletar io friend' })
+  }
+})
+
+// ==================== IO FRIENDS PÚBLICAS (EXPLORAR) ====================
+
+// Listar io friends públicas
+app.get('/api/io-friends/public', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50
+    const offset = parseInt(req.query.offset) || 0
+
+    const ioFriends = await getPublicIoFriends(limit, offset)
+    const total = await countPublicIoFriends()
+
+    res.json({
+      ioFriends,
+      total,
+      limit,
+      offset
+    })
+  } catch (error) {
+    console.error('[io Friends Públicas] Erro ao listar:', error.message)
+    res.status(500).json({ error: 'Erro ao listar io friends públicas' })
+  }
+})
+
+// Buscar io friend pública por ID
+app.get('/api/io-friends/public/:id', async (req, res) => {
+  try {
+    const ioFriend = await getPublicIoFriendById(req.params.id)
+
+    if (!ioFriend) {
+      return res.status(404).json({ error: 'io friend não encontrada ou não é pública' })
+    }
+
+    res.json(ioFriend)
+  } catch (error) {
+    console.error('[io Friend Pública] Erro ao buscar:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar io friend' })
   }
 })
 
