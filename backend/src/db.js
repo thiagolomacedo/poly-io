@@ -274,6 +274,8 @@ async function initDatabase() {
         nivel_iniciativa VARCHAR(20) DEFAULT 'equilibrado',
         usa_emojis BOOLEAN DEFAULT TRUE,
         caracteristicas_extras TEXT,
+        avatar_prompt TEXT,
+        avatar_base64 TEXT,
         ativo BOOLEAN DEFAULT TRUE,
         criado_em TIMESTAMP DEFAULT NOW(),
         atualizado_em TIMESTAMP DEFAULT NOW()
@@ -282,7 +284,11 @@ async function initDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_io_friends_user ON io_friends(user_id);
     `)
+    // Migração: adicionar colunas de avatar se não existirem
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS avatar_prompt TEXT`)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS avatar_base64 TEXT`)
     console.log('[DB] Tabela io_friends OK')
+    // TODO: Migrar para Cloudinary quando escalar (armazenamento de imagens)
 
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
@@ -579,8 +585,8 @@ async function createIoFriend(userId, config) {
     }
 
     const result = await pool.query(`
-      INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
       userId,
@@ -590,7 +596,9 @@ async function createIoFriend(userId, config) {
       config.tom_emocional || 'gentil',
       config.nivel_iniciativa || 'equilibrado',
       config.usa_emojis !== false,
-      config.caracteristicas_extras || null
+      config.caracteristicas_extras || null,
+      config.avatar_prompt || null,
+      config.avatar_base64 || null
     ])
 
     console.log(`[io Friend] Criada para user ${userId}: "${config.nome}"`)
@@ -613,6 +621,8 @@ async function updateIoFriend(userId, config) {
         nivel_iniciativa = COALESCE($6, nivel_iniciativa),
         usa_emojis = COALESCE($7, usa_emojis),
         caracteristicas_extras = COALESCE($8, caracteristicas_extras),
+        avatar_prompt = COALESCE($9, avatar_prompt),
+        avatar_base64 = COALESCE($10, avatar_base64),
         atualizado_em = NOW()
       WHERE user_id = $1
       RETURNING *
@@ -624,7 +634,9 @@ async function updateIoFriend(userId, config) {
       config.tom_emocional,
       config.nivel_iniciativa,
       config.usa_emojis,
-      config.caracteristicas_extras
+      config.caracteristicas_extras,
+      config.avatar_prompt,
+      config.avatar_base64
     ])
 
     if (result.rows.length === 0) {

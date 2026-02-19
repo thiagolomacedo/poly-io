@@ -500,6 +500,38 @@
               />
             </div>
 
+            <!-- Avatar -->
+            <div class="form-group avatar-section">
+              <label>Avatar (opcional)</label>
+              <div class="avatar-preview-container">
+                <div class="avatar-preview">
+                  <img
+                    v-if="ioFriendForm.avatar_base64"
+                    :src="ioFriendForm.avatar_base64"
+                    alt="Avatar"
+                  />
+                  <span v-else class="avatar-placeholder">🤖</span>
+                </div>
+                <div class="avatar-controls">
+                  <input
+                    v-model="ioFriendForm.avatar_prompt"
+                    type="text"
+                    placeholder="Descreva a aparência... Ex: garota anime cabelo roxo"
+                    maxlength="200"
+                  />
+                  <button
+                    type="button"
+                    class="btn-generate-avatar"
+                    @click="generateIoFriendAvatar"
+                    :disabled="generatingAvatar || !ioFriendForm.avatar_prompt"
+                  >
+                    {{ generatingAvatar ? '🎨 Gerando...' : '🎨 Gerar' }}
+                  </button>
+                </div>
+              </div>
+              <small class="avatar-hint">Use IA para criar o visual da sua io friend</small>
+            </div>
+
             <!-- Personalidade -->
             <div class="form-group">
               <label>Personalidade</label>
@@ -2624,6 +2656,7 @@ const nameInputRef = ref(null)
 const showIoFriendModal = ref(false)
 const ioFriend = ref(null)
 const savingIoFriend = ref(false)
+const generatingAvatar = ref(false)
 const ioFriendForm = ref({
   nome: '',
   personalidade: '',
@@ -2631,7 +2664,9 @@ const ioFriendForm = ref({
   tom_emocional: 'gentil',
   nivel_iniciativa: 'equilibrado',
   usa_emojis: true,
-  caracteristicas_extras: ''
+  caracteristicas_extras: '',
+  avatar_prompt: '',
+  avatar_base64: ''
 })
 
 // Tipos de redes sociais disponíveis
@@ -3706,7 +3741,9 @@ function openIoFriendModal() {
       tom_emocional: ioFriend.value.tom_emocional || 'gentil',
       nivel_iniciativa: ioFriend.value.nivel_iniciativa || 'equilibrado',
       usa_emojis: ioFriend.value.usa_emojis !== false,
-      caracteristicas_extras: ioFriend.value.caracteristicas_extras || ''
+      caracteristicas_extras: ioFriend.value.caracteristicas_extras || '',
+      avatar_prompt: ioFriend.value.avatar_prompt || '',
+      avatar_base64: ioFriend.value.avatar_base64 || ''
     }
   } else {
     // Form vazio para criar
@@ -3717,10 +3754,45 @@ function openIoFriendModal() {
       tom_emocional: 'gentil',
       nivel_iniciativa: 'equilibrado',
       usa_emojis: true,
-      caracteristicas_extras: ''
+      caracteristicas_extras: '',
+      avatar_prompt: '',
+      avatar_base64: ''
     }
   }
   showIoFriendModal.value = true
+}
+
+// Gerar avatar via IA
+async function generateIoFriendAvatar() {
+  if (!ioFriendForm.value.avatar_prompt.trim()) return
+
+  generatingAvatar.value = true
+
+  try {
+    const res = await fetch(`${API_URL}/io-friend/generate-avatar`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ prompt: ioFriendForm.value.avatar_prompt })
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao gerar avatar')
+      return
+    }
+
+    ioFriendForm.value.avatar_base64 = data.avatar_base64
+    console.log('[io Friend] Avatar gerado com sucesso!')
+  } catch (e) {
+    console.error('[io Friend] Erro ao gerar avatar:', e)
+    alert('Erro ao gerar avatar')
+  } finally {
+    generatingAvatar.value = false
+  }
 }
 
 // Salvar io friend (criar ou atualizar)
@@ -11257,6 +11329,82 @@ body {
   border-radius: 8px;
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+/* Avatar da io friend */
+.avatar-section {
+  margin-bottom: 8px;
+}
+
+.avatar-preview-container {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #2a2a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid #333;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  font-size: 2rem;
+}
+
+.avatar-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.avatar-controls input {
+  padding: 10px 12px;
+  background: #1a1a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.btn-generate-avatar {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-generate-avatar:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-generate-avatar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.avatar-hint {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 4px;
 }
 
 .btn-io-friend {

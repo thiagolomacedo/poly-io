@@ -1518,7 +1518,7 @@ app.get('/api/io-friend', authMiddleware, async (req, res) => {
 // Criar io friend
 app.post('/api/io-friend', authMiddleware, async (req, res) => {
   try {
-    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras } = req.body
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64 } = req.body
 
     if (!nome || nome.trim().length === 0) {
       return res.status(400).json({ error: 'Nome é obrigatório' })
@@ -1535,7 +1535,9 @@ app.post('/api/io-friend', authMiddleware, async (req, res) => {
       tom_emocional,
       nivel_iniciativa,
       usa_emojis,
-      caracteristicas_extras
+      caracteristicas_extras,
+      avatar_prompt,
+      avatar_base64
     })
 
     if (result.error) {
@@ -1552,7 +1554,7 @@ app.post('/api/io-friend', authMiddleware, async (req, res) => {
 // Atualizar io friend
 app.put('/api/io-friend', authMiddleware, async (req, res) => {
   try {
-    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras } = req.body
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64 } = req.body
 
     if (nome && nome.trim().length > 50) {
       return res.status(400).json({ error: 'Nome muito longo (máx 50 caracteres)' })
@@ -1565,7 +1567,9 @@ app.put('/api/io-friend', authMiddleware, async (req, res) => {
       tom_emocional,
       nivel_iniciativa,
       usa_emojis,
-      caracteristicas_extras
+      caracteristicas_extras,
+      avatar_prompt,
+      avatar_base64
     })
 
     if (result.error) {
@@ -1592,6 +1596,63 @@ app.delete('/api/io-friend', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[io Friend] Erro ao deletar:', error.message)
     res.status(500).json({ error: 'Erro ao deletar io friend' })
+  }
+})
+
+// Gerar avatar para io friend via IA
+app.post('/api/io-friend/generate-avatar', authMiddleware, async (req, res) => {
+  try {
+    const { prompt } = req.body
+
+    if (!prompt || prompt.trim().length === 0) {
+      return res.status(400).json({ error: 'Prompt é obrigatório' })
+    }
+
+    if (!HUGGINGFACE_API_KEY) {
+      return res.status(503).json({ error: 'Geração de imagem não disponível' })
+    }
+
+    console.log(`[io Friend Avatar] Gerando para user ${req.userId}: "${prompt.substring(0, 50)}..."`)
+
+    // Preparar prompt para avatar (estilo consistente)
+    const avatarPrompt = `portrait of ${prompt}, digital art style, centered face, clean background, avatar profile picture, high quality`
+
+    // Traduzir se necessário
+    const idiomaDetectado = detectarIdioma(prompt, 'pt')
+    let promptEnglish = avatarPrompt
+    if (idiomaDetectado !== 'en') {
+      promptEnglish = await traduzirTexto(avatarPrompt, idiomaDetectado, 'en')
+    }
+
+    // Gerar imagem via HuggingFace
+    const response = await nodeFetch(
+      'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inputs: promptEnglish,
+          parameters: { width: 256, height: 256 } // Menor para avatar
+        })
+      }
+    )
+
+    if (!response.ok) {
+      console.error('[io Friend Avatar] Erro HuggingFace:', response.status)
+      return res.status(500).json({ error: 'Erro ao gerar imagem' })
+    }
+
+    const buffer = await response.buffer()
+    const base64 = `data:image/jpeg;base64,${buffer.toString('base64')}`
+
+    console.log(`[io Friend Avatar] Gerado com sucesso (${buffer.length} bytes)`)
+    res.json({ avatar_base64: base64 })
+  } catch (error) {
+    console.error('[io Friend Avatar] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao gerar avatar' })
   }
 })
 
