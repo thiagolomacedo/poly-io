@@ -441,7 +441,8 @@
             </div>
           </div>
 
-          <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
+          <p v-if="profileUser?.avatar_config?.type === 'gravatar'" class="profile-tip">Foto via Gravatar (gravatar.com)</p>
+          <p v-else-if="profileUser?.io_friend_avatar" class="profile-tip">Avatar gerado por IA</p>
 
           <!-- Botão io Friend (só para o próprio perfil) -->
           <button
@@ -3563,6 +3564,13 @@ function cancelAvatarEdit() {
 async function openProfile(user) {
   if (user.id === currentUser.value.id) {
     profileUser.value = { ...currentUser.value }
+  } else if (user.is_io_friend || user.io_friend_avatar) {
+    // io Friend - usar dados já carregados (não buscar do /users pois não tem io_friend data)
+    profileUser.value = { ...user }
+    if (ioFriend.value) {
+      profileUser.value.nome = ioFriend.value.nome
+      profileUser.value.io_friend_avatar = ioFriend.value.avatar_base64
+    }
   } else {
     // Buscar dados completos do usuário
     try {
