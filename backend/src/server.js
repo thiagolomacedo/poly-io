@@ -1716,6 +1716,10 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
           WHEN c.user_a_id = $1 THEN u2.avatar_config
           ELSE u1.avatar_config
         END as avatar_config,
+        CASE
+          WHEN c.user_a_id = $1 THEN u2.kofi_url
+          ELSE u1.kofi_url
+        END as kofi_url,
         (
           SELECT COUNT(*)
           FROM messages m
