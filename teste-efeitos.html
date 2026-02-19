@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Efeitos CSS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #09090b;
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h2 {
+      color: #6366f1;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 15px;
+      margin-top: 60px;
+    }
+
+    h2:first-of-type {
+      margin-top: 0;
+    }
+
+    .demo {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    /* ============ 1. GRADIENTE ANIMADO ============ */
+    .gradient {
+      background: linear-gradient(90deg, #6366f1, #8b5cf6, #d946ef, #6366f1);
+      background-size: 300% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientMove 4s ease infinite;
+    }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ============ 2. GLOW / NEON ============ */
+    .glow {
+      color: #6366f1;
+      text-shadow:
+        0 0 10px rgba(99, 102, 241, 0.8),
+        0 0 20px rgba(99, 102, 241, 0.6),
+        0 0 40px rgba(99, 102, 241, 0.4),
+        0 0 80px rgba(99, 102, 241, 0.2);
+      animation: glowPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% {
+        text-shadow:
+          0 0 10px rgba(99, 102, 241, 0.8),
+          0 0 20px rgba(99, 102, 241, 0.6),
+          0 0 40px rgba(99, 102, 241, 0.4);
+      }
+      50% {
+        text-shadow:
+          0 0 20px rgba(99, 102, 241, 1),
+          0 0 40px rgba(99, 102, 241, 0.8),
+          0 0 80px rgba(99, 102, 241, 0.6);
+      }
+    }
+
+    /* ============ 3. DIGITACAO ============ */
+    .typing-container {
+      display: inline-block;
+    }
+
+    .typing {
+      display: inline-block;
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 3px solid #6366f1;
+      animation: typing 3s steps(35) infinite, blink 0.5s step-end infinite;
+      color: #fff;
+    }
+
+    @keyframes typing {
+      0%, 100% { width: 0; }
+      50%, 90% { width: 100%; }
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    /* ============ 4. GLITCH ============ */
+    .glitch {
+      position: relative;
+      color: #fff;
+    }
+
+    .glitch::before,
+    .glitch::after {
+      content: 'Chat profissional sem barreiras';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .glitch::before {
+      color: #ff00ff;
+      animation: glitch1 2s infinite;
+      clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    }
+
+    .glitch::after {
+      color: #00ffff;
+      animation: glitch2 2s infinite;
+      clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    }
+
+    @keyframes glitch1 {
+      0%, 100% { transform: translate(0); }
+      20% { transform: translate(-3px, 3px); }
+      40% { transform: translate(3px, -3px); }
+      60% { transform: translate(-3px, -3px); }
+      80% { transform: translate(3px, 3px); }
+    }
+
+    @keyframes glitch2 {
+      0%, 100% { transform: translate(0); }
+      20% { transform: translate(3px, -3px); }
+      40% { transform: translate(-3px, 3px); }
+      60% { transform: translate(3px, 3px); }
+      80% { transform: translate(-3px, -3px); }
+    }
+
+    /* ============ 5. UNDERLINE ANIMADO ============ */
+    .underline {
+      position: relative;
+      display: inline-block;
+      color: #fff;
+    }
+
+    .underline::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #6366f1, #d946ef);
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underlineGrow 2s ease-in-out infinite;
+    }
+
+    @keyframes underlineGrow {
+      0%, 100% { transform: scaleX(0); transform-origin: left; }
+      50% { transform: scaleX(1); transform-origin: left; }
+      51% { transform-origin: right; }
+      99% { transform: scaleX(0); transform-origin: right; }
+    }
+
+    /* ============ 6. WAVE / ONDA ============ */
+    .wave span {
+      display: inline-block;
+      animation: wave 1.5s ease-in-out infinite;
+      color: #fff;
+    }
+
+    .wave span:nth-child(1) { animation-delay: 0s; }
+    .wave span:nth-child(2) { animation-delay: 0.05s; }
+    .wave span:nth-child(3) { animation-delay: 0.1s; }
+    .wave span:nth-child(4) { animation-delay: 0.15s; }
+    .wave span:nth-child(5) { animation-delay: 0.2s; }
+    .wave span:nth-child(6) { animation-delay: 0.25s; }
+    .wave span:nth-child(7) { animation-delay: 0.3s; }
+    .wave span:nth-child(8) { animation-delay: 0.35s; }
+    .wave span:nth-child(9) { animation-delay: 0.4s; }
+    .wave span:nth-child(10) { animation-delay: 0.45s; }
+    .wave span:nth-child(11) { animation-delay: 0.5s; }
+    .wave span:nth-child(12) { animation-delay: 0.55s; }
+    .wave span:nth-child(13) { animation-delay: 0.6s; }
+
+    @keyframes wave {
+      0%, 100% { transform: translateY(0); color: #fff; }
+      50% { transform: translateY(-10px); color: #6366f1; }
+    }
+
+    /* ============ 7. SHIMMER / BRILHO ============ */
+    .shimmer {
+      background: linear-gradient(90deg, #fff 0%, #fff 40%, #6366f1 50%, #fff 60%, #fff 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .numero {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      background: #6366f1;
+      border-radius: 50%;
+      line-height: 30px;
+      font-size: 0.9rem;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2><span class="numero">1</span> Gradiente Animado</h2>
+    <div class="demo">
+      <p class="title gradient">Chat profissional<br>sem barreiras de idioma</p>
+    </div>
+
+    <h2><span class="numero">2</span> Glow / Neon</h2>
+    <div class="demo">
+      <p class="title glow">Chat profissional<br>sem barreiras de idioma</p>
+    </div>
+
+    <h2><span class="numero">3</span> Digitacao</h2>
+    <div class="demo">
+      <div class="typing-container">
+        <p class="title typing">Chat profissional sem barreiras</p>
+      </div>
+    </div>
+
+    <h2><span class="numero">4</span> Glitch</h2>
+    <div class="demo">
+      <p class="title glitch">Chat profissional sem barreiras</p>
+    </div>
+
+    <h2><span class="numero">5</span> Underline Animado</h2>
+    <div class="demo">
+      <p class="title underline">Chat profissional<br>sem barreiras de idioma</p>
+    </div>
+
+    <h2><span class="numero">6</span> Wave / Onda</h2>
+    <div class="demo">
+      <p class="title wave">
+        <span>C</span><span>h</span><span>a</span><span>t</span><span>&nbsp;</span><span>p</span><span>r</span><span>o</span><span>f</span><span>i</span><span>s</span><span>s</span><span>i</span><span>o</span><span>n</span><span>a</span><span>l</span>
+      </p>
+    </div>
+
+    <h2><span class="numero">7</span> Shimmer / Brilho</h2>
+    <div class="demo">
+      <p class="title shimmer">Chat profissional<br>sem barreiras de idioma</p>
+    </div>
+  </div>
+</body>
+</html>
