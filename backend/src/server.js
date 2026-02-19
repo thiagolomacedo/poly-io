@@ -1900,6 +1900,9 @@ app.get('/api/profile/contacts-config', authMiddleware, async (req, res) => {
 // Listar minhas conexões (aceitas)
 app.get('/api/connections', authMiddleware, async (req, res) => {
   try {
+    // Buscar io friend do usuário (se existir)
+    const ioFriend = await getIoFriend(req.userId)
+
     const result = await pool.query(`
       SELECT
         c.id as connection_id,
@@ -1946,7 +1949,20 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
       ORDER BY c.atualizado_em DESC
     `, [req.userId])
 
-    res.json(result.rows)
+    // Se usuário tem io friend, substituir dados da io pelo da io friend
+    const connections = result.rows.map(conn => {
+      if (conn.email === 'io@poly.io' && ioFriend) {
+        return {
+          ...conn,
+          nome: ioFriend.nome,
+          io_friend_avatar: ioFriend.avatar_base64 || null,
+          is_io_friend: true
+        }
+      }
+      return conn
+    })
+
+    res.json(connections)
   } catch (error) {
     console.error('[Connections] Erro ao listar:', error.message)
     res.status(500).json({ error: 'Erro ao listar conexões' })

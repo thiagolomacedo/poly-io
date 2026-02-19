@@ -2836,9 +2836,12 @@ function generateFlagSvg(idioma, size = 80) {
 
 // Obter avatar do usuário (Kawaii/Pixel se salvou, senão Bandeira do país)
 function getUserAvatarUrl(user, size = 80) {
-  // io tem avatar personalizado
-  // io é identificada pelo nome (id é dinâmico)
-  if (user?.nome === 'io') {
+  // io Friend tem avatar personalizado via IA
+  if (user?.io_friend_avatar) {
+    return user.io_friend_avatar
+  }
+  // io padrão (sem io friend) usa avatar fixo
+  if (user?.email === 'io@poly.io' || user?.nome === 'io') {
     return '/io-avatar.png'
   }
   // Prioridade: Avatar personalizado (Kawaii/Pixel/Gravatar) > Bandeira do país
@@ -5102,7 +5105,9 @@ async function loadConnections() {
       avatar_config: c.avatar_config,
       kofi_url: c.kofi_url,
       online: c.user_id in onlineUsers,
-      status: onlineUsers[c.user_id] || 'offline'
+      status: onlineUsers[c.user_id] || 'offline',
+      io_friend_avatar: c.io_friend_avatar || null,
+      is_io_friend: c.is_io_friend || false
     }))
 
     // Sincronizar ordem dos contatos com localStorage
