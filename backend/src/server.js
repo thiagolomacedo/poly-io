@@ -1781,6 +1781,103 @@ app.post('/api/io-friends/public/:id/adopt', authMiddleware, async (req, res) =>
   }
 })
 
+// ==================== SISTEMA DE LIKES ====================
+
+// Curtir uma io friend
+app.post('/api/io-friends/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+
+    // Verificar se io friend existe e é pública
+    const ioCheck = await pool.query(
+      'SELECT id, publico FROM io_friends WHERE id = $1',
+      [ioFriendId]
+    )
+
+    if (ioCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'io Friend não encontrada' })
+    }
+
+    if (!ioCheck.rows[0].publico) {
+      return res.status(400).json({ error: 'Só é possível curtir io Friends públicas' })
+    }
+
+    // Verificar se já curtiu
+    const existingLike = await pool.query(
+      'SELECT id FROM io_friend_likes WHERE io_friend_id = $1 AND user_id = $2',
+      [ioFriendId, req.userId]
+    )
+
+    if (existingLike.rows.length > 0) {
+      return res.status(400).json({ error: 'Você já curtiu esta io Friend' })
+    }
+
+    // Inserir like
+    await pool.query(
+      'INSERT INTO io_friend_likes (io_friend_id, user_id) VALUES ($1, $2)',
+      [ioFriendId, req.userId]
+    )
+
+    // Atualizar contador (cache)
+    const countResult = await pool.query(
+      'UPDATE io_friends SET likes_count = (SELECT COUNT(*) FROM io_friend_likes WHERE io_friend_id = $1) WHERE id = $1 RETURNING likes_count',
+      [ioFriendId]
+    )
+
+    console.log(`[Like] User ${req.userId} curtiu io friend ${ioFriendId}`)
+    res.json({ success: true, likes_count: countResult.rows[0].likes_count })
+  } catch (error) {
+    console.error('[Like] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao curtir' })
+  }
+})
+
+// Descurtir uma io friend
+app.delete('/api/io-friends/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+
+    // Remover like
+    const result = await pool.query(
+      'DELETE FROM io_friend_likes WHERE io_friend_id = $1 AND user_id = $2 RETURNING id',
+      [ioFriendId, req.userId]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Você não curtiu esta io Friend' })
+    }
+
+    // Atualizar contador (cache)
+    const countResult = await pool.query(
+      'UPDATE io_friends SET likes_count = (SELECT COUNT(*) FROM io_friend_likes WHERE io_friend_id = $1) WHERE id = $1 RETURNING likes_count',
+      [ioFriendId]
+    )
+
+    console.log(`[Unlike] User ${req.userId} descurtiu io friend ${ioFriendId}`)
+    res.json({ success: true, likes_count: countResult.rows[0].likes_count })
+  } catch (error) {
+    console.error('[Unlike] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao descurtir' })
+  }
+})
+
+// Verificar se usuário curtiu uma io friend
+app.get('/api/io-friends/:id/liked', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+
+    const result = await pool.query(
+      'SELECT id FROM io_friend_likes WHERE io_friend_id = $1 AND user_id = $2',
+      [ioFriendId, req.userId]
+    )
+
+    res.json({ liked: result.rows.length > 0 })
+  } catch (error) {
+    console.error('[Check Like] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao verificar curtida' })
+  }
+})
+
 // Gerar avatar para io friend via IA
 app.post('/api/io-friend/generate-avatar', authMiddleware, async (req, res) => {
   try {
@@ -1972,8 +2069,8 @@ app.get('/api/users/:id', authMiddleware, async (req, res) => {
     // Buscar io friend do usuário (se existir e for pública, ou se é o próprio usuário)
     const isOwnProfile = parseInt(req.params.id) === req.userId
     const ioFriendQuery = isOwnProfile
-      ? 'SELECT id, nome, avatar_base64, publico FROM io_friends WHERE user_id = $1'
-      : 'SELECT id, nome, avatar_base64, publico FROM io_friends WHERE user_id = $1 AND publico = TRUE'
+      ? 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1'
+      : 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1 AND publico = TRUE'
 
     const ioFriendResult = await pool.query(ioFriendQuery, [req.params.id])
 

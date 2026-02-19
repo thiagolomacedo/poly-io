@@ -276,7 +276,14 @@
               />
             </div>
             <!-- io Friend criada pelo usuário -->
-            <div v-if="profileUser?.created_io_friend" class="profile-io-friend-badge" :title="'io Friend: ' + profileUser.created_io_friend.nome">
+            <div
+              v-if="profileUser?.created_io_friend"
+              class="profile-io-friend-badge"
+              :class="getIoFriendTierClass(profileUser.created_io_friend.likes_count)"
+              :title="'io Friend: ' + profileUser.created_io_friend.nome"
+              @click.stop="openIoFriendModal(profileUser.created_io_friend, profileUser)"
+            >
+              <span v-if="getIoFriendTier(profileUser.created_io_friend.likes_count) === 'lendario'" class="io-crown">👑</span>
               <img
                 v-if="profileUser.created_io_friend.avatar_base64"
                 :src="profileUser.created_io_friend.avatar_base64"
@@ -760,8 +767,13 @@
                 <h4 class="explore-card-name">{{ bot.nome }}</h4>
                 <span class="explore-card-gender">{{ getGeneroLabel(bot.genero) }}</span>
                 <p class="explore-card-desc">{{ bot.perfil_publico || 'Sem descrição' }}</p>
-                <div class="explore-card-creator">
-                  <small>Criado por {{ bot.criador_nome }}</small>
+                <div class="explore-card-meta">
+                  <div class="explore-card-creator">
+                    <small>Criado por {{ bot.criador_nome }}</small>
+                  </div>
+                  <div class="explore-card-likes" :class="getIoFriendTierClass(bot.likes_count)">
+                    {{ getIoFriendTierEmoji(bot.likes_count) }} {{ formatLikes(bot.likes_count || 0) }}
+                  </div>
                 </div>
 
                 <button
@@ -782,6 +794,65 @@
           <div class="explore-footer">
             <p class="explore-tip">💡 Experimente conversar antes de adotar!</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Modal: io Friend Details (curtir) -->
+      <div v-if="showIoFriendDetailModal" class="modal-overlay" @click="showIoFriendDetailModal = false">
+        <div class="modal-content io-friend-detail-modal" @click.stop>
+          <button class="modal-close" @click="showIoFriendDetailModal = false">✕</button>
+
+          <!-- Avatar com tier -->
+          <div class="io-detail-avatar-container" :class="getIoFriendTierClass(selectedIoFriendDetail?.likes_count)">
+            <span v-if="getIoFriendTier(selectedIoFriendDetail?.likes_count) === 'lendario'" class="io-detail-crown">👑</span>
+            <div class="io-detail-avatar">
+              <img
+                v-if="selectedIoFriendDetail?.avatar_base64"
+                :src="selectedIoFriendDetail.avatar_base64"
+                :alt="selectedIoFriendDetail?.nome"
+              />
+              <span v-else>🤖</span>
+            </div>
+          </div>
+
+          <!-- Nome e tier badge -->
+          <h3 class="io-detail-name">{{ selectedIoFriendDetail?.nome }}</h3>
+          <div class="io-detail-tier-badge" :class="getIoFriendTierClass(selectedIoFriendDetail?.likes_count)">
+            {{ getIoFriendTierEmoji(selectedIoFriendDetail?.likes_count) }}
+            {{ formatLikes(selectedIoFriendDetail?.likes_count || 0) }}
+          </div>
+
+          <!-- Descrição -->
+          <p v-if="selectedIoFriendDetail?.perfil_publico" class="io-detail-desc">
+            {{ selectedIoFriendDetail.perfil_publico }}
+          </p>
+
+          <!-- Criador -->
+          <p class="io-detail-creator">
+            Criada por <strong>{{ selectedIoFriendCreator?.nome || 'Desconhecido' }}</strong>
+          </p>
+
+          <!-- Botão de curtir -->
+          <button
+            v-if="selectedIoFriendDetail?.publico"
+            class="btn-like-io"
+            :class="{ 'liked': ioFriendLiked }"
+            @click="toggleIoFriendLike"
+            :disabled="likingIoFriend"
+          >
+            <span class="like-heart">{{ ioFriendLiked ? '❤️' : '🤍' }}</span>
+            {{ likingIoFriend ? '...' : (ioFriendLiked ? 'Curtido!' : 'Curtir') }}
+          </button>
+
+          <!-- Botão experimentar (se não for própria) -->
+          <button
+            v-if="selectedIoFriendDetail?.publico && selectedIoFriendCreator?.id !== currentUser?.id"
+            class="btn-experiment-detail"
+            @click="experimentIoFriendFromModal"
+            :disabled="experimentingLoading"
+          >
+            🧪 Experimentar
+          </button>
         </div>
       </div>
 
@@ -2876,6 +2947,13 @@ const showExploreModal = ref(false)
 const experimentingIoFriendId = ref(null) // id da io friend em experimento
 const experimentingLoading = ref(null) // id da io friend sendo processada
 
+// Modal de detalhes da io friend (curtir)
+const showIoFriendDetailModal = ref(false)
+const selectedIoFriendDetail = ref(null)
+const selectedIoFriendCreator = ref(null)
+const ioFriendLiked = ref(false)
+const likingIoFriend = ref(false)
+
 // Tipos de redes sociais disponíveis
 const redesSociais = {
   linkedin: { nome: 'LinkedIn', icone: '💼', placeholder: 'https://linkedin.com/in/seu-perfil' },
@@ -4238,6 +4316,99 @@ async function adoptIoFriend() {
     console.error('[Adopt] Erro:', e)
     alert('Erro ao adotar io friend')
   }
+}
+
+// ==================== SISTEMA DE TIERS E LIKES ====================
+
+// Obter tier baseado no número de curtidas
+function getIoFriendTier(likes) {
+  const count = parseInt(likes) || 0
+  if (count >= 5000) return 'lendario'
+  if (count >= 3000) return 'diamante'
+  if (count >= 1000) return 'ouro'
+  if (count >= 500) return 'prata'
+  return 'iniciante'
+}
+
+// Obter classe CSS do tier
+function getIoFriendTierClass(likes) {
+  return `tier-${getIoFriendTier(likes)}`
+}
+
+// Obter emoji do tier
+function getIoFriendTierEmoji(likes) {
+  const tier = getIoFriendTier(likes)
+  const emojis = {
+    iniciante: '❤️',
+    prata: '🤍',
+    ouro: '💛',
+    diamante: '💎',
+    lendario: '🔥'
+  }
+  return emojis[tier] || '❤️'
+}
+
+// Formatar número de curtidas
+function formatLikes(count) {
+  const num = parseInt(count) || 0
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1).replace('.0', '') + 'K'
+  }
+  return num.toString()
+}
+
+// Abrir modal de detalhes da io friend
+async function openIoFriendModal(ioFriend, creator) {
+  selectedIoFriendDetail.value = ioFriend
+  selectedIoFriendCreator.value = creator
+  ioFriendLiked.value = false
+  showIoFriendDetailModal.value = true
+
+  // Verificar se já curtiu
+  if (ioFriend.publico) {
+    try {
+      const res = await fetch(`${API_URL}/io-friends/${ioFriend.id}/liked`, {
+        headers: authHeaders()
+      })
+      if (res.ok) {
+        const data = await res.json()
+        ioFriendLiked.value = data.liked
+      }
+    } catch (e) {
+      console.error('[Like Check] Erro:', e)
+    }
+  }
+}
+
+// Curtir/descurtir io friend
+async function toggleIoFriendLike() {
+  if (!selectedIoFriendDetail.value) return
+  likingIoFriend.value = true
+
+  try {
+    const method = ioFriendLiked.value ? 'DELETE' : 'POST'
+    const res = await fetch(`${API_URL}/io-friends/${selectedIoFriendDetail.value.id}/like`, {
+      method,
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      ioFriendLiked.value = !ioFriendLiked.value
+      selectedIoFriendDetail.value.likes_count = data.likes_count
+    }
+  } catch (e) {
+    console.error('[Like] Erro:', e)
+  } finally {
+    likingIoFriend.value = false
+  }
+}
+
+// Experimentar io friend a partir do modal de detalhes
+async function experimentIoFriendFromModal() {
+  if (!selectedIoFriendDetail.value) return
+  showIoFriendDetailModal.value = false
+  await experimentIoFriend(selectedIoFriendDetail.value)
 }
 
 // Carregar io friend em experimento
@@ -10765,6 +10936,262 @@ body {
   font-size: 20px;
 }
 
+/* Coroa para tier lendario */
+.io-crown {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  z-index: 10;
+  filter: drop-shadow(0 0 6px #ffd700);
+  animation: crown-float 2s ease-in-out infinite;
+}
+
+@keyframes crown-float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* ============ TIER STYLES ============ */
+
+/* Tier: Iniciante (0-499) */
+.tier-iniciante .io-friend-mini-avatar,
+.tier-iniciante.profile-io-friend-badge {
+  border: 3px solid #3a3a4a;
+}
+
+/* Tier: Prata (500-999) */
+.tier-prata.profile-io-friend-badge {
+  background: linear-gradient(135deg, #a8a8a8, #e8e8e8, #a8a8a8);
+  box-shadow: 0 0 10px rgba(200, 200, 200, 0.5);
+}
+
+/* Tier: Ouro (1000-2999) */
+.tier-ouro.profile-io-friend-badge {
+  background: linear-gradient(135deg, #b8860b, #ffd700, #b8860b);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+}
+
+/* Tier: Diamante (3000-4999) */
+.tier-diamante.profile-io-friend-badge {
+  background: linear-gradient(135deg, #00d4ff, #00ffcc, #ff00ff, #00d4ff);
+  animation: diamante-rotate 3s linear infinite;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.7);
+}
+
+@keyframes diamante-rotate {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* Tier: Lendario (5000+) */
+.tier-lendario.profile-io-friend-badge {
+  background: conic-gradient(from 0deg, #ffd700, #ff6b00, #ff0080, #9933ff, #00d4ff, #ffd700);
+  animation: lendario-rotate 4s linear infinite;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+}
+
+@keyframes lendario-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.tier-lendario .io-friend-mini-avatar {
+  animation: lendario-pulse 2s ease-in-out infinite;
+}
+
+@keyframes lendario-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ============ MODAL IO FRIEND DETAIL ============ */
+.io-friend-detail-modal {
+  max-width: 360px;
+  text-align: center;
+  padding: 30px;
+}
+
+.io-detail-avatar-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  padding: 4px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.io-detail-avatar-container.tier-prata {
+  background: linear-gradient(135deg, #a8a8a8, #e8e8e8, #a8a8a8);
+}
+
+.io-detail-avatar-container.tier-ouro {
+  background: linear-gradient(135deg, #b8860b, #ffd700, #b8860b);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.io-detail-avatar-container.tier-diamante {
+  background: linear-gradient(135deg, #00d4ff, #00ffcc, #ff00ff, #00d4ff);
+  animation: diamante-rotate 3s linear infinite;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.6);
+}
+
+.io-detail-avatar-container.tier-lendario {
+  background: conic-gradient(from 0deg, #ffd700, #ff6b00, #ff0080, #9933ff, #00d4ff, #ffd700);
+  animation: lendario-rotate 4s linear infinite;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.7);
+}
+
+.io-detail-crown {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.8rem;
+  z-index: 10;
+  filter: drop-shadow(0 0 8px #ffd700);
+  animation: crown-float 2s ease-in-out infinite;
+}
+
+.io-detail-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  overflow: hidden;
+}
+
+.io-detail-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.io-detail-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.io-detail-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.io-detail-tier-badge.tier-iniciante {
+  background: #2a2a3a;
+  color: #888;
+}
+
+.io-detail-tier-badge.tier-prata {
+  background: linear-gradient(135deg, #a8a8a8, #d0d0d0);
+  color: #333;
+}
+
+.io-detail-tier-badge.tier-ouro {
+  background: linear-gradient(135deg, #b8860b, #ffd700);
+  color: #333;
+}
+
+.io-detail-tier-badge.tier-diamante {
+  background: linear-gradient(135deg, #00d4ff, #00ffcc);
+  color: #333;
+}
+
+.io-detail-tier-badge.tier-lendario {
+  background: linear-gradient(135deg, #ffd700, #ff6b00);
+  color: #333;
+  animation: badge-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes badge-glow {
+  0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+  100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+}
+
+.io-detail-desc {
+  color: #aaa;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.io-detail-creator {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+.io-detail-creator strong {
+  color: #888;
+}
+
+.btn-like-io {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #2a2a3a;
+  color: #fff;
+}
+
+.btn-like-io:hover {
+  background: #3a3a4a;
+  transform: scale(1.05);
+}
+
+.btn-like-io.liked {
+  background: linear-gradient(135deg, #ec4899, #f43f5e);
+  color: #fff;
+}
+
+.btn-like-io.liked:hover {
+  transform: scale(1.05);
+}
+
+.btn-like-io .like-heart {
+  font-size: 1.2rem;
+}
+
+.btn-experiment-detail {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 20px;
+  border: 1px solid #6366f1;
+  border-radius: 10px;
+  background: transparent;
+  color: #6366f1;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-experiment-detail:hover {
+  background: #6366f1;
+  color: #fff;
+}
+
 .profile-name {
   font-size: 1.5rem;
   font-weight: 600;
@@ -12121,9 +12548,49 @@ body {
   overflow: hidden;
 }
 
+.explore-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
 .explore-card-creator {
   color: #6b7280;
   font-size: 0.8rem;
+}
+
+.explore-card-likes {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.explore-card-likes.tier-iniciante {
+  background: #2a2a3a;
+  color: #888;
+}
+
+.explore-card-likes.tier-prata {
+  background: linear-gradient(135deg, #a8a8a8, #d0d0d0);
+  color: #333;
+}
+
+.explore-card-likes.tier-ouro {
+  background: linear-gradient(135deg, #b8860b, #ffd700);
+  color: #333;
+}
+
+.explore-card-likes.tier-diamante {
+  background: linear-gradient(135deg, #00d4ff, #00ffcc);
+  color: #333;
+}
+
+.explore-card-likes.tier-lendario {
+  background: linear-gradient(135deg, #ffd700, #ff6b00);
+  color: #333;
+  animation: badge-glow 2s ease-in-out infinite alternate;
 }
 
 .btn-experiment-io {

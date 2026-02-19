@@ -314,6 +314,24 @@ async function initDatabase() {
     // Coluna para io friend em experimento (substitui temporariamente a io do usuário)
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS experimenting_io_friend_id INTEGER REFERENCES io_friends(id) ON DELETE SET NULL`)
 
+    // ==================== TABELA IO FRIEND LIKES (Curtidas) ====================
+    // Sistema de curtidas para io friends públicas
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS io_friend_likes (
+        id SERIAL PRIMARY KEY,
+        io_friend_id INTEGER REFERENCES io_friends(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        UNIQUE(io_friend_id, user_id)
+      )
+    `)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_io_friend_likes_io ON io_friend_likes(io_friend_id)`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_io_friend_likes_user ON io_friend_likes(user_id)`)
+    console.log('[DB] Tabela io_friend_likes OK')
+
+    // Coluna de contador de likes (cache para performance)
+    await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS likes_count INTEGER DEFAULT 0`)
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -723,13 +741,14 @@ async function getPublicIoFriends(limit = 50, offset = 0) {
         iof.perfil_publico,
         iof.avatar_base64,
         iof.criado_em,
+        COALESCE(iof.likes_count, 0) as likes_count,
         u.id as criador_id,
         u.nome as criador_nome,
         u.avatar_config as criador_avatar
       FROM io_friends iof
       JOIN users u ON iof.user_id = u.id
       WHERE iof.publico = TRUE AND iof.ativo = TRUE
-      ORDER BY iof.criado_em DESC
+      ORDER BY COALESCE(iof.likes_count, 0) DESC, iof.criado_em DESC
       LIMIT $1 OFFSET $2
     `, [limit, offset])
 
@@ -747,6 +766,7 @@ async function getPublicIoFriendById(ioFriendId) {
     const result = await pool.query(`
       SELECT
         iof.*,
+        COALESCE(iof.likes_count, 0) as likes_count,
         u.id as criador_id,
         u.nome as criador_nome
       FROM io_friends iof
