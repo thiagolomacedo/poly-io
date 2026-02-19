@@ -1773,10 +1773,38 @@
                 <span class="status" :class="[selectedConnection.status || 'offline']">{{ getStatusLabel(selectedConnection.status) }}</span>
               </div>
             </div>
-            <!-- Botões de experimento ao lado do nome -->
-            <div v-if="selectedConnection?.is_experimenting" class="experiment-header-btns">
-              <button class="btn-adopt-header" @click.stop="adoptIoFriend">💜 Adotar</button>
-              <button class="btn-stop-header" @click.stop="stopExperimenting">✕</button>
+            <!-- Dropdown de experimento ao lado do nome -->
+            <div v-if="selectedConnection?.is_experimenting" class="experiment-dropdown-wrapper">
+              <button
+                class="experiment-dropdown-btn"
+                @click.stop="experimentDropdownOpen = !experimentDropdownOpen"
+              >
+                <span class="experiment-icon">🧪</span>
+                <span class="experiment-label">Experimentando</span>
+                <span class="dropdown-arrow">{{ experimentDropdownOpen ? '▲' : '▼' }}</span>
+              </button>
+              <div v-if="experimentDropdownOpen" class="experiment-dropdown-menu" @click.stop>
+                <div
+                  class="experiment-dropdown-item adopt"
+                  @click="adoptIoFriend(); experimentDropdownOpen = false"
+                >
+                  <div class="experiment-item-header">
+                    <span class="experiment-item-icon">💜</span>
+                    <span class="experiment-item-name">Adotar</span>
+                  </div>
+                  <p class="experiment-item-desc">Torna essa io sua io Friend permanente. Substitui sua io atual.</p>
+                </div>
+                <div
+                  class="experiment-dropdown-item cancel"
+                  @click="stopExperimenting(); experimentDropdownOpen = false"
+                >
+                  <div class="experiment-item-header">
+                    <span class="experiment-item-icon">↩️</span>
+                    <span class="experiment-item-name">Cancelar</span>
+                  </div>
+                  <p class="experiment-item-desc">Volta para sua io original. O experimento será encerrado.</p>
+                </div>
+              </div>
             </div>
             <div class="chat-actions">
               <select
@@ -2785,6 +2813,7 @@ const statusOptions = [
   { value: 'invisivel', label: 'Invisível', desc: 'Você aparecerá offline, mas ainda pode conversar.' }
 ]
 const statusDropdownOpen = ref(false)
+const experimentDropdownOpen = ref(false)
 
 // Modal de perfil
 const showProfileModal = ref(false)
@@ -7908,6 +7937,9 @@ onMounted(async () => {
     if (!e.target.closest('.status-dropdown-wrapper')) {
       statusDropdownOpen.value = false
     }
+    if (!e.target.closest('.experiment-dropdown-wrapper')) {
+      experimentDropdownOpen.value = false
+    }
   })
 
   // Listener global para colar imagens com Ctrl+V no chat 1:1
@@ -9835,44 +9867,112 @@ body {
   margin-left: 8px;
 }
 
-/* Botões de experimento no header */
-.experiment-header-btns {
-  display: flex;
-  gap: 8px;
+/* Dropdown de experimento no header */
+.experiment-dropdown-wrapper {
+  position: relative;
   margin-left: 12px;
 }
 
-.btn-adopt-header {
+.experiment-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: linear-gradient(135deg, #a855f7, #7c3aed);
   border: none;
   color: #fff;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 600;
   transition: all 0.2s;
 }
 
-.btn-adopt-header:hover {
+.experiment-dropdown-btn:hover {
   background: linear-gradient(135deg, #9333ea, #6d28d9);
   transform: scale(1.02);
 }
 
-.btn-stop-header {
-  background: #333;
-  border: 1px solid #555;
-  color: #999;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
-  transition: all 0.2s;
+.experiment-dropdown-btn .experiment-icon {
+  font-size: 14px;
 }
 
-.btn-stop-header:hover {
-  background: #444;
+.experiment-dropdown-btn .experiment-label {
+  font-size: 12px;
+}
+
+.experiment-dropdown-btn .dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.experiment-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  background: #1e1e2e;
+  border: 1px solid #3a3a4a;
+  border-radius: 12px;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.experiment-dropdown-item {
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #2a2a3a;
+}
+
+.experiment-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.experiment-dropdown-item:hover {
+  background: #2a2a3a;
+}
+
+.experiment-dropdown-item.adopt:hover {
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.experiment-dropdown-item.cancel:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.experiment-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.experiment-item-icon {
+  font-size: 16px;
+}
+
+.experiment-item-name {
+  font-weight: 600;
+  font-size: 14px;
   color: #fff;
+}
+
+.experiment-dropdown-item.adopt .experiment-item-name {
+  color: #a855f7;
+}
+
+.experiment-dropdown-item.cancel .experiment-item-name {
+  color: #888;
+}
+
+.experiment-item-desc {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+  padding-left: 26px;
+  line-height: 1.4;
 }
 
 /* Messages */
