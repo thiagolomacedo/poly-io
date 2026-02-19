@@ -281,7 +281,7 @@
               class="profile-io-friend-badge"
               :class="getIoFriendTierClass(profileUser.created_io_friend.likes_count)"
               :title="'io Friend: ' + profileUser.created_io_friend.nome"
-              @click.stop="openIoFriendModal(profileUser.created_io_friend, profileUser)"
+              @click.stop="openIoFriendDetailModal(profileUser.created_io_friend, profileUser)"
             >
               <span v-if="getIoFriendTier(profileUser.created_io_friend.likes_count) === 'lendario'" class="io-crown">👑</span>
               <img
@@ -4357,8 +4357,8 @@ function formatLikes(count) {
   return num.toString()
 }
 
-// Abrir modal de detalhes da io friend
-async function openIoFriendModal(ioFriend, creator) {
+// Abrir modal de detalhes da io friend (para curtir)
+async function openIoFriendDetailModal(ioFriend, creator) {
   selectedIoFriendDetail.value = ioFriend
   selectedIoFriendCreator.value = creator
   ioFriendLiked.value = false
