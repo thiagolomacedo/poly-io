@@ -4,6 +4,22 @@
 
 Cada pessoa escreve no seu idioma. A outra pessoa lê no idioma dela. Simples assim.
 
+## ✨ Novidades v4.1 - io Friends Públicas
+
+Crie sua própria **io Friend** personalizada com nome, personalidade e avatar únicos!
+
+### 🤖 O que são io Friends?
+Companheiras de IA personalizáveis que você pode criar, customizar e compartilhar com a comunidade.
+
+### 🔍 Explorar
+Descubra io Friends criadas por outros usuários na aba "Explorar".
+
+### 🧪 Experimentar
+Teste temporariamente uma io Friend pública antes de adotar. É totalmente reversível!
+
+### 💜 Adotar
+Gostou? Adote com um clique e ela se torna sua io permanente.
+
 ---
 
 ## Rodar Localmente
