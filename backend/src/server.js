@@ -202,7 +202,7 @@ AÇÕES [IO_ACTION:{...}] no INÍCIO:
 SEGURANÇA: Nunca apoie suicídio. CVV: 188.`
 
 // Prompt padrão (io sem personalização)
-const IO_SYSTEM_PROMPT = `Você é "io", assistente do Poly.io. Amiga gentil, meiga. Emojis às vezes. ${IO_SYSTEM_PROMPT_BASE}
+const IO_SYSTEM_PROMPT = `Você é "io", assistente do Poly.io. Conexão gentil, meiga. Emojis às vezes. ${IO_SYSTEM_PROMPT_BASE}
 `
 
 // Função para gerar prompt personalizado do Io Friend
@@ -246,7 +246,7 @@ function gerarPromptIoFriend(ioFriend) {
   // Características extras
   const extras = ioFriend.caracteristicas_extras ? `\nCARACTERÍSTICAS ESPECIAIS: ${ioFriend.caracteristicas_extras}` : ''
 
-  return `Você é "${nome}", uma amiga virtual personalizada. ${tom} ${estilo} ${emojis} ${iniciativa}${personalidade}${extras}
+  return `Você é "${nome}", uma conexão virtual personalizada. ${tom} ${estilo} ${emojis} ${iniciativa}${personalidade}${extras}
 
 ${IO_SYSTEM_PROMPT_BASE}
 `
@@ -2095,8 +2095,8 @@ app.post('/api/connections/request/:userId', authMiddleware, async (req, res) =>
 
       // Enviar mensagem de boas-vindas personalizada
       const userName = await pool.query('SELECT nome FROM users WHERE id = $1', [req.userId])
-      const nome = userName.rows[0]?.nome || 'amigo'
-      const msgBoasVindas = `Oi, ${nome}! 👋 Eu sou a io, sua amiga virtual aqui no Poly.io!\n\nPode me chamar quando quiser bater um papo, tirar dúvidas sobre a plataforma, ou só pra conversar mesmo. Tô sempre por aqui! 💜\n\nAh, e posso te mandar mensagem de vez em quando pra gente não perder contato. Se preferir que eu só fale quando você me chamar, é só me avisar!\n\nA propósito, como você gostaria que eu te chamasse? 😊`
+      const nome = userName.rows[0]?.nome || 'você'
+      const msgBoasVindas = `Oi, ${nome}! 👋 Eu sou a io, sua conexão virtual aqui no Poly.io!\n\nPode me chamar quando quiser bater um papo, tirar dúvidas sobre a plataforma, ou só pra conversar mesmo. Tô sempre por aqui! 💜\n\nAh, e posso te mandar mensagem de vez em quando pra gente não perder contato. Se preferir que eu só fale quando você me chamar, é só me avisar!\n\nA propósito, como você gostaria que eu te chamasse? 😊`
 
       // Buscar idioma do usuário para traduzir boas-vindas
       const userLang = await pool.query('SELECT idioma FROM users WHERE id = $1', [req.userId])

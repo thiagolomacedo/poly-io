@@ -299,9 +299,9 @@
           </div>
           <p class="profile-info">{{ getIdiomaLabel(profileUser?.idioma) }} · {{ profileUser?.pais || 'Não informado' }}</p>
 
-          <!-- Código de Amigo -->
+          <!-- Código de Conexão -->
           <div v-if="profileUser?.codigo_amigo" class="friend-code-section">
-            <p class="friend-code-label">Código de Amigo</p>
+            <p class="friend-code-label">Código de Conexão</p>
             <div class="friend-code-box">
               <span class="friend-code">{{ profileUser.codigo_amigo }}</span>
               <button
@@ -452,13 +452,13 @@
             {{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}
           </button>
 
-          <!-- Botão Adicionar Amigo (só para outros usuários sem conexão) -->
+          <!-- Botão Adicionar Conexão (só para outros usuários sem conexão) -->
           <button
             v-if="profileUser?.id !== currentUser?.id && !isConnectedOrPending(profileUser?.id)"
             class="btn-add-friend-profile"
             @click="sendProfileConnectionRequest"
           >
-            ➕ Adicionar amigo
+            ➕ Adicionar conexão
           </button>
 
           <!-- Status de conexão (se já conectado ou pendente) -->
@@ -485,7 +485,7 @@
         <div class="modal-content io-friend-modal" @click.stop>
           <button class="modal-close" @click="showIoFriendModal = false">✕</button>
           <h3>{{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}</h3>
-          <p class="io-friend-subtitle">Personalize sua assistente virtual</p>
+          <p class="io-friend-subtitle">Personalize sua conexão virtual</p>
 
           <form @submit.prevent="saveIoFriend" class="io-friend-form">
             <!-- Nome -->
@@ -529,7 +529,7 @@
                   </button>
                 </div>
               </div>
-              <small class="avatar-hint">Use IA para criar o visual da sua io friend</small>
+              <small class="avatar-hint">Use IA para criar o visual da sua conexão</small>
             </div>
 
             <!-- Personalidade -->
@@ -621,7 +621,7 @@
           </form>
 
           <p class="io-friend-tip">
-            💡 Sua io Friend terá memória e lembranças sobre você, igual a io padrão.
+            💡 Sua conexão terá memória e lembranças sobre você, igual a io padrão.
           </p>
         </div>
       </div>
@@ -1231,7 +1231,7 @@
               <input
                 v-model="codeQuery"
                 type="text"
-                placeholder="Código de amigo (ex: ABC123)"
+                placeholder="Código de conexão (ex: ABC123)"
                 maxlength="6"
                 @input="codeQuery = codeQuery.toUpperCase()"
                 @keyup.enter="searchByCode"
@@ -3801,7 +3801,7 @@ async function generateIoFriendAvatar() {
 // Salvar io friend (criar ou atualizar)
 async function saveIoFriend() {
   if (!ioFriendForm.value.nome.trim()) {
-    alert('Digite um nome para sua io friend')
+    alert('Digite um nome para sua conexão virtual')
     return
   }
 
@@ -3830,7 +3830,7 @@ async function saveIoFriend() {
     alert(ioFriend.value ? `${ioFriendForm.value.nome} salva com sucesso! 🎉` : 'io Friend criada!')
   } catch (e) {
     console.error('[io Friend] Erro ao salvar:', e)
-    alert('Erro ao salvar io friend')
+    alert('Erro ao salvar conexão virtual')
   } finally {
     savingIoFriend.value = false
   }
@@ -3851,11 +3851,11 @@ async function removeIoFriend() {
     if (res.ok) {
       ioFriend.value = null
       showIoFriendModal.value = false
-      alert('io friend removida. Você está usando a io padrão agora.')
+      alert('Conexão virtual removida. Você está usando a io padrão agora.')
     }
   } catch (e) {
     console.error('[io Friend] Erro ao remover:', e)
-    alert('Erro ao remover io friend')
+    alert('Erro ao remover conexão virtual')
   } finally {
     savingIoFriend.value = false
   }
@@ -4712,7 +4712,7 @@ async function sendProfileConnectionRequest() {
 function getConnectionStatus(userId) {
   // conexões têm campo "id", não "user_id"
   const isConnected = connections.value.some(c => c.id === userId)
-  if (isConnected) return '✓ Já são amigos'
+  if (isConnected) return '✓ Já estão conectados'
 
   const hasPendingReceived = pendingRequests.value.some(r => r.user_id === userId)
   if (hasPendingReceived) return '⏳ Solicitação recebida'
