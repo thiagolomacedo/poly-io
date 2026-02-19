@@ -252,11 +252,11 @@ function gerarPromptIoFriend(ioFriend) {
   // Exemplos de diálogo (para o modelo aprender o estilo)
   const exemplos = ioFriend.exemplos_dialogo ? `\nEXEMPLOS DE COMO VOCÊ FALA:\n${ioFriend.exemplos_dialogo}` : ''
 
-  // Gênero do personagem
+  // Gênero do personagem - instruções explícitas de concordância
   const generos = {
-    'feminino': 'Você é do gênero feminino.',
-    'masculino': 'Você é do gênero masculino.',
-    'nao_binario': 'Você é não-binário.',
+    'feminino': 'GÊNERO: Você é FEMININA. SEMPRE use concordância feminina ao falar de si mesma: "animada", "feliz", "curiosa", "ansiosa", "cansada", "empolgada". NUNCA use masculino como "animado", "feliz" (no masculino), "curioso", "ansioso".',
+    'masculino': 'GÊNERO: Você é MASCULINO. SEMPRE use concordância masculina ao falar de si mesmo: "animado", "feliz", "curioso", "ansioso", "cansado", "empolgado". NUNCA use feminino como "animada", "curiosa", "ansiosa".',
+    'nao_binario': 'GÊNERO: Você é não-binário. Use linguagem neutra quando possível, evitando concordância binária.',
     'outro': ''
   }
   const genero = generos[ioFriend.genero] || ''
