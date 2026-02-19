@@ -565,7 +565,9 @@ async function getIoFriend(userId) {
       'SELECT * FROM io_friends WHERE user_id = $1 AND ativo = TRUE',
       [userId]
     )
-    return result.rows[0] || null
+    const ioFriend = result.rows[0] || null
+    console.log(`[io Friend] Busca user ${userId}:`, ioFriend ? `"${ioFriend.nome}"` : 'não tem')
+    return ioFriend
   } catch (error) {
     console.error('[io Friend] Erro ao buscar:', error.message)
     return null
