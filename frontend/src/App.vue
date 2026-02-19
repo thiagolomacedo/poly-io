@@ -3827,7 +3827,19 @@ async function saveIoFriend() {
 
     ioFriend.value = data.ioFriend
     showIoFriendModal.value = false
-    alert(ioFriend.value ? `${ioFriendForm.value.nome} salva com sucesso! 🎉` : 'io Friend criada!')
+
+    // Recarregar conexões para atualizar avatar no chat
+    await loadConnections()
+
+    // Se io/io friend estiver selecionado, atualizar com novos dados
+    if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
+      const updatedConn = connections.value.find(c => c.email === 'io@poly.io' || c.is_io_friend)
+      if (updatedConn) {
+        selectedConnection.value = { ...updatedConn }
+      }
+    }
+
+    alert(`${ioFriendForm.value.nome} salva com sucesso! 🎉`)
   } catch (e) {
     console.error('[io Friend] Erro ao salvar:', e)
     alert('Erro ao salvar conexão virtual')
@@ -3851,6 +3863,18 @@ async function removeIoFriend() {
     if (res.ok) {
       ioFriend.value = null
       showIoFriendModal.value = false
+
+      // Recarregar conexões para voltar ao avatar padrão
+      await loadConnections()
+
+      // Se io estiver selecionado, atualizar com dados padrão
+      if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
+        const updatedConn = connections.value.find(c => c.email === 'io@poly.io')
+        if (updatedConn) {
+          selectedConnection.value = { ...updatedConn }
+        }
+      }
+
       alert('Conexão virtual removida. Você está usando a io padrão agora.')
     }
   } catch (e) {
