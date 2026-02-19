@@ -968,6 +968,169 @@
     .delay-2 { animation-delay: 0.2s; }
     .delay-3 { animation-delay: 0.3s; }
     .delay-4 { animation-delay: 0.4s; }
+
+    /* ==================== IO FRIENDS SECTION ==================== */
+    .io-friends {
+      padding: 8rem 2rem;
+      background: linear-gradient(180deg, var(--bg-dark) 0%, #0f0f1a 100%);
+    }
+
+    .io-friends-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .io-friends-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .io-friends-info h3,
+    .io-tiers h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .io-friends-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .io-friends-list li {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.6;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .io-friends-list li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+    }
+
+    .io-friends-list li strong {
+      color: var(--primary-light);
+    }
+
+    .tiers-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .tier-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem 1rem;
+      background: var(--bg-card);
+      border-radius: 16px;
+      min-width: 100px;
+      position: relative;
+      transition: transform 0.3s;
+    }
+
+    .tier-item:hover {
+      transform: translateY(-5px);
+    }
+
+    .tier-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: var(--bg-dark);
+    }
+
+    .tier-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .tier-range {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .tier-crown {
+      position: absolute;
+      top: 5px;
+      font-size: 1.2rem;
+      filter: drop-shadow(0 0 6px #ffd700);
+      animation: crown-float 2s ease-in-out infinite;
+    }
+
+    @keyframes crown-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    /* Tier styles */
+    .tier-iniciante .tier-avatar {
+      border: 3px solid #3a3a4a;
+    }
+
+    .tier-prata .tier-avatar {
+      border: 3px solid;
+      border-image: linear-gradient(135deg, #a8a8a8, #e8e8e8) 1;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(200, 200, 200, 0.3);
+    }
+
+    .tier-ouro .tier-avatar {
+      border: 3px solid;
+      border-image: linear-gradient(135deg, #b8860b, #ffd700) 1;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    }
+
+    .tier-diamante .tier-avatar {
+      border: 3px solid;
+      border-image: linear-gradient(135deg, #00d4ff, #00ffcc, #ff00ff) 1;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+      animation: diamante-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes diamante-pulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(0, 212, 255, 0.5); }
+      50% { box-shadow: 0 0 25px rgba(0, 212, 255, 0.8); }
+    }
+
+    .tier-lendario .tier-avatar {
+      border: 3px solid;
+      border-image: conic-gradient(from 0deg, #ffd700, #ff6b00, #ff0080, #9933ff, #00d4ff, #ffd700) 1;
+      border-radius: 50%;
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+      animation: lendario-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes lendario-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+      50% { box-shadow: 0 0 35px rgba(255, 107, 0, 0.8); }
+    }
+
+    @media (max-width: 768px) {
+      .io-friends-content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -981,8 +1144,8 @@
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#salas">Salas</a>
+        <a href="#io-friends">io Friends</a>
         <a href="#instalar">Instalar</a>
-        <a href="#filosofia">Filosofia</a>
         <a href="https://poly-io.vercel.app" class="btn btn-primary">Entrar</a>
       </div>
     </div>
@@ -1170,6 +1333,14 @@
         </div>
 
         <div class="feature-card">
+          <div class="feature-icon">✨</div>
+          <h3 class="feature-title">io Friends Públicas</h3>
+          <p class="feature-description">
+            Crie sua própria io Friend com personalidade única. Compartilhe com a comunidade e ganhe curtidas!
+          </p>
+        </div>
+
+        <div class="feature-card">
           <div class="feature-icon">🛒</div>
           <h3 class="feature-title">Ko-fi Store</h3>
           <p class="feature-description">
@@ -1225,6 +1396,61 @@
             <div class="room-msg received">
               <span class="room-msg-flag">🇺🇸</span>
               Same here! Vue 3 + TypeScript is amazing.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- io Friends Section -->
+  <section class="io-friends" id="io-friends">
+    <div class="io-friends-container">
+      <div class="section-header">
+        <span class="section-label">io Friends</span>
+        <h2 class="section-title">Crie sua companheira de IA</h2>
+        <p class="section-subtitle">Personalize, compartilhe e ganhe reconhecimento da comunidade.</p>
+      </div>
+
+      <div class="io-friends-content">
+        <div class="io-friends-info">
+          <h3>Como funciona?</h3>
+          <ul class="io-friends-list">
+            <li><strong>Crie</strong> sua io Friend com nome, personalidade e avatar únicos</li>
+            <li><strong>Publique</strong> para que outros usuários possam descobrir</li>
+            <li><strong>Experimente</strong> io Friends de outros usuários antes de adotar</li>
+            <li><strong>Curta</strong> suas favoritas e ajude-as a subir de tier</li>
+          </ul>
+        </div>
+
+        <div class="io-tiers">
+          <h3>Sistema de Tiers</h3>
+          <div class="tiers-grid">
+            <div class="tier-item tier-iniciante">
+              <div class="tier-avatar">🤖</div>
+              <span class="tier-name">Iniciante</span>
+              <span class="tier-range">0-499 ❤️</span>
+            </div>
+            <div class="tier-item tier-prata">
+              <div class="tier-avatar">🤖</div>
+              <span class="tier-name">Prata</span>
+              <span class="tier-range">500+ 🤍</span>
+            </div>
+            <div class="tier-item tier-ouro">
+              <div class="tier-avatar">🤖</div>
+              <span class="tier-name">Ouro</span>
+              <span class="tier-range">1K+ 💛</span>
+            </div>
+            <div class="tier-item tier-diamante">
+              <div class="tier-avatar">🤖</div>
+              <span class="tier-name">Diamante</span>
+              <span class="tier-range">3K+ 💎</span>
+            </div>
+            <div class="tier-item tier-lendario">
+              <span class="tier-crown">👑</span>
+              <div class="tier-avatar">🤖</div>
+              <span class="tier-name">Lendário</span>
+              <span class="tier-range">5K+ 🔥</span>
             </div>
           </div>
         </div>
