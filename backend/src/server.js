@@ -272,11 +272,15 @@ Você ainda não sabe muito sobre este usuário. Quando ele compartilhar informa
 
           const totalMemorias = await countIoMemories(userId)
 
+          const regraEtaria = classificacaoEtaria.includes('ADULTO')
+            ? '(liberado: beijos, romance intenso, cenas quentes em histórias/contos - adulto cria livremente!)'
+            : '(bloqueie conteúdo sexual/sugestivo)'
+
           contextoUsuario = `\n\n[CONTEXTO DO USUÁRIO]
 - Nome cadastrado: ${user.nome}
 - Como chamar: ${apelido}
 - Idioma/País: ${idiomaUsuario.toUpperCase()}
-- Classificação etária: ${classificacaoEtaria}${user.maior_idade_confirmado ? ' (confirmado)' : ''}
+- Classificação etária: ${classificacaoEtaria}${user.maior_idade_confirmado ? ' (confirmado)' : ''} ${regraEtaria}
 - Aniversário: ${user.io_aniversario ? new Date(user.io_aniversario).toLocaleDateString('pt-BR') : 'Não sei ainda'}
 - Última conversa: ${tempoDecorrido(user.io_ultima_conversa) || 'Primeira vez - seja acolhedora'}
 - Aceita mensagens proativas: ${user.io_proativo ? 'Sim' : 'Não'}
