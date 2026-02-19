@@ -733,7 +733,7 @@
               v-for="bot in publicIoFriends"
               :key="bot.id"
               class="explore-card"
-              :class="{ 'explore-card-added': isPublicIoFriendAdded(bot.id) }"
+              :class="{ 'explore-card-experimenting': experimentingIoFriendId === bot.id }"
             >
               <div class="explore-card-avatar">
                 <img
@@ -753,26 +753,22 @@
                 </div>
 
                 <button
-                  v-if="!isPublicIoFriendAdded(bot.id)"
-                  class="btn-add-public-io"
-                  @click="addPublicIoFriend(bot)"
-                  :disabled="addingPublicIoFriend"
+                  v-if="experimentingIoFriendId !== bot.id"
+                  class="btn-experiment-io"
+                  @click="experimentIoFriend(bot)"
+                  :disabled="experimentingLoading"
                 >
-                  {{ addingPublicIoFriend === bot.id ? '⏳ Adicionando...' : '➕ Adicionar' }}
+                  {{ experimentingLoading === bot.id ? '⏳ ...' : '🧪 Experimentar' }}
                 </button>
-                <button
-                  v-else
-                  class="btn-chat-public-io"
-                  @click="startChatWithPublicIoFriend(bot)"
-                >
-                  💬 Conversar
-                </button>
+                <div v-else class="experimenting-badge">
+                  ✨ Experimentando agora
+                </div>
               </div>
             </div>
           </div>
 
           <div class="explore-footer">
-            <p class="explore-tip">💡 Adicione conexões IA e converse com personagens únicos!</p>
+            <p class="explore-tip">💡 Experimente conversar antes de adotar!</p>
           </div>
         </div>
       </div>
@@ -1822,6 +1818,15 @@
             <button @click="exportChat">Baixar conversa</button>
           </div>
 
+          <!-- Banner de experimento -->
+          <div v-if="selectedConnection?.is_experimenting" class="experiment-banner">
+            <span>🧪 Experimentando <strong>{{ selectedConnection.nome }}</strong></span>
+            <div class="experiment-actions">
+              <button class="btn-adopt" @click="adoptIoFriend">💜 Usar como minha io</button>
+              <button class="btn-stop-experiment" @click="stopExperimenting">✕ Parar</button>
+            </div>
+          </div>
+
           <!-- Mensagens -->
           <div class="messages" ref="messagesContainer">
             <div
@@ -2829,12 +2834,10 @@ const ioFriendForm = ref({
 const publicIoFriends = ref([])
 const loadingPublicIoFriends = ref(false)
 const showExploreModal = ref(false)
-const myPublicIoFriends = ref([]) // io friends públicas que o usuário adicionou
-const addingPublicIoFriend = ref(null) // id da io friend sendo adicionada
 
-// Chat com io friend pública
-const publicIoChatHistory = ref({}) // { ioFriendId: [{role, content, timestamp}] }
-const publicIoTyping = ref(null) // id da io friend que está "digitando"
+// Experimentar io friend pública
+const experimentingIoFriendId = ref(null) // id da io friend em experimento
+const experimentingLoading = ref(null) // id da io friend sendo processada
 
 // Tipos de redes sociais disponíveis
 const redesSociais = {
@@ -4107,17 +4110,12 @@ function getGeneroLabel(genero) {
   return generos[genero] || genero
 }
 
-// Verificar se io friend pública já foi adicionada
-function isPublicIoFriendAdded(ioFriendId) {
-  return myPublicIoFriends.value.some(pif => pif.id === ioFriendId)
-}
-
-// Adicionar io friend pública
-async function addPublicIoFriend(bot) {
-  addingPublicIoFriend.value = bot.id
+// Experimentar io friend pública (substitui temporariamente a io)
+async function experimentIoFriend(bot) {
+  experimentingLoading.value = bot.id
 
   try {
-    const res = await fetch(`${API_URL}/io-friends/public/${bot.id}/add`, {
+    const res = await fetch(`${API_URL}/io-friends/public/${bot.id}/experiment`, {
       method: 'POST',
       headers: authHeaders()
     })
@@ -4125,102 +4123,98 @@ async function addPublicIoFriend(bot) {
     const data = await res.json()
 
     if (!res.ok) {
-      alert(data.error || 'Erro ao adicionar')
+      alert(data.error || 'Erro ao experimentar')
       return
     }
 
-    // Adicionar à lista local
-    myPublicIoFriends.value.push(bot)
+    // Marcar como experimentando
+    experimentingIoFriendId.value = bot.id
 
-    // Recarregar conexões para mostrar a nova io friend
+    // Fechar modal e ir para o chat com a io
+    showExploreModal.value = false
+
+    // Recarregar conexões para atualizar nome/avatar da io
     await loadConnections()
 
-    alert(`${bot.nome} adicionada com sucesso! 🎉`)
+    // Selecionar a io para conversar
+    const ioConn = connections.value.find(c => c.email === 'io@poly.io')
+    if (ioConn) {
+      selectConnection(ioConn)
+    }
+
+    alert(`Experimentando ${bot.nome}! Converse com ela no chat. 🧪`)
   } catch (e) {
-    console.error('[Public io Friend] Erro ao adicionar:', e)
-    alert('Erro ao adicionar conexão')
+    console.error('[Experiment] Erro:', e)
+    alert('Erro ao experimentar')
   } finally {
-    addingPublicIoFriend.value = null
+    experimentingLoading.value = null
   }
 }
 
-// Iniciar chat com io friend pública
-function startChatWithPublicIoFriend(bot) {
-  // Fechar modal de explorar
-  showExploreModal.value = false
-
-  // Encontrar a conexão da io friend pública na lista
-  const conn = connections.value.find(c => c.is_public_io_friend && c.public_io_friend_id === bot.id)
-
-  if (conn) {
-    selectedConnection.value = conn
-    loadMessages(conn)
-  } else {
-    alert('Recarregue a página para ver a conexão')
-  }
-}
-
-// Carregar minhas io friends públicas adicionadas
-async function loadMyPublicIoFriends() {
+// Parar de experimentar io friend
+async function stopExperimenting() {
   try {
-    const res = await fetch(`${API_URL}/io-friends/my-public`, {
+    const res = await fetch(`${API_URL}/io-friends/experiment/stop`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      experimentingIoFriendId.value = null
+      await loadConnections()
+      alert('Voltou para a io padrão!')
+    }
+  } catch (e) {
+    console.error('[Experiment] Erro ao parar:', e)
+  }
+}
+
+// Adotar io friend (usar como minha io permanentemente)
+async function adoptIoFriend() {
+  if (!experimentingIoFriendId.value) return
+
+  try {
+    const res = await fetch(`${API_URL}/io-friends/public/${experimentingIoFriendId.value}/adopt`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao adotar')
+      return
+    }
+
+    experimentingIoFriendId.value = null
+
+    // Recarregar io friend e conexões
+    await loadIoFriend()
+    await loadConnections()
+
+    alert(`${data.message || 'io adotada com sucesso!'} 💜`)
+  } catch (e) {
+    console.error('[Adopt] Erro:', e)
+    alert('Erro ao adotar io friend')
+  }
+}
+
+// Carregar io friend em experimento
+async function loadExperimentingIoFriend() {
+  try {
+    const res = await fetch(`${API_URL}/io-friends/experiment`, {
       headers: authHeaders()
     })
 
     if (res.ok) {
       const data = await res.json()
-      myPublicIoFriends.value = data.ioFriends || []
-      console.log(`[Public io Friends] Carregadas ${myPublicIoFriends.value.length} adicionadas`)
+      if (data.experimenting) {
+        experimentingIoFriendId.value = data.experimenting.id
+        console.log(`[Experiment] Experimentando: ${data.experimenting.nome}`)
+      }
     }
   } catch (e) {
-    console.error('[Public io Friends] Erro ao carregar minhas:', e)
-  }
-}
-
-// Enviar mensagem para io friend pública
-async function sendMessageToPublicIoFriend(texto) {
-  if (!selectedConnection.value?.is_public_io_friend) return
-
-  const ioFriendId = selectedConnection.value.public_io_friend_id
-
-  // Adicionar mensagem do usuário ao histórico local
-  if (!publicIoChatHistory.value[ioFriendId]) {
-    publicIoChatHistory.value[ioFriendId] = []
-  }
-
-  publicIoChatHistory.value[ioFriendId].push({
-    role: 'user',
-    content: texto,
-    timestamp: new Date().toISOString()
-  })
-
-  // Simular indicador de digitação
-  publicIoTyping.value = ioFriendId
-
-  try {
-    const res = await fetch(`${API_URL}/chat/public-io/${ioFriendId}`, {
-      method: 'POST',
-      headers: {
-        ...authHeaders(),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ texto })
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      // Adicionar resposta ao histórico local
-      publicIoChatHistory.value[ioFriendId].push({
-        role: 'assistant',
-        content: data.resposta,
-        timestamp: data.enviadoEm
-      })
-    }
-  } catch (e) {
-    console.error('[Public io Friend Chat] Erro:', e)
-  } finally {
-    publicIoTyping.value = null
+    console.error('[Experiment] Erro ao carregar:', e)
   }
 }
 
@@ -5362,8 +5356,8 @@ async function initializeApp() {
   // Carregar io friend do usuário (se existir)
   await loadIoFriend()
 
-  // Carregar io friends públicas adicionadas pelo usuário
-  await loadMyPublicIoFriends()
+  // Carregar io friend em experimento (se houver)
+  await loadExperimentingIoFriend()
 
   // Inicializar IndexedDB para arquivos pendentes
   try {
@@ -5658,12 +5652,6 @@ async function selectConnection(conn) {
   replyingTo.value = null // Limpar reply ao mudar de conversa
   sidebarOpen.value = false
 
-  // Se é io friend pública, apenas carregar mensagens
-  if (conn.is_public_io_friend) {
-    await loadMessages()
-    return
-  }
-
   // Zerar contador de não lidas para esta conexão
   const connId = conn.connectionId.toString()
   if (unreadCounts.value[connId]) {
@@ -5688,24 +5676,6 @@ async function selectConnection(conn) {
 
 async function loadMessages() {
   if (!selectedConnection.value) return
-
-  // Se é io friend pública, carregar do histórico local
-  if (selectedConnection.value.is_public_io_friend) {
-    const ioFriendId = selectedConnection.value.public_io_friend_id
-    const history = publicIoChatHistory.value[ioFriendId] || []
-
-    messages.value = history.map((msg, index) => ({
-      id: `${msg.role}-${index}`,
-      euEnviei: msg.role === 'user',
-      texto: msg.content,
-      textoOriginal: msg.content,
-      enviadoEm: msg.timestamp || new Date().toISOString(),
-      senderName: msg.role === 'assistant' ? selectedConnection.value.nome : undefined
-    }))
-
-    scrollToBottom()
-    return
-  }
 
   try {
     // Monta URL com idioma de recepção se diferente do padrão
@@ -5786,48 +5756,6 @@ async function submitImagineModal() {
 async function sendMessage() {
   if (!newMessage.value.trim() || !selectedConnection.value) return
   if (isSendingMessage.value) return // Previne cliques duplos
-
-  // Se é io friend pública, usar função específica
-  if (selectedConnection.value.is_public_io_friend) {
-    isSendingMessage.value = true
-    const texto = newMessage.value.trim()
-    newMessage.value = ''
-
-    // Adicionar mensagem do usuário ao chat local imediatamente
-    const userMsg = {
-      id: `user-${Date.now()}`,
-      euEnviei: true,
-      texto: texto,
-      textoOriginal: texto,
-      enviadoEm: new Date().toISOString()
-    }
-    messages.value.push(userMsg)
-    scrollToBottom()
-
-    // Enviar para API e receber resposta
-    await sendMessageToPublicIoFriend(texto)
-
-    // Adicionar resposta da IA ao chat
-    const ioFriendId = selectedConnection.value.public_io_friend_id
-    const history = publicIoChatHistory.value[ioFriendId] || []
-    const lastResponse = history[history.length - 1]
-
-    if (lastResponse && lastResponse.role === 'assistant') {
-      const iaMsg = {
-        id: `ia-${Date.now()}`,
-        euEnviei: false,
-        texto: lastResponse.content,
-        textoOriginal: lastResponse.content,
-        enviadoEm: lastResponse.timestamp,
-        senderName: selectedConnection.value.nome
-      }
-      messages.value.push(iaMsg)
-      scrollToBottom()
-    }
-
-    isSendingMessage.value = false
-    return
-  }
 
   isSendingMessage.value = true
 
@@ -11981,10 +11909,10 @@ body {
   font-size: 0.8rem;
 }
 
-.btn-add-public-io {
+.btn-experiment-io {
   margin-top: 12px;
   padding: 8px 16px;
-  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   border: none;
   color: #fff;
   border-radius: 8px;
@@ -11995,38 +11923,84 @@ body {
   width: 100%;
 }
 
-.btn-add-public-io:hover:not(:disabled) {
-  background: linear-gradient(135deg, #9333ea, #6d28d9);
+.btn-experiment-io:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706, #b45309);
   transform: translateY(-1px);
 }
 
-.btn-add-public-io:disabled {
+.btn-experiment-io:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.btn-chat-public-io {
+.experimenting-badge {
   margin-top: 12px;
   padding: 8px 16px;
   background: linear-gradient(135deg, #10b981, #059669);
-  border: none;
-  color: #fff;
   border-radius: 8px;
-  cursor: pointer;
+  text-align: center;
+  color: #fff;
   font-size: 0.85rem;
   font-weight: 600;
-  transition: all 0.2s;
-  width: 100%;
 }
 
-.btn-chat-public-io:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  transform: translateY(-1px);
-}
-
-.explore-card-added {
+.explore-card-experimenting {
   border-color: #10b981;
-  background: #1e1e2e;
+  background: linear-gradient(135deg, #1e1e2e, #0f2922);
+}
+
+/* Banner de experimento no chat */
+.experiment-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #f59e0b20, #d9770620);
+  border-bottom: 1px solid #f59e0b40;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.experiment-banner span {
+  color: #f59e0b;
+  font-size: 0.9rem;
+}
+
+.experiment-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-adopt {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-adopt:hover {
+  background: linear-gradient(135deg, #9333ea, #6d28d9);
+}
+
+.btn-stop-experiment {
+  padding: 6px 12px;
+  background: #333;
+  border: 1px solid #555;
+  color: #999;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.btn-stop-experiment:hover {
+  background: #444;
+  color: #fff;
 }
 
 .explore-footer {

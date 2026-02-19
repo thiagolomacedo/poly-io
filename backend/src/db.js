@@ -311,6 +311,9 @@ async function initDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_user_public_io_friends_user ON user_public_io_friends(user_id)`)
     console.log('[DB] Tabela user_public_io_friends OK')
 
+    // Coluna para io friend em experimento (substitui temporariamente a io do usuário)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS experimenting_io_friend_id INTEGER REFERENCES io_friends(id) ON DELETE SET NULL`)
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -888,6 +891,158 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
   }
 }
 
+// ==================== FUNÇÕES EXPERIMENTAR IO FRIEND ====================
+
+// Iniciar experimento com io friend pública (substitui temporariamente a io)
+async function startExperimentingIoFriend(userId, ioFriendId) {
+  try {
+    // Verificar se a io friend existe e é pública
+    const ioFriend = await pool.query(
+      'SELECT id, user_id, nome FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      [ioFriendId]
+    )
+    if (ioFriend.rows.length === 0) {
+      return { error: 'io friend não encontrada ou não é pública' }
+    }
+
+    // Não pode experimentar sua própria io friend
+    if (ioFriend.rows[0].user_id === userId) {
+      return { error: 'Você não pode experimentar sua própria io friend' }
+    }
+
+    // Marcar como experimentando
+    await pool.query(
+      'UPDATE users SET experimenting_io_friend_id = $1 WHERE id = $2',
+      [ioFriendId, userId]
+    )
+
+    console.log(`[Experiment] User ${userId} começou a experimentar io friend ${ioFriendId} (${ioFriend.rows[0].nome})`)
+    return { success: true, ioFriendName: ioFriend.rows[0].nome }
+  } catch (error) {
+    console.error('[Experiment] Erro ao iniciar:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Parar de experimentar io friend
+async function stopExperimentingIoFriend(userId) {
+  try {
+    await pool.query(
+      'UPDATE users SET experimenting_io_friend_id = NULL WHERE id = $1',
+      [userId]
+    )
+    console.log(`[Experiment] User ${userId} parou de experimentar`)
+    return { success: true }
+  } catch (error) {
+    console.error('[Experiment] Erro ao parar:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Buscar io friend em experimento do usuário
+async function getExperimentingIoFriend(userId) {
+  try {
+    const result = await pool.query(`
+      SELECT iof.*, u.nome as criador_nome
+      FROM users usr
+      JOIN io_friends iof ON usr.experimenting_io_friend_id = iof.id
+      JOIN users u ON iof.user_id = u.id
+      WHERE usr.id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+    `, [userId])
+
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[Experiment] Erro ao buscar:', error.message)
+    return null
+  }
+}
+
+// Adotar io friend (copiar configurações para a io do usuário)
+async function adoptIoFriend(userId, ioFriendId) {
+  try {
+    // Buscar io friend pública
+    const source = await pool.query(
+      'SELECT * FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      [ioFriendId]
+    )
+    if (source.rows.length === 0) {
+      return { error: 'io friend não encontrada' }
+    }
+
+    const srcFriend = source.rows[0]
+
+    // Verificar se usuário já tem io friend
+    const existing = await pool.query(
+      'SELECT id FROM io_friends WHERE user_id = $1',
+      [userId]
+    )
+
+    if (existing.rows.length > 0) {
+      // Atualizar existente
+      await pool.query(`
+        UPDATE io_friends SET
+          nome = $1,
+          personalidade = $2,
+          estilo_comunicacao = $3,
+          tom_emocional = $4,
+          nivel_iniciativa = $5,
+          usa_emojis = $6,
+          caracteristicas_extras = $7,
+          avatar_base64 = $8,
+          genero = $9,
+          perfil_publico = $10,
+          cenario = $11,
+          exemplos_dialogo = $12,
+          atualizado_em = NOW()
+        WHERE user_id = $13
+      `, [
+        srcFriend.nome,
+        srcFriend.personalidade,
+        srcFriend.estilo_comunicacao,
+        srcFriend.tom_emocional,
+        srcFriend.nivel_iniciativa,
+        srcFriend.usa_emojis,
+        srcFriend.caracteristicas_extras,
+        srcFriend.avatar_base64,
+        srcFriend.genero,
+        srcFriend.perfil_publico,
+        srcFriend.cenario,
+        srcFriend.exemplos_dialogo,
+        userId
+      ])
+    } else {
+      // Criar nova
+      await pool.query(`
+        INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_base64, genero, perfil_publico, cenario, exemplos_dialogo, publico)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, FALSE)
+      `, [
+        userId,
+        srcFriend.nome,
+        srcFriend.personalidade,
+        srcFriend.estilo_comunicacao,
+        srcFriend.tom_emocional,
+        srcFriend.nivel_iniciativa,
+        srcFriend.usa_emojis,
+        srcFriend.caracteristicas_extras,
+        srcFriend.avatar_base64,
+        srcFriend.genero,
+        srcFriend.perfil_publico,
+        srcFriend.cenario,
+        srcFriend.exemplos_dialogo
+      ])
+    }
+
+    // Parar de experimentar
+    await stopExperimentingIoFriend(userId)
+
+    console.log(`[Adopt] User ${userId} adotou io friend ${ioFriendId} (${srcFriend.nome})`)
+    return { success: true, ioFriendName: srcFriend.nome }
+  } catch (error) {
+    console.error('[Adopt] Erro:', error.message)
+    return { error: error.message }
+  }
+}
+
 module.exports = {
   pool,
   initDatabase,
@@ -915,5 +1070,10 @@ module.exports = {
   addPublicIoFriend,
   removePublicIoFriend,
   getUserPublicIoFriends,
-  getUserPublicIoFriendById
+  getUserPublicIoFriendById,
+  // Funções experimentar io friend
+  startExperimentingIoFriend,
+  stopExperimentingIoFriend,
+  getExperimentingIoFriend,
+  adoptIoFriend
 }
