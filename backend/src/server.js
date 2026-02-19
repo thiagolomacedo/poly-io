@@ -1950,8 +1950,12 @@ app.get('/api/connections', authMiddleware, async (req, res) => {
     `, [req.userId])
 
     // Se usuário tem io friend, substituir dados da io pelo da io friend
+    if (ioFriend) {
+      console.log(`[Connections] User ${req.userId} tem io friend: "${ioFriend.nome}"`)
+    }
     const connections = result.rows.map(conn => {
       if (conn.email === 'io@poly.io' && ioFriend) {
+        console.log(`[Connections] Substituindo io por io friend: "${ioFriend.nome}"`)
         return {
           ...conn,
           nome: ioFriend.nome,
