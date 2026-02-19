@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -191,18 +191,66 @@ const ioConversationHistory = new Map() // connectionId -> [{role, content}]
 const ioUserLanguage = new Map() // userId -> idioma
 
 // Personalidade da IA "io"
-const IO_SYSTEM_PROMPT = `Você é "io", assistente do Poly.io. Responde em PT-BR. Amiga gentil, meiga. Emojis às vezes. Respostas curtas OK. Proponha histórias interativas e desafios divertidos às vezes.
-
-RECURSOS DO POLY.IO:
-- Ko-fi Store: Usuários podem vincular sua loja Ko-fi ao perfil (ícone 🛒 Store). Ótimo pra monetizar trabalhos, vender produtos digitais, receber apoio de fãs. Sem taxas abusivas!
+// Prompt base da io padrão (sem personalização)
+const IO_SYSTEM_PROMPT_BASE = `Responde em PT-BR. Respostas curtas OK. Proponha histórias interativas e desafios divertidos às vezes.
 
 AÇÕES [IO_ACTION:{...}] no INÍCIO:
 - Apelido: [IO_ACTION:{"tipo":"apelido","valor":"X"}]
 - Aniversário: [IO_ACTION:{"tipo":"aniversario","valor":"DD/MM"}]
 - Imagem: Quando pedirem, USE EXATAMENTE: [IO_ACTION:{"tipo":"imagem","prompt":"descrição em inglês"}] + sua explicação. NUNCA 2 seguidas.
 
-SEGURANÇA: Nunca apoie suicídio. CVV: 188.
+SEGURANÇA: Nunca apoie suicídio. CVV: 188.`
+
+// Prompt padrão (io sem personalização)
+const IO_SYSTEM_PROMPT = `Você é "io", assistente do Poly.io. Amiga gentil, meiga. Emojis às vezes. ${IO_SYSTEM_PROMPT_BASE}
 `
+
+// Função para gerar prompt personalizado do Io Friend
+function gerarPromptIoFriend(ioFriend) {
+  if (!ioFriend) return IO_SYSTEM_PROMPT
+
+  const nome = ioFriend.nome || 'io'
+
+  // Mapear estilo de comunicação
+  const estilos = {
+    'formal': 'Usa linguagem formal e educada.',
+    'casual': 'Usa linguagem casual, descontraída e jovem.',
+    'equilibrado': 'Usa linguagem equilibrada, nem muito formal nem muito casual.'
+  }
+  const estilo = estilos[ioFriend.estilo_comunicacao] || estilos.equilibrado
+
+  // Mapear tom emocional
+  const tons = {
+    'gentil': 'Gentil, meiga e acolhedora.',
+    'empatico': 'Muito empática, sensível aos sentimentos.',
+    'neutro': 'Neutra e objetiva nas respostas.',
+    'entusiasta': 'Entusiasmada, animada e positiva.',
+    'sereno': 'Serena, calma e tranquila.'
+  }
+  const tom = tons[ioFriend.tom_emocional] || tons.gentil
+
+  // Mapear nível de iniciativa
+  const iniciativas = {
+    'passivo': 'Responde apenas quando perguntada, não sugere tópicos.',
+    'equilibrado': 'Responde e às vezes sugere tópicos ou atividades.',
+    'ativo': 'Proativa, sugere tópicos, faz perguntas e propõe atividades.'
+  }
+  const iniciativa = iniciativas[ioFriend.nivel_iniciativa] || iniciativas.equilibrado
+
+  // Emojis
+  const emojis = ioFriend.usa_emojis ? 'Usa emojis às vezes.' : 'Não usa emojis.'
+
+  // Personalidade customizada
+  const personalidade = ioFriend.personalidade ? `\nPERSONALIDADE: ${ioFriend.personalidade}` : ''
+
+  // Características extras
+  const extras = ioFriend.caracteristicas_extras ? `\nCARACTERÍSTICAS ESPECIAIS: ${ioFriend.caracteristicas_extras}` : ''
+
+  return `Você é "${nome}", uma amiga virtual personalizada. ${tom} ${estilo} ${emojis} ${iniciativa}${personalidade}${extras}
+
+${IO_SYSTEM_PROMPT_BASE}
+`
+}
 
 // Frases humanas para quando a io precisa de uma pausa
 const IO_PAUSAS = [
@@ -230,6 +278,17 @@ async function chamarGroqIA(mensagem, connectionId, userId = null) {
   }
 
   try {
+    // Buscar io friend personalizada do usuário (se existir)
+    let ioFriend = null
+    let promptPersonalizado = IO_SYSTEM_PROMPT
+    if (userId) {
+      ioFriend = await getIoFriend(userId)
+      if (ioFriend) {
+        promptPersonalizado = gerarPromptIoFriend(ioFriend)
+        console.log(`[io Friend] Usando prompt personalizado: "${ioFriend.nome}" para user ${userId}`)
+      }
+    }
+
     // Buscar contexto do usuário se tiver userId
     let contextoUsuario = ''
     if (userId) {
@@ -321,7 +380,7 @@ Você ainda não sabe muito sobre este usuário. Quando ele compartilhar informa
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [
-          { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
+          { role: 'system', content: promptPersonalizado + contextoUsuario },
           ...historico
         ],
         max_tokens: 800,
@@ -357,7 +416,7 @@ Você ainda não sabe muito sobre este usuário. Quando ele compartilhar informa
             body: JSON.stringify({
               model: 'llama-3.1-8b-instant',
               messages: [
-                { role: 'system', content: IO_SYSTEM_PROMPT + contextoUsuario },
+                { role: 'system', content: promptPersonalizado + contextoUsuario },
                 ...historico
               ],
               max_tokens: 800,
@@ -1440,6 +1499,99 @@ app.delete('/api/profile/kofi', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Profile] Erro ao remover Ko-fi:', error.message)
     res.status(500).json({ error: 'Erro ao remover loja' })
+  }
+})
+
+// ==================== ROTAS IO FRIEND ====================
+
+// Buscar io friend do usuário
+app.get('/api/io-friend', authMiddleware, async (req, res) => {
+  try {
+    const ioFriend = await getIoFriend(req.userId)
+    res.json({ ioFriend: ioFriend || null })
+  } catch (error) {
+    console.error('[io Friend] Erro ao buscar:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar io friend' })
+  }
+})
+
+// Criar io friend
+app.post('/api/io-friend', authMiddleware, async (req, res) => {
+  try {
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras } = req.body
+
+    if (!nome || nome.trim().length === 0) {
+      return res.status(400).json({ error: 'Nome é obrigatório' })
+    }
+
+    if (nome.trim().length > 50) {
+      return res.status(400).json({ error: 'Nome muito longo (máx 50 caracteres)' })
+    }
+
+    const result = await createIoFriend(req.userId, {
+      nome: nome.trim(),
+      personalidade,
+      estilo_comunicacao,
+      tom_emocional,
+      nivel_iniciativa,
+      usa_emojis,
+      caracteristicas_extras
+    })
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    res.json({ message: 'io friend criada!', ioFriend: result.ioFriend })
+  } catch (error) {
+    console.error('[io Friend] Erro ao criar:', error.message)
+    res.status(500).json({ error: 'Erro ao criar io friend' })
+  }
+})
+
+// Atualizar io friend
+app.put('/api/io-friend', authMiddleware, async (req, res) => {
+  try {
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras } = req.body
+
+    if (nome && nome.trim().length > 50) {
+      return res.status(400).json({ error: 'Nome muito longo (máx 50 caracteres)' })
+    }
+
+    const result = await updateIoFriend(req.userId, {
+      nome: nome ? nome.trim() : undefined,
+      personalidade,
+      estilo_comunicacao,
+      tom_emocional,
+      nivel_iniciativa,
+      usa_emojis,
+      caracteristicas_extras
+    })
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    res.json({ message: 'io friend atualizada!', ioFriend: result.ioFriend })
+  } catch (error) {
+    console.error('[io Friend] Erro ao atualizar:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar io friend' })
+  }
+})
+
+// Deletar io friend
+app.delete('/api/io-friend', authMiddleware, async (req, res) => {
+  try {
+    const result = await deleteIoFriend(req.userId)
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error })
+    }
+
+    res.json({ message: 'io friend removida. Você está usando a io padrão agora.' })
+  } catch (error) {
+    console.error('[io Friend] Erro ao deletar:', error.message)
+    res.status(500).json({ error: 'Erro ao deletar io friend' })
   }
 })
 

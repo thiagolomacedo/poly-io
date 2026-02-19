@@ -443,6 +443,15 @@
 
           <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
 
+          <!-- Botão io Friend (só para o próprio perfil) -->
+          <button
+            v-if="profileUser?.id === currentUser?.id"
+            class="btn-io-friend"
+            @click="openIoFriendModal"
+          >
+            {{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}
+          </button>
+
           <!-- Botão Adicionar Amigo (só para outros usuários sem conexão) -->
           <button
             v-if="profileUser?.id !== currentUser?.id && !isConnectedOrPending(profileUser?.id)"
@@ -468,6 +477,120 @@
           >
             Excluir conta
           </a>
+        </div>
+      </div>
+
+      <!-- Modal: io Friend (criar/editar) -->
+      <div v-if="showIoFriendModal" class="modal-overlay" @click="showIoFriendModal = false">
+        <div class="modal-content io-friend-modal" @click.stop>
+          <button class="modal-close" @click="showIoFriendModal = false">✕</button>
+          <h3>{{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}</h3>
+          <p class="io-friend-subtitle">Personalize sua assistente virtual</p>
+
+          <form @submit.prevent="saveIoFriend" class="io-friend-form">
+            <!-- Nome -->
+            <div class="form-group">
+              <label>Nome da sua io *</label>
+              <input
+                v-model="ioFriendForm.nome"
+                type="text"
+                placeholder="Ex: Luna, Aria, Mia..."
+                maxlength="50"
+                required
+              />
+            </div>
+
+            <!-- Personalidade -->
+            <div class="form-group">
+              <label>Personalidade</label>
+              <textarea
+                v-model="ioFriendForm.personalidade"
+                placeholder="Descreva como ela deve ser... Ex: Curiosa, adora falar sobre ciência e filosofia, tem um humor sutil"
+                maxlength="500"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <!-- Estilo de Comunicação -->
+            <div class="form-group">
+              <label>Estilo de comunicação</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.estilo_comunicacao" value="formal" />
+                  <span>Formal</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.estilo_comunicacao" value="equilibrado" />
+                  <span>Equilibrado</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" v-model="ioFriendForm.estilo_comunicacao" value="casual" />
+                  <span>Casual</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Tom Emocional -->
+            <div class="form-group">
+              <label>Tom emocional</label>
+              <select v-model="ioFriendForm.tom_emocional">
+                <option value="gentil">💕 Gentil e meiga</option>
+                <option value="empatico">🤗 Muito empática</option>
+                <option value="neutro">😐 Neutra e objetiva</option>
+                <option value="entusiasta">🎉 Entusiasmada</option>
+                <option value="sereno">🧘 Serena e calma</option>
+              </select>
+            </div>
+
+            <!-- Nível de Iniciativa -->
+            <div class="form-group">
+              <label>Nível de iniciativa</label>
+              <select v-model="ioFriendForm.nivel_iniciativa">
+                <option value="passivo">Passiva - só responde quando perguntada</option>
+                <option value="equilibrado">Equilibrada - às vezes sugere tópicos</option>
+                <option value="ativo">Ativa - sugere, pergunta e propõe</option>
+              </select>
+            </div>
+
+            <!-- Usa Emojis -->
+            <div class="form-group checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" v-model="ioFriendForm.usa_emojis" />
+                <span>Usa emojis nas respostas</span>
+              </label>
+            </div>
+
+            <!-- Características Extras -->
+            <div class="form-group">
+              <label>Características especiais (opcional)</label>
+              <textarea
+                v-model="ioFriendForm.caracteristicas_extras"
+                placeholder="Ex: Fala 'né' às vezes, gosta de usar analogias, sempre termina com uma pergunta..."
+                maxlength="500"
+                rows="2"
+              ></textarea>
+            </div>
+
+            <div class="modal-buttons">
+              <button type="submit" class="btn-primary" :disabled="savingIoFriend">
+                {{ savingIoFriend ? 'Salvando...' : (ioFriend ? 'Salvar' : 'Criar') }}
+              </button>
+              <button type="button" class="btn-secondary" @click="showIoFriendModal = false">Cancelar</button>
+              <button
+                v-if="ioFriend"
+                type="button"
+                class="btn-danger"
+                @click="removeIoFriend"
+                :disabled="savingIoFriend"
+              >
+                Remover
+              </button>
+            </div>
+          </form>
+
+          <p class="io-friend-tip">
+            💡 Sua io Friend terá memória e lembranças sobre você, igual a io padrão.
+          </p>
         </div>
       </div>
 
@@ -2497,6 +2620,20 @@ const tipTargetUser = ref(null)
 const nameInput = ref('')
 const nameInputRef = ref(null)
 
+// io Friend (assistente personalizada)
+const showIoFriendModal = ref(false)
+const ioFriend = ref(null)
+const savingIoFriend = ref(false)
+const ioFriendForm = ref({
+  nome: '',
+  personalidade: '',
+  estilo_comunicacao: 'equilibrado',
+  tom_emocional: 'gentil',
+  nivel_iniciativa: 'equilibrado',
+  usa_emojis: true,
+  caracteristicas_extras: ''
+})
+
 // Tipos de redes sociais disponíveis
 const redesSociais = {
   linkedin: { nome: 'LinkedIn', icone: '💼', placeholder: 'https://linkedin.com/in/seu-perfil' },
@@ -3537,6 +3674,115 @@ async function removeKofi() {
     }
   } catch (e) {
     console.error('Erro ao remover Ko-fi:', e)
+  }
+}
+
+// ==================== io Friend ====================
+
+// Carregar io friend do usuário
+async function loadIoFriend() {
+  try {
+    const res = await fetch(`${API_URL}/io-friend`, {
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      ioFriend.value = data.ioFriend
+      console.log('[io Friend]', ioFriend.value ? `Carregada: ${ioFriend.value.nome}` : 'Não tem (usando io padrão)')
+    }
+  } catch (e) {
+    console.error('[io Friend] Erro ao carregar:', e)
+  }
+}
+
+// Abrir modal io friend
+function openIoFriendModal() {
+  if (ioFriend.value) {
+    // Preencher form com dados existentes
+    ioFriendForm.value = {
+      nome: ioFriend.value.nome || '',
+      personalidade: ioFriend.value.personalidade || '',
+      estilo_comunicacao: ioFriend.value.estilo_comunicacao || 'equilibrado',
+      tom_emocional: ioFriend.value.tom_emocional || 'gentil',
+      nivel_iniciativa: ioFriend.value.nivel_iniciativa || 'equilibrado',
+      usa_emojis: ioFriend.value.usa_emojis !== false,
+      caracteristicas_extras: ioFriend.value.caracteristicas_extras || ''
+    }
+  } else {
+    // Form vazio para criar
+    ioFriendForm.value = {
+      nome: '',
+      personalidade: '',
+      estilo_comunicacao: 'equilibrado',
+      tom_emocional: 'gentil',
+      nivel_iniciativa: 'equilibrado',
+      usa_emojis: true,
+      caracteristicas_extras: ''
+    }
+  }
+  showIoFriendModal.value = true
+}
+
+// Salvar io friend (criar ou atualizar)
+async function saveIoFriend() {
+  if (!ioFriendForm.value.nome.trim()) {
+    alert('Digite um nome para sua io friend')
+    return
+  }
+
+  savingIoFriend.value = true
+
+  try {
+    const method = ioFriend.value ? 'PUT' : 'POST'
+    const res = await fetch(`${API_URL}/io-friend`, {
+      method,
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(ioFriendForm.value)
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      alert(data.error || 'Erro ao salvar')
+      return
+    }
+
+    ioFriend.value = data.ioFriend
+    showIoFriendModal.value = false
+    alert(ioFriend.value ? `${ioFriendForm.value.nome} salva com sucesso! 🎉` : 'io Friend criada!')
+  } catch (e) {
+    console.error('[io Friend] Erro ao salvar:', e)
+    alert('Erro ao salvar io friend')
+  } finally {
+    savingIoFriend.value = false
+  }
+}
+
+// Remover io friend
+async function removeIoFriend() {
+  if (!confirm(`Remover "${ioFriend.value?.nome}"? Você voltará a usar a io padrão.`)) return
+
+  savingIoFriend.value = true
+
+  try {
+    const res = await fetch(`${API_URL}/io-friend`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      ioFriend.value = null
+      showIoFriendModal.value = false
+      alert('io friend removida. Você está usando a io padrão agora.')
+    }
+  } catch (e) {
+    console.error('[io Friend] Erro ao remover:', e)
+    alert('Erro ao remover io friend')
+  } finally {
+    savingIoFriend.value = false
   }
 }
 
@@ -4674,6 +4920,9 @@ function handleServiceWorkerMessage(event) {
 async function initializeApp() {
   // Carregar configuração de contatos do servidor
   await loadContactsConfigFromServer()
+
+  // Carregar io friend do usuário (se existir)
+  await loadIoFriend()
 
   // Inicializar IndexedDB para arquivos pendentes
   try {
@@ -10892,6 +11141,148 @@ body {
 .modal-content h3 {
   margin-bottom: 16px;
   color: var(--text-primary);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Modal io Friend */
+.io-friend-modal {
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.io-friend-subtitle {
+  color: var(--text-secondary);
+  margin: -8px 0 20px;
+  font-size: 0.9rem;
+}
+
+.io-friend-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.io-friend-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.io-friend-form label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.io-friend-form input[type="text"],
+.io-friend-form textarea,
+.io-friend-form select {
+  padding: 12px;
+  background: #1a1a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.io-friend-form input:focus,
+.io-friend-form textarea:focus,
+.io-friend-form select:focus {
+  outline: none;
+  border-color: #a855f7;
+}
+
+.io-friend-form textarea {
+  resize: none;
+}
+
+.radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: #a855f7;
+}
+
+.checkbox-group {
+  padding: 8px 0;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-option input[type="checkbox"] {
+  accent-color: #a855f7;
+  width: 18px;
+  height: 18px;
+}
+
+.io-friend-tip {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(168, 85, 247, 0.1);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.btn-io-friend {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-io-friend:hover {
+  opacity: 0.9;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
 }
 
 /* Modal Imagine (Gerar Imagem) */

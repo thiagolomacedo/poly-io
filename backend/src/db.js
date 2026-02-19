@@ -261,6 +261,29 @@ async function initDatabase() {
     `)
     console.log('[DB] Tabela io_memories OK')
 
+    // ==================== TABELA IO FRIEND (Io Personalizada) ====================
+    // Cada usuário pode criar UMA io friend personalizada
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS io_friends (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        nome VARCHAR(50) NOT NULL DEFAULT 'io',
+        personalidade TEXT,
+        estilo_comunicacao VARCHAR(30) DEFAULT 'equilibrado',
+        tom_emocional VARCHAR(30) DEFAULT 'gentil',
+        nivel_iniciativa VARCHAR(20) DEFAULT 'equilibrado',
+        usa_emojis BOOLEAN DEFAULT TRUE,
+        caracteristicas_extras TEXT,
+        ativo BOOLEAN DEFAULT TRUE,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        atualizado_em TIMESTAMP DEFAULT NOW()
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_io_friends_user ON io_friends(user_id);
+    `)
+    console.log('[DB] Tabela io_friends OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -527,6 +550,113 @@ async function countIoMemories(userId) {
   }
 }
 
+// ==================== FUNÇÕES IO FRIEND ====================
+
+// Buscar io friend do usuário
+async function getIoFriend(userId) {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM io_friends WHERE user_id = $1 AND ativo = TRUE',
+      [userId]
+    )
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[io Friend] Erro ao buscar:', error.message)
+    return null
+  }
+}
+
+// Criar io friend
+async function createIoFriend(userId, config) {
+  try {
+    // Verificar se já existe
+    const existing = await pool.query(
+      'SELECT id FROM io_friends WHERE user_id = $1',
+      [userId]
+    )
+    if (existing.rows.length > 0) {
+      return { error: 'Você já tem uma io friend. Limite: 1 por usuário.' }
+    }
+
+    const result = await pool.query(`
+      INSERT INTO io_friends (user_id, nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      userId,
+      config.nome || 'io',
+      config.personalidade || null,
+      config.estilo_comunicacao || 'equilibrado',
+      config.tom_emocional || 'gentil',
+      config.nivel_iniciativa || 'equilibrado',
+      config.usa_emojis !== false,
+      config.caracteristicas_extras || null
+    ])
+
+    console.log(`[io Friend] Criada para user ${userId}: "${config.nome}"`)
+    return { created: true, ioFriend: result.rows[0] }
+  } catch (error) {
+    console.error('[io Friend] Erro ao criar:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Atualizar io friend
+async function updateIoFriend(userId, config) {
+  try {
+    const result = await pool.query(`
+      UPDATE io_friends SET
+        nome = COALESCE($2, nome),
+        personalidade = COALESCE($3, personalidade),
+        estilo_comunicacao = COALESCE($4, estilo_comunicacao),
+        tom_emocional = COALESCE($5, tom_emocional),
+        nivel_iniciativa = COALESCE($6, nivel_iniciativa),
+        usa_emojis = COALESCE($7, usa_emojis),
+        caracteristicas_extras = COALESCE($8, caracteristicas_extras),
+        atualizado_em = NOW()
+      WHERE user_id = $1
+      RETURNING *
+    `, [
+      userId,
+      config.nome,
+      config.personalidade,
+      config.estilo_comunicacao,
+      config.tom_emocional,
+      config.nivel_iniciativa,
+      config.usa_emojis,
+      config.caracteristicas_extras
+    ])
+
+    if (result.rows.length === 0) {
+      return { error: 'io friend não encontrada' }
+    }
+
+    console.log(`[io Friend] Atualizada para user ${userId}`)
+    return { updated: true, ioFriend: result.rows[0] }
+  } catch (error) {
+    console.error('[io Friend] Erro ao atualizar:', error.message)
+    return { error: error.message }
+  }
+}
+
+// Deletar io friend
+async function deleteIoFriend(userId) {
+  try {
+    const result = await pool.query(
+      'DELETE FROM io_friends WHERE user_id = $1 RETURNING id',
+      [userId]
+    )
+    if (result.rowCount > 0) {
+      console.log(`[io Friend] Deletada para user ${userId}`)
+      return { deleted: true }
+    }
+    return { error: 'io friend não encontrada' }
+  } catch (error) {
+    console.error('[io Friend] Erro ao deletar:', error.message)
+    return { error: error.message }
+  }
+}
+
 module.exports = {
   pool,
   initDatabase,
@@ -540,5 +670,10 @@ module.exports = {
   deleteIoMemory,
   clearIoMemories,
   countIoMemories,
-  MEMORY_LIMIT
+  MEMORY_LIMIT,
+  // Funções io friend
+  getIoFriend,
+  createIoFriend,
+  updateIoFriend,
+  deleteIoFriend
 }
