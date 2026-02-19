@@ -5463,7 +5463,8 @@ async function loadConnections() {
       online: c.user_id in onlineUsers,
       status: onlineUsers[c.user_id] || 'offline',
       io_friend_avatar: c.io_friend_avatar || null,
-      is_io_friend: c.is_io_friend || false
+      is_io_friend: c.is_io_friend || false,
+      is_experimenting: c.is_experimenting || false
     }))
 
     // Sincronizar ordem dos contatos com localStorage
