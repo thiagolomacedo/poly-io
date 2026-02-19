@@ -1323,7 +1323,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo, avatar_config, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, codigo_amigo, avatar_config, criado_em FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -1353,7 +1353,7 @@ app.put('/api/profile/social', authMiddleware, async (req, res) => {
     )
 
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, codigo_amigo FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, codigo_amigo FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -1376,6 +1376,64 @@ app.delete('/api/profile/social', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Profile] Erro ao remover rede social:', error.message)
     res.status(500).json({ error: 'Erro ao remover rede social' })
+  }
+})
+
+// Atualizar URL da loja Ko-fi
+app.put('/api/profile/kofi', authMiddleware, async (req, res) => {
+  try {
+    const { url } = req.body
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL é obrigatória' })
+    }
+
+    // Validar formato da URL (deve ser ko-fi.com/username ou ko-fi.com/username/shop)
+    const kofiRegex = /^(https?:\/\/)?(www\.)?ko-fi\.com\/[\w-]+(\/shop)?$/i
+    if (!kofiRegex.test(url.trim())) {
+      return res.status(400).json({ error: 'URL inválida. Use o formato: ko-fi.com/seu-usuario/shop' })
+    }
+
+    // Garantir que a URL tenha https e /shop no final
+    let normalizedUrl = url.trim()
+    if (!normalizedUrl.startsWith('http')) {
+      normalizedUrl = 'https://' + normalizedUrl
+    }
+    if (!normalizedUrl.endsWith('/shop')) {
+      normalizedUrl = normalizedUrl.replace(/\/$/, '') + '/shop'
+    }
+
+    await pool.query(
+      'UPDATE users SET kofi_url = $1 WHERE id = $2',
+      [normalizedUrl, req.userId]
+    )
+
+    const result = await pool.query(
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, codigo_amigo FROM users WHERE id = $1',
+      [req.userId]
+    )
+
+    console.log(`[Profile] Ko-fi Store configurada: ${normalizedUrl} (user ${req.userId})`)
+    res.json(result.rows[0])
+  } catch (error) {
+    console.error('[Profile] Erro ao atualizar Ko-fi:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar loja' })
+  }
+})
+
+// Remover URL da loja Ko-fi
+app.delete('/api/profile/kofi', authMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE users SET kofi_url = NULL WHERE id = $1',
+      [req.userId]
+    )
+
+    console.log(`[Profile] Ko-fi Store removida (user ${req.userId})`)
+    res.json({ message: 'Loja removida' })
+  } catch (error) {
+    console.error('[Profile] Erro ao remover Ko-fi:', error.message)
+    res.status(500).json({ error: 'Erro ao remover loja' })
   }
 })
 
@@ -1500,7 +1558,7 @@ app.get('/api/users', authMiddleware, async (req, res) => {
 app.get('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, avatar_config, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, avatar_config, criado_em FROM users WHERE id = $1',
       [req.params.id]
     )
 

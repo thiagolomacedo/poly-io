@@ -111,6 +111,11 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS io_ultima_conversa TIMESTAMP
     `)
 
+    // URL da loja Ko-fi do usuário
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS kofi_url VARCHAR(255)
+    `)
+
     // ==================== VERIFICAÇÃO DE IDADE ====================
     // Data de nascimento do usuário
     await client.query(`

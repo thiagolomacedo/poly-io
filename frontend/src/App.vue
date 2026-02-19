@@ -363,6 +363,64 @@
             </div>
           </div>
 
+          <!-- Ko-fi Store -->
+          <div class="profile-store">
+            <!-- Meu perfil - posso editar -->
+            <div v-if="profileUser?.id === currentUser?.id" class="store-edit">
+              <!-- Modo visualização -->
+              <div v-if="!editingKofi" class="store-display">
+                <a
+                  v-if="profileUser?.kofi_url"
+                  :href="profileUser.kofi_url"
+                  target="_blank"
+                  class="store-link"
+                >
+                  <span class="store-icon">🛒</span>
+                  Store
+                </a>
+                <span v-else class="store-empty">Sem loja</span>
+                <button class="btn-edit-store" @click="editingKofi = true">
+                  {{ profileUser?.kofi_url ? 'Editar' : 'Criar Store' }}
+                </button>
+              </div>
+              <!-- Modo edição -->
+              <div v-else class="store-form">
+                <p class="store-info">
+                  <a href="https://ko-fi.com" target="_blank">Crie sua loja no Ko-fi</a> (grátis, 0% taxa)
+                </p>
+                <input
+                  v-model="kofiUrlInput"
+                  type="url"
+                  placeholder="ko-fi.com/seu-usuario/shop"
+                  class="store-input"
+                />
+                <div class="store-buttons">
+                  <button class="btn-save" @click="saveKofi">Salvar</button>
+                  <button class="btn-cancel" @click="editingKofi = false">Cancelar</button>
+                  <button
+                    v-if="profileUser?.kofi_url"
+                    class="btn-remove"
+                    @click="removeKofi"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Perfil de outro usuário - só visualizar -->
+            <div v-else>
+              <a
+                v-if="profileUser?.kofi_url"
+                :href="profileUser.kofi_url"
+                target="_blank"
+                class="store-link"
+              >
+                <span class="store-icon">🛒</span>
+                Store
+              </a>
+            </div>
+          </div>
+
           <p class="profile-tip">Foto via Gravatar (gravatar.com)</p>
 
           <!-- Botão Adicionar Amigo (só para outros usuários sem conexão) -->
@@ -2366,6 +2424,8 @@ const profileUser = ref(null)
 const editingSocial = ref(false)
 const socialTipoInput = ref('')
 const socialUrlInput = ref('')
+const editingKofi = ref(false)
+const kofiUrlInput = ref('')
 const codeCopied = ref(false)
 const linkCopied = ref(false)
 const editingName = ref(false)
@@ -3276,7 +3336,9 @@ async function openProfile(user) {
   }
   socialTipoInput.value = profileUser.value.social_tipo || ''
   socialUrlInput.value = profileUser.value.social_url || ''
+  kofiUrlInput.value = profileUser.value.kofi_url || ''
   editingSocial.value = false
+  editingKofi.value = false
   editingName.value = false
   showProfileModal.value = true
 }
@@ -3362,6 +3424,54 @@ async function removeSocial() {
     }
   } catch (e) {
     console.error('Erro ao remover rede social:', e)
+  }
+}
+
+// Salvar URL da loja Ko-fi
+async function saveKofi() {
+  if (!kofiUrlInput.value.trim()) {
+    alert('Digite a URL da sua loja Ko-fi')
+    return
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/profile/kofi`, {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: kofiUrlInput.value.trim() })
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      currentUser.value.kofi_url = updated.kofi_url
+      profileUser.value.kofi_url = updated.kofi_url
+      kofiUrlInput.value = updated.kofi_url
+      editingKofi.value = false
+    } else {
+      const err = await res.json()
+      alert(err.error || 'Erro ao salvar loja')
+    }
+  } catch (e) {
+    console.error('Erro ao salvar Ko-fi:', e)
+  }
+}
+
+// Remover URL da loja Ko-fi
+async function removeKofi() {
+  if (!confirm('Remover loja do perfil?')) return
+
+  try {
+    const res = await fetch(`${API_URL}/profile/kofi`, {
+      method: 'DELETE',
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      currentUser.value.kofi_url = null
+      profileUser.value.kofi_url = null
+      kofiUrlInput.value = ''
+      editingKofi.value = false
+    }
+  } catch (e) {
+    console.error('Erro ao remover Ko-fi:', e)
   }
 }
 
@@ -9906,6 +10016,137 @@ body {
 }
 
 .social-buttons .btn-remove:hover {
+  background: #b91c1c;
+}
+
+/* Ko-fi Store */
+.profile-store {
+  margin-bottom: 20px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #222;
+}
+
+.store-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #ff5e5b, #ff9966);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.store-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 94, 91, 0.4);
+}
+
+.store-icon {
+  font-size: 1.1rem;
+}
+
+.store-empty {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.store-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.btn-edit-store {
+  padding: 8px 16px;
+  background: #333;
+  border: none;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-edit-store:hover {
+  background: #444;
+  color: #fff;
+}
+
+.store-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.store-info {
+  font-size: 0.8rem;
+  color: #888;
+  text-align: center;
+}
+
+.store-info a {
+  color: #ff5e5b;
+  text-decoration: none;
+}
+
+.store-info a:hover {
+  text-decoration: underline;
+}
+
+.store-input {
+  padding: 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.store-input:focus {
+  border-color: #ff5e5b;
+  outline: none;
+}
+
+.store-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.store-buttons .btn-save {
+  flex: 1;
+  padding: 10px;
+  background: #ff5e5b;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.store-buttons .btn-cancel {
+  flex: 1;
+  padding: 10px;
+  background: #333;
+  border: none;
+  border-radius: 8px;
+  color: #888;
+  cursor: pointer;
+}
+
+.store-buttons .btn-remove {
+  padding: 10px;
+  background: #dc2626;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.store-buttons .btn-remove:hover {
   background: #b91c1c;
 }
 
