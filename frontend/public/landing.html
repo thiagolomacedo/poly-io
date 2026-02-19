@@ -406,18 +406,23 @@
     }
 
     .manifesto-container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 4rem;
     }
 
     .manifesto-image {
-      display: block;
+      flex-shrink: 0;
       max-width: 280px;
       height: auto;
-      margin: 0 auto 2rem;
       border-radius: 16px;
       filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.3));
+    }
+
+    .manifesto-text {
+      text-align: left;
     }
 
     .manifesto-quote {
@@ -426,6 +431,16 @@
       line-height: 1.4;
       margin-bottom: 2rem;
       color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .manifesto-container {
+        flex-direction: column;
+        text-align: center;
+      }
+      .manifesto-text {
+        text-align: center;
+      }
     }
 
     .manifesto-quote::before {
@@ -1396,13 +1411,15 @@
   <section class="manifesto">
     <div class="manifesto-container">
       <img src="/io-friend-hero.png" alt="io Friend" class="manifesto-image">
-      <p class="manifesto-quote">
-        No Poly.io, conversas não ficam guardadas. Elas acontecem.
-      </p>
-      <p class="manifesto-explanation">
-        Mensagens expiram em 24 horas. Salas desaparecem quando param de ser usadas.
-        Aqui, o foco é estar presente — não acumular histórico.
-      </p>
+      <div class="manifesto-text">
+        <p class="manifesto-quote">
+          No Poly.io, conversas não ficam guardadas. Elas acontecem.
+        </p>
+        <p class="manifesto-explanation">
+          Mensagens expiram em 24 horas. Salas desaparecem quando param de ser usadas.
+          Aqui, o foco é estar presente — não acumular histórico.
+        </p>
+      </div>
     </div>
   </section>
 
