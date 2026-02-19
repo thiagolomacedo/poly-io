@@ -38,12 +38,17 @@
 
           <div class="form-group">
             <label>Senha</label>
-            <input
-              v-model="loginForm.senha"
-              type="password"
-              placeholder="Sua senha"
-              required
-            />
+            <div class="password-wrapper">
+              <input
+                v-model="loginForm.senha"
+                :type="showLoginPassword ? 'text' : 'password'"
+                placeholder="Sua senha"
+                required
+              />
+              <button type="button" class="password-toggle" @click="showLoginPassword = !showLoginPassword">
+                {{ showLoginPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
 
           <label class="remember-me">
@@ -84,13 +89,18 @@
 
           <div class="form-group">
             <label>Senha</label>
-            <input
-              v-model="registerForm.senha"
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              minlength="6"
-              required
-            />
+            <div class="password-wrapper">
+              <input
+                v-model="registerForm.senha"
+                :type="showRegisterPassword ? 'text' : 'password'"
+                placeholder="Mínimo 6 caracteres"
+                minlength="6"
+                required
+              />
+              <button type="button" class="password-toggle" @click="showRegisterPassword = !showRegisterPassword">
+                {{ showRegisterPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
 
           <div class="form-row">
@@ -190,23 +200,33 @@
         <form @submit.prevent="resetPassword" class="auth-form">
           <div class="form-group">
             <label>Nova Senha</label>
-            <input
-              v-model="newPassword"
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              minlength="6"
-              required
-            />
+            <div class="password-wrapper">
+              <input
+                v-model="newPassword"
+                :type="showNewPassword ? 'text' : 'password'"
+                placeholder="Mínimo 6 caracteres"
+                minlength="6"
+                required
+              />
+              <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
+                {{ showNewPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label>Confirmar Senha</label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              placeholder="Confirme a senha"
-              minlength="6"
-              required
-            />
+            <div class="password-wrapper">
+              <input
+                v-model="confirmPassword"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                placeholder="Confirme a senha"
+                minlength="6"
+                required
+              />
+              <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+                {{ showConfirmPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
           <button type="submit" class="btn-primary" :disabled="loading">
             {{ loading ? 'Salvando...' : 'Salvar Nova Senha' }}
@@ -1999,6 +2019,12 @@ const registerForm = ref({
   dataNascimento: '',
   maiorIdadeConfirmado: false
 })
+
+// Mostrar/ocultar senhas
+const showLoginPassword = ref(false)
+const showRegisterPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
 
 // Calcula se é maior de idade baseado na data de nascimento
 const isMaiorDeIdade = computed(() => {
@@ -7504,6 +7530,34 @@ body {
 .form-group input:focus,
 .form-group select:focus {
   border-color: var(--accent);
+}
+
+/* Password toggle */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  flex: 1;
+  padding-right: 45px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.password-toggle:hover {
+  opacity: 1;
 }
 
 .form-row {
