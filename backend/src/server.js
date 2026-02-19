@@ -1395,20 +1395,19 @@ app.put('/api/profile/kofi', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'URL é obrigatória' })
     }
 
-    // Validar formato da URL (deve ser ko-fi.com/username ou ko-fi.com/username/shop)
+    // Validar formato da URL (ko-fi.com/username com ou sem /shop)
     const kofiRegex = /^(https?:\/\/)?(www\.)?ko-fi\.com\/[\w-]+(\/shop)?$/i
     if (!kofiRegex.test(url.trim())) {
-      return res.status(400).json({ error: 'URL inválida. Use o formato: ko-fi.com/seu-usuario/shop' })
+      return res.status(400).json({ error: 'URL inválida. Use o formato: ko-fi.com/seu-usuario' })
     }
 
-    // Garantir que a URL tenha https e /shop no final
+    // Garantir que a URL tenha https (não forçar /shop para permitir gorjetas)
     let normalizedUrl = url.trim()
     if (!normalizedUrl.startsWith('http')) {
       normalizedUrl = 'https://' + normalizedUrl
     }
-    if (!normalizedUrl.endsWith('/shop')) {
-      normalizedUrl = normalizedUrl.replace(/\/$/, '') + '/shop'
-    }
+    // Remove trailing slash se houver
+    normalizedUrl = normalizedUrl.replace(/\/$/, '')
 
     await pool.query(
       'UPDATE users SET kofi_url = $1 WHERE id = $2',

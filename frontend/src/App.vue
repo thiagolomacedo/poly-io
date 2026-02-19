@@ -411,7 +411,7 @@
                 <input
                   v-model="kofiUrlInput"
                   type="url"
-                  placeholder="ko-fi.com/seu-usuario/shop"
+                  placeholder="ko-fi.com/seu-usuario"
                   class="store-input"
                 />
                 <div class="store-buttons">
