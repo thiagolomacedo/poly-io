@@ -4779,6 +4779,7 @@ async function loadConnections() {
       idioma: c.idioma,
       pais: c.pais,
       avatar_config: c.avatar_config,
+      kofi_url: c.kofi_url,
       online: c.user_id in onlineUsers,
       status: onlineUsers[c.user_id] || 'offline'
     }))
