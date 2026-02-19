@@ -1967,7 +1967,21 @@ app.get('/api/users/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado' })
     }
 
-    res.json(result.rows[0])
+    const user = result.rows[0]
+
+    // Buscar io friend do usuário (se existir e for pública, ou se é o próprio usuário)
+    const isOwnProfile = parseInt(req.params.id) === req.userId
+    const ioFriendQuery = isOwnProfile
+      ? 'SELECT id, nome, avatar_base64, publico FROM io_friends WHERE user_id = $1'
+      : 'SELECT id, nome, avatar_base64, publico FROM io_friends WHERE user_id = $1 AND publico = TRUE'
+
+    const ioFriendResult = await pool.query(ioFriendQuery, [req.params.id])
+
+    if (ioFriendResult.rows.length > 0) {
+      user.created_io_friend = ioFriendResult.rows[0]
+    }
+
+    res.json(user)
   } catch (error) {
     console.error('[Users] Erro ao buscar perfil:', error.message)
     res.status(500).json({ error: 'Erro ao buscar perfil' })

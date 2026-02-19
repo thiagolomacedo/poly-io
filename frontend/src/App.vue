@@ -268,11 +268,23 @@
         <div class="profile-modal" @click.stop>
           <button class="profile-close" @click="showProfileModal = false">✕</button>
 
-          <div class="profile-avatar-large">
-            <img
-              :src="getUserAvatarUrl(profileUser, 150)"
-              :alt="profileUser.nome"
-            />
+          <div class="profile-avatar-container">
+            <div class="profile-avatar-large">
+              <img
+                :src="getUserAvatarUrl(profileUser, 150)"
+                :alt="profileUser.nome"
+              />
+            </div>
+            <!-- io Friend criada pelo usuário -->
+            <div v-if="profileUser?.created_io_friend" class="profile-io-friend-badge" :title="'io Friend: ' + profileUser.created_io_friend.nome">
+              <img
+                v-if="profileUser.created_io_friend.avatar_base64"
+                :src="profileUser.created_io_friend.avatar_base64"
+                :alt="profileUser.created_io_friend.nome"
+                class="io-friend-mini-avatar"
+              />
+              <div v-else class="io-friend-mini-default">🤖</div>
+            </div>
           </div>
 
           <div class="profile-name-row">
@@ -3756,9 +3768,7 @@ function cancelAvatarEdit() {
 
 // Abrir modal de perfil
 async function openProfile(user) {
-  if (user.id === currentUser.value.id) {
-    profileUser.value = { ...currentUser.value }
-  } else if (user.is_io_friend || user.io_friend_avatar) {
+  if (user.is_io_friend || user.io_friend_avatar) {
     // io Friend - usar dados já carregados (não buscar do /users pois não tem io_friend data)
     profileUser.value = { ...user }
     if (ioFriend.value) {
@@ -3766,14 +3776,20 @@ async function openProfile(user) {
       profileUser.value.io_friend_avatar = ioFriend.value.avatar_base64
     }
   } else {
-    // Buscar dados completos do usuário
+    // Buscar dados completos do usuário (inclui io friend criada)
     try {
       const res = await fetch(`${API_URL}/users/${user.id}`, {
         headers: authHeaders()
       })
-      profileUser.value = await res.json()
+      const userData = await res.json()
+      // Para o próprio usuário, mesclar com currentUser para ter dados mais atualizados
+      if (user.id === currentUser.value.id) {
+        profileUser.value = { ...currentUser.value, ...userData }
+      } else {
+        profileUser.value = userData
+      }
     } catch (e) {
-      profileUser.value = user
+      profileUser.value = user.id === currentUser.value.id ? { ...currentUser.value } : user
     }
   }
   socialTipoInput.value = profileUser.value.social_tipo || ''
@@ -10701,6 +10717,52 @@ body {
 
 .profile-avatar-large img + .profile-letter {
   display: none;
+}
+
+/* Container para avatar + io friend badge */
+.profile-avatar-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.profile-avatar-container .profile-avatar-large {
+  margin: 0;
+}
+
+/* Badge da io Friend criada */
+.profile-io-friend-badge {
+  position: absolute;
+  right: calc(50% - 75px);
+  top: 0;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: 3px solid var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.profile-io-friend-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.io-friend-mini-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.io-friend-mini-default {
+  font-size: 20px;
 }
 
 .profile-name {
