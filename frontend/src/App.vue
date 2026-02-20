@@ -118,6 +118,12 @@
                 <option value="zh">中文</option>
                 <option value="ru">Русский</option>
                 <option value="ar">العربية</option>
+                <option value="hi">हिन्दी</option>
+                <option value="tr">Türkçe</option>
+                <option value="nl">Nederlands</option>
+                <option value="pl">Polski</option>
+                <option value="vi">Tiếng Việt</option>
+                <option value="id">Bahasa Indonesia</option>
               </select>
             </div>
 
@@ -3034,7 +3040,7 @@ const redesSociais = {
   website: { nome: 'Website', icone: '🌐', placeholder: 'https://seu-site.com' }
 }
 
-// Idiomas
+// Idiomas (17 idiomas - cobertura ~92% do mundo)
 const idiomas = {
   pt: 'Português',
   en: 'English',
@@ -3046,7 +3052,13 @@ const idiomas = {
   ko: '한국어',
   zh: '中文',
   ru: 'Русский',
-  ar: 'العربية'
+  ar: 'العربية',
+  hi: 'हिन्दी',
+  tr: 'Türkçe',
+  nl: 'Nederlands',
+  pl: 'Polski',
+  vi: 'Tiếng Việt',
+  id: 'Bahasa Indonesia'
 }
 
 // Lista de idiomas para o dropdown (exclui o idioma do perfil)
@@ -3175,6 +3187,41 @@ function generateFlagSvg(idioma, size = 80) {
       <circle cx="50" cy="50" r="48" fill="#006C35"/>
       <rect x="20" y="58" width="60" height="4" rx="2" fill="#fff"/>
       <text x="50" y="48" font-size="12" fill="#fff" text-anchor="middle" font-family="Arial">ﷲ</text>
+    </svg>`,
+    // Índia - Laranja, branco, verde com Ashoka Chakra
+    hi: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#FF9933"/>
+      <path d="M50,98 A48,48 0 0,1 2,50 L98,50 A48,48 0 0,1 50,98" fill="#138808"/>
+      <circle cx="50" cy="50" r="10" fill="none" stroke="#000080" stroke-width="2"/>
+    </svg>`,
+    // Turquia - Vermelho com lua e estrela
+    tr: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#E30A17"/>
+      <circle cx="42" cy="50" r="16" fill="#fff"/>
+      <circle cx="46" cy="50" r="13" fill="#E30A17"/>
+      <text x="62" y="56" font-size="18" fill="#fff">★</text>
+    </svg>`,
+    // Holanda - Vermelho, branco, azul (horizontal)
+    nl: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#21468B"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#AE1C28"/>
+      <rect x="2" y="35" width="96" height="30" fill="#fff"/>
+    </svg>`,
+    // Polônia - Branco e vermelho
+    pl: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#DC143C"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#fff"/>
+    </svg>`,
+    // Vietnã - Vermelho com estrela amarela
+    vi: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#DA251D"/>
+      <text x="50" y="62" font-size="40" fill="#FFFF00" text-anchor="middle">★</text>
+    </svg>`,
+    // Indonésia - Vermelho e branco
+    id: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}">
+      <circle cx="50" cy="50" r="48" fill="#fff"/>
+      <path d="M50,2 A48,48 0 0,1 98,50 L2,50 A48,48 0 0,1 50,2" fill="#CE1126"/>
     </svg>`
   }
 
