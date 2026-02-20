@@ -145,6 +145,11 @@ async function initDatabase() {
       UPDATE users SET is_founder = TRUE, max_io_friends = 2, max_rooms = 2 WHERE is_founder IS NULL
     `)
 
+    // Garantir que TODOS os fundadores tenham os limites corretos (2 io friends, 2 salas)
+    await client.query(`
+      UPDATE users SET max_io_friends = 2, max_rooms = 2 WHERE is_founder = TRUE AND (max_io_friends < 2 OR max_rooms < 2)
+    `)
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários
