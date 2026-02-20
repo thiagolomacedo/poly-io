@@ -321,7 +321,7 @@
           <!-- Badge Membro Fundador -->
           <div v-if="profileUser?.is_founder" class="founder-badge">
             <span class="founder-star">✦</span>
-            Fundador
+            {{ profileUser?.id === 1 ? 'CEO Fundador' : 'Fundador' }}
           </div>
 
           <!-- Código de Conexão -->
