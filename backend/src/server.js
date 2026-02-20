@@ -984,6 +984,41 @@ async function traduzirComAzure(texto, idiomaOrigem, idiomaDestino) {
   throw new Error('Azure translation failed')
 }
 
+// Lingva - API gratuita e ILIMITADA (usa Google Translate por trás)
+// Instâncias públicas disponíveis para fallback
+const LINGVA_INSTANCES = [
+  'lingva.ml',
+  'translate.plausibility.cloud',
+  'lingva.lunar.icu',
+  'translate.projectsegfau.lt'
+]
+
+async function traduzirComLingva(texto, idiomaOrigem, idiomaDestino) {
+  // Lingva usa códigos padrão, mas zh precisa ser zh para chinês simplificado
+  const source = idiomaOrigem === 'zh' ? 'zh' : idiomaOrigem
+  const target = idiomaDestino === 'zh' ? 'zh' : idiomaDestino
+
+  // Tentar cada instância até uma funcionar
+  for (const instance of LINGVA_INSTANCES) {
+    try {
+      const url = `https://${instance}/api/v1/${source}/${target}/${encodeURIComponent(texto)}`
+      const response = await fetch(url, { timeout: 5000 })
+
+      if (!response.ok) continue
+
+      const data = await response.json()
+      if (data.translation) {
+        console.log(`  [Lingva/${instance}] "${texto.substring(0, 30)}..." → "${data.translation.substring(0, 30)}..."`)
+        return data.translation
+      }
+    } catch (error) {
+      console.log(`  [Lingva/${instance}] Erro: ${error.message}`)
+      continue
+    }
+  }
+  throw new Error('Lingva translation failed on all instances')
+}
+
 async function traduzirComMyMemory(texto, idiomaOrigem, idiomaDestino) {
   const langPair = `${idiomaOrigem}|${idiomaDestino}`
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${langPair}`
@@ -1084,6 +1119,7 @@ async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
   let azureOrigem = idiomaOrigem === 'zh' ? 'zh-Hans' : idiomaOrigem
   let azureDestino = idiomaDestino === 'zh' ? 'zh-Hans' : idiomaDestino
 
+  // 1. Azure (se configurado)
   if (AZURE_KEY) {
     try {
       return await traduzirComAzure(textoParaTraduzir, azureOrigem, azureDestino)
@@ -1092,6 +1128,14 @@ async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
     }
   }
 
+  // 2. Lingva (gratuito e ILIMITADO - usa Google Translate)
+  try {
+    return await traduzirComLingva(textoParaTraduzir, idiomaOrigem, idiomaDestino)
+  } catch (error) {
+    console.log('  [Lingva] Todas as instâncias falharam')
+  }
+
+  // 3. MyMemory (fallback - tem limite de 50k chars/dia)
   try {
     return await traduzirComMyMemory(textoParaTraduzir, idiomaOrigem, idiomaDestino)
   } catch (error) {
