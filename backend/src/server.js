@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -1529,7 +1529,7 @@ app.delete('/api/profile/kofi', authMiddleware, async (req, res) => {
 
 // ==================== ROTAS IO FRIEND ====================
 
-// Buscar io friend do usuário
+// Buscar io friend do usuário (primeira ativa - compatibilidade)
 app.get('/api/io-friend', authMiddleware, async (req, res) => {
   try {
     const ioFriend = await getIoFriend(req.userId)
@@ -1537,6 +1537,17 @@ app.get('/api/io-friend', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[io Friend] Erro ao buscar:', error.message)
     res.status(500).json({ error: 'Erro ao buscar io friend' })
+  }
+})
+
+// Buscar TODAS as io friends do usuário (para fundadores com múltiplas)
+app.get('/api/io-friends/mine', authMiddleware, async (req, res) => {
+  try {
+    const ioFriends = await getAllIoFriends(req.userId)
+    res.json({ ioFriends })
+  } catch (error) {
+    console.error('[io Friends] Erro ao buscar:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar io friends' })
   }
 })
 
@@ -1618,7 +1629,7 @@ app.put('/api/io-friend', authMiddleware, async (req, res) => {
   }
 })
 
-// Deletar io friend
+// Deletar io friend (primeira/única do usuário)
 app.delete('/api/io-friend', authMiddleware, async (req, res) => {
   try {
     const result = await deleteIoFriend(req.userId)
@@ -1630,6 +1641,96 @@ app.delete('/api/io-friend', authMiddleware, async (req, res) => {
     res.json({ message: 'io friend removida. Você está usando a io padrão agora.' })
   } catch (error) {
     console.error('[io Friend] Erro ao deletar:', error.message)
+    res.status(500).json({ error: 'Erro ao deletar io friend' })
+  }
+})
+
+// Atualizar io friend específica por ID (para fundadores com múltiplas)
+app.put('/api/io-friend/:id', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+    const { nome, personalidade, estilo_comunicacao, tom_emocional, nivel_iniciativa, usa_emojis, caracteristicas_extras, avatar_prompt, avatar_base64, genero, perfil_publico, cenario, exemplos_dialogo, publico } = req.body
+
+    if (nome && nome.trim().length > 50) {
+      return res.status(400).json({ error: 'Nome muito longo (máx 50 caracteres)' })
+    }
+
+    // Verificar se a io friend pertence ao usuário
+    const check = await pool.query(
+      'SELECT id FROM io_friends WHERE id = $1 AND user_id = $2',
+      [ioFriendId, req.userId]
+    )
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'io friend não encontrada' })
+    }
+
+    // Atualizar
+    const result = await pool.query(`
+      UPDATE io_friends SET
+        nome = COALESCE($2, nome),
+        personalidade = COALESCE($3, personalidade),
+        estilo_comunicacao = COALESCE($4, estilo_comunicacao),
+        tom_emocional = COALESCE($5, tom_emocional),
+        nivel_iniciativa = COALESCE($6, nivel_iniciativa),
+        usa_emojis = COALESCE($7, usa_emojis),
+        caracteristicas_extras = COALESCE($8, caracteristicas_extras),
+        avatar_prompt = COALESCE($9, avatar_prompt),
+        avatar_base64 = COALESCE($10, avatar_base64),
+        genero = COALESCE($11, genero),
+        perfil_publico = COALESCE($12, perfil_publico),
+        cenario = COALESCE($13, cenario),
+        exemplos_dialogo = COALESCE($14, exemplos_dialogo),
+        publico = COALESCE($15, publico),
+        atualizado_em = NOW()
+      WHERE id = $1
+      RETURNING *
+    `, [
+      ioFriendId,
+      nome ? nome.trim() : null,
+      personalidade,
+      estilo_comunicacao,
+      tom_emocional,
+      nivel_iniciativa,
+      usa_emojis,
+      caracteristicas_extras,
+      avatar_prompt,
+      avatar_base64,
+      genero,
+      perfil_publico,
+      cenario,
+      exemplos_dialogo,
+      publico
+    ])
+
+    console.log(`[io Friend] Atualizada id ${ioFriendId} (user ${req.userId})`)
+    res.json({ message: 'io friend atualizada!', ioFriend: result.rows[0] })
+  } catch (error) {
+    console.error('[io Friend] Erro ao atualizar por ID:', error.message)
+    res.status(500).json({ error: 'Erro ao atualizar io friend' })
+  }
+})
+
+// Deletar io friend específica por ID (para fundadores com múltiplas)
+app.delete('/api/io-friend/:id', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+
+    // Verificar se a io friend pertence ao usuário
+    const check = await pool.query(
+      'SELECT id FROM io_friends WHERE id = $1 AND user_id = $2',
+      [ioFriendId, req.userId]
+    )
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'io friend não encontrada' })
+    }
+
+    // Deletar
+    await pool.query('DELETE FROM io_friends WHERE id = $1', [ioFriendId])
+
+    console.log(`[io Friend] Deletada id ${ioFriendId} (user ${req.userId})`)
+    res.json({ message: 'io friend removida.' })
+  } catch (error) {
+    console.error('[io Friend] Erro ao deletar por ID:', error.message)
     res.status(500).json({ error: 'Erro ao deletar io friend' })
   }
 })
@@ -3526,24 +3627,24 @@ app.get('/api/rooms', authMiddleware, async (req, res) => {
   }
 })
 
-// Buscar minha sala (se existir)
+// Buscar minhas salas (fundadores podem ter múltiplas)
 app.get('/api/rooms/mine', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT * FROM rooms WHERE owner_id = $1 AND status != 'deleted'
+      ORDER BY criado_em ASC
     `, [req.userId])
 
-    if (result.rows.length === 0) {
-      return res.json(null)
-    }
+    // Adicionar contagem de usuários online em cada sala
+    const rooms = result.rows.map(room => ({
+      ...room,
+      online_count: salaUsuarios.get(room.id)?.size || 0
+    }))
 
-    const room = result.rows[0]
-    room.online_count = salaUsuarios.get(room.id)?.size || 0
-
-    res.json(room)
+    res.json(rooms)
   } catch (error) {
-    console.error('[Rooms] Erro ao buscar minha sala:', error.message)
-    res.status(500).json({ error: 'Erro ao buscar sala' })
+    console.error('[Rooms] Erro ao buscar minhas salas:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar salas' })
   }
 })
 

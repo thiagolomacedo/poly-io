@@ -469,14 +469,49 @@
           <p v-if="profileUser?.avatar_config?.type === 'gravatar'" class="profile-tip">Foto via Gravatar (gravatar.com)</p>
           <p v-else-if="profileUser?.io_friend_avatar" class="profile-tip">Avatar gerado por IA</p>
 
-          <!-- Botão io Friend (só para o próprio perfil) -->
-          <button
-            v-if="profileUser?.id === currentUser?.id"
-            class="btn-io-friend"
-            @click="openIoFriendModal"
-          >
-            {{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}
-          </button>
+          <!-- Seção io Friends (só para o próprio perfil) -->
+          <div v-if="profileUser?.id === currentUser?.id" class="io-friends-section">
+            <!-- Lista de io friends do usuário (se tiver) -->
+            <div v-if="ioFriends.length > 0" class="my-io-friends-list">
+              <div
+                v-for="friend in ioFriends"
+                :key="friend.id"
+                class="my-io-friend-item"
+              >
+                <img
+                  v-if="friend.avatar_base64"
+                  :src="friend.avatar_base64"
+                  :alt="friend.nome"
+                  class="io-friend-thumb"
+                />
+                <span class="io-friend-name">{{ friend.nome }}</span>
+                <button
+                  class="btn-edit-mini"
+                  @click="openIoFriendModal(friend)"
+                  title="Editar"
+                >✏️</button>
+                <button
+                  class="btn-delete-mini"
+                  @click="removeIoFriend(friend.id)"
+                  title="Excluir"
+                >🗑️</button>
+              </div>
+            </div>
+
+            <!-- Botão Criar Nova io Friend (se não atingiu limite) -->
+            <button
+              v-if="ioFriends.length < (currentUser?.max_io_friends || 1)"
+              class="btn-io-friend"
+              @click="openIoFriendModal()"
+            >
+              ✨ {{ ioFriends.length === 0 ? 'Criar io Friend' : 'Criar Nova io Friend' }}
+            </button>
+
+            <!-- Info de limite para fundadores -->
+            <p v-if="currentUser?.is_founder && currentUser?.max_io_friends > 1" class="founder-io-limit">
+              {{ ioFriends.length }}/{{ currentUser.max_io_friends }} io friends
+            </p>
+          </div>
 
           <!-- Botão Explorar io Friends Públicas -->
           <button
@@ -519,7 +554,7 @@
       <div v-if="showIoFriendModal" class="modal-overlay" @click="showIoFriendModal = false">
         <div class="modal-content io-friend-modal" @click.stop>
           <button class="modal-close" @click="showIoFriendModal = false">✕</button>
-          <h3>{{ ioFriend ? '✨ Editar io Friend' : '✨ Criar io Friend' }}</h3>
+          <h3>{{ editingIoFriendId ? '✨ Editar io Friend' : '✨ Criar io Friend' }}</h3>
           <p class="io-friend-subtitle">Personalize sua conexão virtual</p>
 
           <form @submit.prevent="saveIoFriend" class="io-friend-form">
@@ -720,10 +755,10 @@
               </button>
               <button type="button" class="btn-secondary" @click="showIoFriendModal = false">Cancelar</button>
               <button
-                v-if="ioFriend"
+                v-if="editingIoFriendId"
                 type="button"
                 class="btn-danger"
-                @click="removeIoFriend"
+                @click="removeIoFriend()"
                 :disabled="savingIoFriend"
               >
                 Remover
@@ -1574,36 +1609,38 @@
 
           <!-- Tab: Salas -->
           <div v-if="currentTab === 'rooms'" class="tab-content">
-            <!-- Minha Sala -->
-            <div v-if="myRoom" class="my-room-section">
-              <h4 class="section-title">Minha Sala</h4>
+            <!-- Minhas Salas -->
+            <div v-if="myRooms.length > 0" class="my-room-section">
+              <h4 class="section-title">{{ myRooms.length === 1 ? 'Minha Sala' : 'Minhas Salas' }}</h4>
               <div
+                v-for="room in myRooms"
+                :key="room.id"
                 class="room-item my-room"
-                :class="{ active: selectedRoom?.id === myRoom.id }"
-                @click="enterRoom(myRoom.id)"
+                :class="{ active: selectedRoom?.id === room.id }"
+                @click="enterRoom(room.id)"
               >
                 <div class="room-icon">🏠</div>
                 <div class="room-info">
-                  <span class="name">{{ myRoom.name }}</span>
-                  <span class="desc">{{ myRoom.online_count || 0 }} online</span>
+                  <span class="name">{{ room.name }}</span>
+                  <span class="desc">{{ room.online_count || 0 }} online</span>
                 </div>
-                <button class="btn-delete-room" @click.stop="deleteMyRoom" title="Excluir sala">🗑️</button>
+                <button class="btn-delete-room" @click.stop="deleteMyRoom(room.id)" title="Excluir sala">🗑️</button>
               </div>
             </div>
 
-            <!-- Criar Sala -->
+            <!-- Criar Sala (verifica limite baseado em max_rooms) -->
             <button
-              v-if="!myRoom"
+              v-if="myRooms.length < (currentUser?.max_rooms || 1)"
               class="btn-create-room"
               @click="showCreateRoomModal = true"
             >
-              + Criar Minha Sala
+              + Criar {{ myRooms.length === 0 ? 'Minha Sala' : 'Nova Sala' }}
             </button>
 
             <!-- Lista de Salas Públicas -->
             <h4 class="section-title">Salas Públicas</h4>
             <div
-              v-for="room in rooms.filter(r => r.id !== myRoom?.id)"
+              v-for="room in rooms.filter(r => !myRooms.some(m => m.id === r.id))"
               :key="room.id"
               class="room-item"
               :class="{ active: selectedRoom?.id === room.id }"
@@ -1617,7 +1654,7 @@
                 </span>
               </div>
             </div>
-            <p v-if="rooms.filter(r => r.id !== myRoom?.id).length === 0" class="empty-state small">
+            <p v-if="rooms.filter(r => !myRooms.some(m => m.id === r.id)).length === 0" class="empty-state small">
               Nenhuma sala pública disponível.
             </p>
           </div>
@@ -2647,7 +2684,7 @@ const jitsiUrl = computed(() => {
 
 // ==================== SALAS ====================
 const rooms = ref([])                    // Lista de salas públicas
-const myRoom = ref(null)                 // Minha sala (se existir)
+const myRooms = ref([])                  // Minhas salas (fundadores podem ter múltiplas)
 const selectedRoom = ref(null)           // Sala atualmente selecionada
 const roomUsers = ref([])                // Usuários na sala atual
 const roomMutedUsers = ref(new Set())    // IDs de usuários silenciados na sala
@@ -2924,7 +2961,9 @@ const nameInputRef = ref(null)
 
 // io Friend (assistente personalizada)
 const showIoFriendModal = ref(false)
-const ioFriend = ref(null)
+const ioFriend = ref(null)              // io friend ativa (para chat)
+const ioFriends = ref([])               // Todas as io friends do usuário (fundadores podem ter múltiplas)
+const editingIoFriendId = ref(null)     // ID da io friend sendo editada (null = criando nova)
 const savingIoFriend = ref(false)
 const generatingAvatar = ref(false)
 const ioFriendForm = ref({
@@ -4019,7 +4058,7 @@ async function removeKofi() {
 
 // ==================== io Friend ====================
 
-// Carregar io friend do usuário
+// Carregar io friend ativa do usuário
 async function loadIoFriend() {
   try {
     const res = await fetch(`${API_URL}/io-friend`, {
@@ -4035,28 +4074,46 @@ async function loadIoFriend() {
   }
 }
 
-// Abrir modal io friend
-function openIoFriendModal() {
-  if (ioFriend.value) {
-    // Preencher form com dados existentes
+// Carregar TODAS as io friends do usuário (fundadores podem ter múltiplas)
+async function loadAllIoFriends() {
+  try {
+    const res = await fetch(`${API_URL}/io-friends/mine`, {
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      ioFriends.value = data.ioFriends || []
+      console.log('[io Friends] Total:', ioFriends.value.length)
+    }
+  } catch (e) {
+    console.error('[io Friends] Erro ao carregar:', e)
+  }
+}
+
+// Abrir modal io friend (criar nova ou editar existente)
+function openIoFriendModal(ioFriendToEdit = null) {
+  if (ioFriendToEdit) {
+    // Editando uma io friend específica
+    editingIoFriendId.value = ioFriendToEdit.id
     ioFriendForm.value = {
-      nome: ioFriend.value.nome || '',
-      personalidade: ioFriend.value.personalidade || '',
-      estilo_comunicacao: ioFriend.value.estilo_comunicacao || 'equilibrado',
-      tom_emocional: ioFriend.value.tom_emocional || 'gentil',
-      nivel_iniciativa: ioFriend.value.nivel_iniciativa || 'equilibrado',
-      usa_emojis: ioFriend.value.usa_emojis !== false,
-      caracteristicas_extras: ioFriend.value.caracteristicas_extras || '',
-      avatar_prompt: ioFriend.value.avatar_prompt || '',
-      avatar_base64: ioFriend.value.avatar_base64 || '',
-      genero: ioFriend.value.genero || 'feminino',
-      perfil_publico: ioFriend.value.perfil_publico || '',
-      cenario: ioFriend.value.cenario || '',
-      exemplos_dialogo: ioFriend.value.exemplos_dialogo || '',
-      publico: ioFriend.value.publico || false
+      nome: ioFriendToEdit.nome || '',
+      personalidade: ioFriendToEdit.personalidade || '',
+      estilo_comunicacao: ioFriendToEdit.estilo_comunicacao || 'equilibrado',
+      tom_emocional: ioFriendToEdit.tom_emocional || 'gentil',
+      nivel_iniciativa: ioFriendToEdit.nivel_iniciativa || 'equilibrado',
+      usa_emojis: ioFriendToEdit.usa_emojis !== false,
+      caracteristicas_extras: ioFriendToEdit.caracteristicas_extras || '',
+      avatar_prompt: ioFriendToEdit.avatar_prompt || '',
+      avatar_base64: ioFriendToEdit.avatar_base64 || '',
+      genero: ioFriendToEdit.genero || 'feminino',
+      perfil_publico: ioFriendToEdit.perfil_publico || '',
+      cenario: ioFriendToEdit.cenario || '',
+      exemplos_dialogo: ioFriendToEdit.exemplos_dialogo || '',
+      publico: ioFriendToEdit.publico || false
     }
   } else {
-    // Form vazio para criar
+    // Criando nova io friend
+    editingIoFriendId.value = null
     ioFriendForm.value = {
       nome: '',
       personalidade: '',
@@ -4110,7 +4167,7 @@ async function generateIoFriendAvatar() {
   }
 }
 
-// Salvar io friend (criar ou atualizar)
+// Salvar io friend (criar nova ou atualizar existente)
 async function saveIoFriend() {
   if (!ioFriendForm.value.nome.trim()) {
     alert('Digite um nome para sua conexão virtual')
@@ -4120,8 +4177,15 @@ async function saveIoFriend() {
   savingIoFriend.value = true
 
   try {
-    const method = ioFriend.value ? 'PUT' : 'POST'
-    const res = await fetch(`${API_URL}/io-friend`, {
+    // Se editingIoFriendId existe, estamos editando uma específica
+    // Se não, estamos criando nova
+    const isEditing = editingIoFriendId.value !== null
+    const method = isEditing ? 'PUT' : 'POST'
+    const url = isEditing
+      ? `${API_URL}/io-friend/${editingIoFriendId.value}`
+      : `${API_URL}/io-friend`
+
+    const res = await fetch(url, {
       method,
       headers: {
         ...authHeaders(),
@@ -4137,8 +4201,14 @@ async function saveIoFriend() {
       return
     }
 
+    // Atualizar io friend ativa
     ioFriend.value = data.ioFriend
+
+    // Recarregar lista de io friends
+    await loadAllIoFriends()
+
     showIoFriendModal.value = false
+    editingIoFriendId.value = null
 
     // Recarregar conexões para atualizar avatar no chat
     await loadConnections()
@@ -4160,26 +4230,34 @@ async function saveIoFriend() {
   }
 }
 
-// Remover io friend
-async function removeIoFriend() {
-  if (!confirm(`Remover "${ioFriend.value?.nome}"? Você voltará a usar a io padrão.`)) return
+// Remover io friend (específica por ID ou a ativa)
+async function removeIoFriend(ioFriendId = null) {
+  const targetId = ioFriendId || editingIoFriendId.value || ioFriend.value?.id
+  const targetFriend = ioFriends.value.find(f => f.id === targetId) || ioFriend.value
+
+  if (!targetFriend) return
+  if (!confirm(`Remover "${targetFriend.nome}"? Esta ação não pode ser desfeita.`)) return
 
   savingIoFriend.value = true
 
   try {
-    const res = await fetch(`${API_URL}/io-friend`, {
+    const res = await fetch(`${API_URL}/io-friend/${targetId}`, {
       method: 'DELETE',
       headers: authHeaders()
     })
 
     if (res.ok) {
-      ioFriend.value = null
-      showIoFriendModal.value = false
+      // Recarregar lista e io friend ativa
+      await loadAllIoFriends()
+      await loadIoFriend()
 
-      // Recarregar conexões para voltar ao avatar padrão
+      showIoFriendModal.value = false
+      editingIoFriendId.value = null
+
+      // Recarregar conexões para atualizar avatar
       await loadConnections()
 
-      // Se io estiver selecionado, atualizar com dados padrão
+      // Se io estiver selecionado, atualizar
       if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
         const updatedConn = connections.value.find(c => c.email === 'io@poly.io')
         if (updatedConn) {
@@ -4187,11 +4265,11 @@ async function removeIoFriend() {
         }
       }
 
-      alert('Conexão virtual removida. Você está usando a io padrão agora.')
+      alert('io friend removida.')
     }
   } catch (e) {
     console.error('[io Friend] Erro ao remover:', e)
-    alert('Erro ao remover conexão virtual')
+    alert('Erro ao remover io friend')
   } finally {
     savingIoFriend.value = false
   }
@@ -4870,7 +4948,7 @@ function logout() {
   messages.value = []
   // Limpar dados de salas
   rooms.value = []
-  myRoom.value = null
+  myRooms.value = []
   selectedRoom.value = null
   roomUsers.value = []
   roomMessages.value = []
@@ -4925,17 +5003,17 @@ async function loadRooms() {
   }
 }
 
-// Carregar minha sala
-async function loadMyRoom() {
+// Carregar minhas salas (fundadores podem ter múltiplas)
+async function loadMyRooms() {
   try {
     const res = await fetch(`${API_BASE}/api/rooms/mine`, {
       headers: { 'Authorization': `Bearer ${token.value}` }
     })
     if (res.ok) {
-      myRoom.value = await res.json()
+      myRooms.value = await res.json()
     }
   } catch (error) {
-    console.error('Erro ao carregar minha sala:', error)
+    console.error('Erro ao carregar minhas salas:', error)
   }
 }
 
@@ -4964,7 +5042,7 @@ async function createRoom() {
       return
     }
 
-    myRoom.value = data
+    myRooms.value.push(data)
     showCreateRoomModal.value = false
     createRoomForm.name = ''
     createRoomForm.description = ''
@@ -4978,26 +5056,26 @@ async function createRoom() {
   }
 }
 
-// Excluir minha sala
-async function deleteMyRoom() {
-  if (!myRoom.value) return
+// Excluir uma das minhas salas
+async function deleteMyRoom(roomId) {
+  if (!roomId) return
 
-  const confirmed = confirm('Tem certeza que deseja excluir sua sala?\nTodos os usuários serão removidos.')
+  const confirmed = confirm('Tem certeza que deseja excluir esta sala?\nTodos os usuários serão removidos.')
   if (!confirmed) return
 
   try {
-    const res = await fetch(`${API_BASE}/api/rooms/${myRoom.value.id}`, {
+    const res = await fetch(`${API_BASE}/api/rooms/${roomId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token.value}` }
     })
 
     if (res.ok) {
-      if (selectedRoom.value?.id === myRoom.value.id) {
+      if (selectedRoom.value?.id === roomId) {
         selectedRoom.value = null
         roomMessages.value = []
         roomUsers.value = []
       }
-      myRoom.value = null
+      myRooms.value = myRooms.value.filter(r => r.id !== roomId)
       loadRooms()
     }
   } catch (error) {
@@ -5310,8 +5388,9 @@ async function reactivateRoom() {
 
     if (res.ok) {
       selectedRoom.value.status = 'active'
-      if (myRoom.value?.id === selectedRoom.value.id) {
-        myRoom.value.status = 'active'
+      const myRoomIndex = myRooms.value.findIndex(r => r.id === selectedRoom.value.id)
+      if (myRoomIndex !== -1) {
+        myRooms.value[myRoomIndex].status = 'active'
       }
       loadRooms()
     } else {
@@ -5574,6 +5653,9 @@ async function initializeApp() {
   // Carregar io friend do usuário (se existir)
   await loadIoFriend()
 
+  // Carregar todas as io friends do usuário (fundadores podem ter múltiplas)
+  await loadAllIoFriends()
+
   // Carregar io friend em experimento (se houver)
   await loadExperimentingIoFriend()
 
@@ -5641,7 +5723,7 @@ async function initializeApp() {
     loadPendingRequests()
     loadRooms()
     loadNarrativeMode()
-    loadMyRoom()
+    loadMyRooms()
 
     // Configurar push notifications (solicita permissão)
     setupPushNotifications()
@@ -12464,6 +12546,64 @@ body {
 
 .btn-io-friend:hover {
   opacity: 0.9;
+}
+
+/* Lista de io friends do usuário */
+.io-friends-section {
+  margin-top: 12px;
+}
+
+.my-io-friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.my-io-friend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.io-friend-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.io-friend-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.btn-edit-mini,
+.btn-delete-mini {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.btn-edit-mini:hover,
+.btn-delete-mini:hover {
+  opacity: 1;
+}
+
+.founder-io-limit {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 8px;
 }
 
 .btn-explore {

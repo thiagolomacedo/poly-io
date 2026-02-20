@@ -619,7 +619,7 @@ async function countIoMemories(userId) {
 
 // ==================== FUNÇÕES IO FRIEND ====================
 
-// Buscar io friend do usuário
+// Buscar io friend do usuário (primeira ativa)
 async function getIoFriend(userId) {
   try {
     const result = await pool.query(
@@ -632,6 +632,21 @@ async function getIoFriend(userId) {
   } catch (error) {
     console.error('[io Friend] Erro ao buscar:', error.message)
     return null
+  }
+}
+
+// Buscar TODAS as io friends do usuário (para fundadores com múltiplas)
+async function getAllIoFriends(userId) {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM io_friends WHERE user_id = $1 ORDER BY criado_em ASC',
+      [userId]
+    )
+    console.log(`[io Friend] Busca todas do user ${userId}: ${result.rows.length} encontradas`)
+    return result.rows
+  } catch (error) {
+    console.error('[io Friend] Erro ao buscar todas:', error.message)
+    return []
   }
 }
 
@@ -1107,6 +1122,7 @@ module.exports = {
   MEMORY_LIMIT,
   // Funções io friend
   getIoFriend,
+  getAllIoFriends,
   createIoFriend,
   updateIoFriend,
   deleteIoFriend,
