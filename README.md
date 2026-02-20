@@ -22,6 +22,16 @@ Quando quiser encerrar a fase de lançamento:
 4. Mudar `max_rooms` de `2` para `1`
 5. Novos usuários entrarão sem benefícios de fundador
 
+### 🌐 Internacionalização do App (Roadmap v5.0)
+Traduzir a interface do app para os 11 idiomas:
+1. Instalar Vue i18n: `npm install vue-i18n`
+2. Criar arquivos de tradução em `frontend/src/locales/` (pt.json, en.json, etc.)
+3. Substituir textos hardcoded por `{{ $t('chave') }}`
+4. Adicionar seletor de idioma nas configurações
+5. Salvar preferência do usuário
+
+**Prioridade:** Baixa (a tradução de mensagens já funciona, UI é intuitiva com ícones)
+
 ---
 
 ## ✨ Novidades v4.1 - io Friends Públicas
