@@ -2217,11 +2217,11 @@ app.get('/api/users/:id', authMiddleware, async (req, res) => {
 
     const user = result.rows[0]
 
-    // Buscar io friend do usuário (se existir e for pública, ou se é o próprio usuário)
+    // Buscar io friend ATIVA do usuário (a que aparece no topo do perfil)
     const isOwnProfile = parseInt(req.params.id) === req.userId
     const ioFriendQuery = isOwnProfile
-      ? 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1'
-      : 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1 AND publico = TRUE'
+      ? 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1 AND ativo = TRUE'
+      : 'SELECT id, nome, avatar_base64, publico, COALESCE(likes_count, 0) as likes_count FROM io_friends WHERE user_id = $1 AND ativo = TRUE AND publico = TRUE'
 
     const ioFriendResult = await pool.query(ioFriendQuery, [req.params.id])
 

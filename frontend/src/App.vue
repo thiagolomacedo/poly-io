@@ -4311,6 +4311,19 @@ async function activateIoFriend(ioFriendId) {
       await loadAllIoFriends()
       await loadConnections()
 
+      // Atualizar profileUser com a nova io friend ativa (para mostrar no topo)
+      if (profileUser.value?.id === currentUser.value?.id) {
+        const activeFriend = ioFriends.value.find(f => f.id === ioFriendId)
+        if (activeFriend) {
+          profileUser.value.created_io_friend = {
+            id: activeFriend.id,
+            nome: activeFriend.nome,
+            avatar_base64: activeFriend.avatar_base64,
+            likes_count: activeFriend.likes_count || 0
+          }
+        }
+      }
+
       // Atualizar chat se io estiver selecionado
       if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
         const updatedConn = connections.value.find(c => c.email === 'io@poly.io' || c.is_io_friend)
