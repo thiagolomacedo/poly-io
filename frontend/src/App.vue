@@ -318,6 +318,12 @@
           </div>
           <p class="profile-info">{{ getIdiomaLabel(profileUser?.idioma) }} · {{ profileUser?.pais || 'Não informado' }}</p>
 
+          <!-- Badge Membro Fundador -->
+          <div v-if="profileUser?.is_founder" class="founder-badge">
+            <span class="founder-star">✦</span>
+            Fundador
+          </div>
+
           <!-- Código de Conexão -->
           <div v-if="profileUser?.codigo_amigo" class="friend-code-section">
             <p class="friend-code-label">Código de Conexão</p>
@@ -11272,7 +11278,34 @@ body {
 .profile-info {
   color: #888;
   font-size: 0.9rem;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+
+/* Badge Membro Fundador */
+.founder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid #ffd700;
+  color: #ffd700;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.founder-star {
+  display: inline-block;
+  font-size: 0.8rem;
+  animation: founder-star-spin 3s linear infinite;
+}
+
+@keyframes founder-star-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Código de Amigo */

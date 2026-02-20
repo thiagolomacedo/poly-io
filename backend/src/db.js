@@ -126,6 +126,25 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS maior_idade_confirmado BOOLEAN DEFAULT FALSE
     `)
 
+    // ==================== CAMPOS DE MEMBRO FUNDADOR ====================
+    // Se é membro fundador (cadastrou durante o beta)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT TRUE
+    `)
+    // Limite de io friends que pode criar (fundador: 2, normal: 1)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_io_friends INTEGER DEFAULT 2
+    `)
+    // Limite de salas que pode criar (fundador: 2, normal: 1)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_rooms INTEGER DEFAULT 2
+    `)
+
+    // Marcar todos os usuários existentes como fundadores
+    await client.query(`
+      UPDATE users SET is_founder = TRUE, max_io_friends = 2, max_rooms = 2 WHERE is_founder IS NULL
+    `)
+
     console.log('[DB] Tabela users OK')
 
     // Tabela de conexões entre usuários
@@ -619,13 +638,22 @@ async function getIoFriend(userId) {
 // Criar io friend
 async function createIoFriend(userId, config) {
   try {
-    // Verificar se já existe
-    const existing = await pool.query(
-      'SELECT id FROM io_friends WHERE user_id = $1',
+    // Buscar limite do usuário
+    const userLimit = await pool.query(
+      'SELECT max_io_friends FROM users WHERE id = $1',
       [userId]
     )
-    if (existing.rows.length > 0) {
-      return { error: 'Você já tem uma io friend. Limite: 1 por usuário.' }
+    const maxIoFriends = userLimit.rows[0]?.max_io_friends || 1
+
+    // Contar io friends existentes do usuário
+    const existing = await pool.query(
+      'SELECT COUNT(*) as total FROM io_friends WHERE user_id = $1',
+      [userId]
+    )
+    const total = parseInt(existing.rows[0].total)
+
+    if (total >= maxIoFriends) {
+      return { error: `Você já atingiu o limite de ${maxIoFriends} io friend(s).` }
     }
 
     const result = await pool.query(`

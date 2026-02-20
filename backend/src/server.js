@@ -1414,7 +1414,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, codigo_amigo, avatar_config, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, codigo_amigo, avatar_config, criado_em, is_founder, max_io_friends, max_rooms FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -2056,7 +2056,7 @@ app.get('/api/users', authMiddleware, async (req, res) => {
 app.get('/api/users/:id', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, avatar_config, criado_em FROM users WHERE id = $1',
+      'SELECT id, nome, email, idioma, pais, social_tipo, social_url, kofi_url, avatar_config, criado_em, is_founder FROM users WHERE id = $1',
       [req.params.id]
     )
 
@@ -3637,14 +3637,22 @@ app.post('/api/rooms', authMiddleware, async (req, res) => {
   }
 
   try {
-    // Verificar se usuário já tem uma sala ativa
-    const existing = await pool.query(
-      'SELECT id FROM rooms WHERE owner_id = $1 AND status != \'deleted\'',
+    // Buscar limite de salas do usuário
+    const userLimit = await pool.query(
+      'SELECT max_rooms FROM users WHERE id = $1',
       [req.userId]
     )
+    const maxRooms = userLimit.rows[0]?.max_rooms || 1
 
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'Você já possui uma sala. Exclua a atual para criar outra.' })
+    // Verificar quantas salas o usuário já tem
+    const existing = await pool.query(
+      'SELECT COUNT(*) as total FROM rooms WHERE owner_id = $1 AND status != \'deleted\'',
+      [req.userId]
+    )
+    const totalRooms = parseInt(existing.rows[0].total)
+
+    if (totalRooms >= maxRooms) {
+      return res.status(400).json({ error: `Você já atingiu o limite de ${maxRooms} sala(s). Exclua uma para criar outra.` })
     }
 
     // Gerar código de convite único
