@@ -245,6 +245,15 @@
       font-size: 1.1rem;
     }
 
+    @media (max-width: 768px) {
+      .lang-btn {
+        padding: 6px 10px;
+      }
+      .lang-current {
+        font-size: 0.8rem;
+      }
+    }
+
     /* ==================== HERO ==================== */
     .hero {
       min-height: 100vh;
@@ -1410,30 +1419,29 @@
         <a href="#salas" data-i18n="nav.rooms">Salas</a>
         <a href="#io-friends">io Friends</a>
         <a href="#instalar" data-i18n="nav.install">Instalar</a>
-
-        <!-- Language Selector -->
-        <div class="lang-selector">
-          <button class="lang-btn" id="langBtn">
-            <span class="lang-flag">🌐</span>
-            <span class="lang-current">PT</span>
-            <span class="lang-arrow">▼</span>
-          </button>
-          <div class="lang-dropdown" id="langDropdown">
-            <button data-lang="pt"><span>🇧🇷</span> Português</button>
-            <button data-lang="en"><span>🇺🇸</span> English</button>
-            <button data-lang="es"><span>🇪🇸</span> Español</button>
-            <button data-lang="fr"><span>🇫🇷</span> Français</button>
-            <button data-lang="de"><span>🇩🇪</span> Deutsch</button>
-            <button data-lang="it"><span>🇮🇹</span> Italiano</button>
-            <button data-lang="ja"><span>🇯🇵</span> 日本語</button>
-            <button data-lang="ko"><span>🇰🇷</span> 한국어</button>
-            <button data-lang="zh"><span>🇨🇳</span> 中文</button>
-            <button data-lang="ru"><span>🇷🇺</span> Русский</button>
-            <button data-lang="ar"><span>🇸🇦</span> العربية</button>
-          </div>
-        </div>
-
         <a href="https://poly-io.vercel.app" class="btn btn-primary" data-i18n="nav.enter">Entrar</a>
+      </div>
+
+      <!-- Language Selector (always visible) -->
+      <div class="lang-selector">
+        <button class="lang-btn" id="langBtn">
+          <span class="lang-flag">🌐</span>
+          <span class="lang-current">PT</span>
+          <span class="lang-arrow">▼</span>
+        </button>
+        <div class="lang-dropdown" id="langDropdown">
+          <button data-lang="pt"><span>🇧🇷</span> Português</button>
+          <button data-lang="en"><span>🇺🇸</span> English</button>
+          <button data-lang="es"><span>🇪🇸</span> Español</button>
+          <button data-lang="fr"><span>🇫🇷</span> Français</button>
+          <button data-lang="de"><span>🇩🇪</span> Deutsch</button>
+          <button data-lang="it"><span>🇮🇹</span> Italiano</button>
+          <button data-lang="ja"><span>🇯🇵</span> 日本語</button>
+          <button data-lang="ko"><span>🇰🇷</span> 한국어</button>
+          <button data-lang="zh"><span>🇨🇳</span> 中文</button>
+          <button data-lang="ru"><span>🇷🇺</span> Русский</button>
+          <button data-lang="ar"><span>🇸🇦</span> العربية</button>
+        </div>
       </div>
     </div>
   </nav>
