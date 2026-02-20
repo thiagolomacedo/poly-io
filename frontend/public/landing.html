@@ -150,6 +150,101 @@
       font-size: 1rem;
     }
 
+    /* Language Selector */
+    .lang-selector {
+      position: relative;
+    }
+
+    .lang-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--primary);
+    }
+
+    .lang-flag {
+      font-size: 1rem;
+    }
+
+    .lang-current {
+      font-weight: 600;
+    }
+
+    .lang-arrow {
+      font-size: 0.6rem;
+      opacity: 0.7;
+      transition: transform 0.2s;
+    }
+
+    .lang-selector.open .lang-arrow {
+      transform: rotate(180deg);
+    }
+
+    .lang-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: rgba(24, 24, 27, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      min-width: 160px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.2s;
+      z-index: 1000;
+    }
+
+    .lang-selector.open .lang-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .lang-dropdown button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+
+    .lang-dropdown button:hover {
+      background: rgba(99, 102, 241, 0.2);
+      color: var(--text-primary);
+    }
+
+    .lang-dropdown button.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .lang-dropdown button span {
+      font-size: 1.1rem;
+    }
+
     /* ==================== HERO ==================== */
     .hero {
       min-height: 100vh;
@@ -1311,11 +1406,34 @@
         <span>Poly</span><span>.io</span>
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#salas">Salas</a>
+        <a href="#features" data-i18n="nav.features">Features</a>
+        <a href="#salas" data-i18n="nav.rooms">Salas</a>
         <a href="#io-friends">io Friends</a>
-        <a href="#instalar">Instalar</a>
-        <a href="https://poly-io.vercel.app" class="btn btn-primary">Entrar</a>
+        <a href="#instalar" data-i18n="nav.install">Instalar</a>
+
+        <!-- Language Selector -->
+        <div class="lang-selector">
+          <button class="lang-btn" id="langBtn">
+            <span class="lang-flag">🌐</span>
+            <span class="lang-current">PT</span>
+            <span class="lang-arrow">▼</span>
+          </button>
+          <div class="lang-dropdown" id="langDropdown">
+            <button data-lang="pt"><span>🇧🇷</span> Português</button>
+            <button data-lang="en"><span>🇺🇸</span> English</button>
+            <button data-lang="es"><span>🇪🇸</span> Español</button>
+            <button data-lang="fr"><span>🇫🇷</span> Français</button>
+            <button data-lang="de"><span>🇩🇪</span> Deutsch</button>
+            <button data-lang="it"><span>🇮🇹</span> Italiano</button>
+            <button data-lang="ja"><span>🇯🇵</span> 日本語</button>
+            <button data-lang="ko"><span>🇰🇷</span> 한국어</button>
+            <button data-lang="zh"><span>🇨🇳</span> 中文</button>
+            <button data-lang="ru"><span>🇷🇺</span> Русский</button>
+            <button data-lang="ar"><span>🇸🇦</span> العربية</button>
+          </div>
+        </div>
+
+        <a href="https://poly-io.vercel.app" class="btn btn-primary" data-i18n="nav.enter">Entrar</a>
       </div>
     </div>
   </nav>
@@ -1325,24 +1443,24 @@
     <div class="hero-content">
       <div class="hero-badge animate-in">
         <span class="hero-badge-dot"></span>
-        <span>Tradução em tempo real</span>
+        <span data-i18n="hero.badge">Tradução em tempo real</span>
       </div>
 
       <h1 class="animate-in delay-1">
         <span class="typing-text" id="typewriter"></span><br>
-        <span class="highlight">sem barreiras de idioma</span>
+        <span class="highlight" data-i18n="hero.highlight">sem barreiras de idioma</span>
       </h1>
 
-      <p class="hero-subtitle animate-in delay-2">
+      <p class="hero-subtitle animate-in delay-2" data-i18n="hero.subtitle">
         Cada pessoa fala sua língua. O Poly traduz.
       </p>
 
       <div class="hero-cta animate-in delay-3">
         <a href="https://poly-io.vercel.app" class="btn btn-primary btn-large">
-          Começar agora
+          <span data-i18n="hero.cta">Começar agora</span>
           <span>→</span>
         </a>
-        <a href="#features" class="btn btn-secondary btn-large">
+        <a href="#features" class="btn btn-secondary btn-large" data-i18n="hero.how">
           Como funciona
         </a>
       </div>
@@ -1435,10 +1553,10 @@
     <div class="manifesto-container">
       <img src="/io-friend-hero.png" alt="io Friend" class="manifesto-image">
       <div class="manifesto-text">
-        <p class="manifesto-quote">
+        <p class="manifesto-quote" data-i18n="manifesto.quote">
           No Poly.io, conversas não ficam guardadas. Elas acontecem.
         </p>
-        <p class="manifesto-explanation">
+        <p class="manifesto-explanation" data-i18n="manifesto.explanation">
           Mensagens expiram em 24 horas. Salas desaparecem quando param de ser usadas.
           Aqui, o foco é estar presente — não acumular histórico.
         </p>
@@ -1451,8 +1569,8 @@
     <div class="features-container">
       <div class="section-header">
         <span class="section-label">Features</span>
-        <h2 class="section-title">O idioma deixa de ser uma barreira</h2>
-        <p class="section-subtitle">E vira apenas um detalhe. Você foca na conversa, não na tradução.</p>
+        <h2 class="section-title" data-i18n="features.title">O idioma deixa de ser uma barreira</h2>
+        <p class="section-subtitle" data-i18n="features.subtitle">E vira apenas um detalhe. Você foca na conversa, não na tradução.</p>
       </div>
 
       <div class="features-grid">
@@ -1800,10 +1918,10 @@
   <section class="cta">
     <div class="cta-container">
       <img src="/io-floating.png" alt="io Friend" class="floating-io">
-      <h2>Pronto para conversar sem barreiras?</h2>
-      <p>Cadastre-se em segundos. É gratuito, sempre.</p>
+      <h2 data-i18n="cta.title">Pronto para conversar sem barreiras?</h2>
+      <p data-i18n="cta.subtitle">Cadastre-se em segundos. É gratuito, sempre.</p>
       <a href="https://poly-io.vercel.app" class="btn btn-primary btn-large">
-        Criar minha conta
+        <span data-i18n="cta.button">Criar minha conta</span>
         <span>→</span>
       </a>
     </div>
@@ -1832,7 +1950,265 @@
   </footer>
 
   <script>
-    // Typewriter effect - "Chat profissional" em 11 idiomas
+    // ==================== TRANSLATIONS ====================
+    const translations = {
+      pt: {
+        'nav.features': 'Features',
+        'nav.rooms': 'Salas',
+        'nav.install': 'Instalar',
+        'nav.enter': 'Entrar',
+        'hero.badge': 'Tradução em tempo real',
+        'hero.highlight': 'sem barreiras de idioma',
+        'hero.subtitle': 'Cada pessoa fala sua língua. O Poly traduz.',
+        'hero.cta': 'Começar agora',
+        'hero.how': 'Como funciona',
+        'manifesto.quote': 'No Poly.io, conversas não ficam guardadas. Elas acontecem.',
+        'manifesto.explanation': 'Mensagens expiram em 24 horas. Salas desaparecem quando param de ser usadas. Aqui, o foco é estar presente — não acumular histórico.',
+        'features.title': 'O idioma deixa de ser uma barreira',
+        'features.subtitle': 'E vira apenas um detalhe. Você foca na conversa, não na tradução.',
+        'cta.title': 'Pronto para conversar sem barreiras?',
+        'cta.subtitle': 'Cadastre-se em segundos. É gratuito, sempre.',
+        'cta.button': 'Criar minha conta'
+      },
+      en: {
+        'nav.features': 'Features',
+        'nav.rooms': 'Rooms',
+        'nav.install': 'Install',
+        'nav.enter': 'Enter',
+        'hero.badge': 'Real-time translation',
+        'hero.highlight': 'without language barriers',
+        'hero.subtitle': 'Everyone speaks their language. Poly translates.',
+        'hero.cta': 'Get started',
+        'hero.how': 'How it works',
+        'manifesto.quote': 'At Poly.io, conversations are not stored. They happen.',
+        'manifesto.explanation': 'Messages expire in 24 hours. Rooms disappear when they stop being used. Here, the focus is being present — not accumulating history.',
+        'features.title': 'Language stops being a barrier',
+        'features.subtitle': 'And becomes just a detail. You focus on the conversation, not the translation.',
+        'cta.title': 'Ready to chat without barriers?',
+        'cta.subtitle': 'Sign up in seconds. It\'s free, always.',
+        'cta.button': 'Create my account'
+      },
+      es: {
+        'nav.features': 'Funciones',
+        'nav.rooms': 'Salas',
+        'nav.install': 'Instalar',
+        'nav.enter': 'Entrar',
+        'hero.badge': 'Traducción en tiempo real',
+        'hero.highlight': 'sin barreras de idioma',
+        'hero.subtitle': 'Cada persona habla su idioma. Poly traduce.',
+        'hero.cta': 'Comenzar ahora',
+        'hero.how': 'Cómo funciona',
+        'manifesto.quote': 'En Poly.io, las conversaciones no se guardan. Suceden.',
+        'manifesto.explanation': 'Los mensajes expiran en 24 horas. Las salas desaparecen cuando dejan de usarse. Aquí, el enfoque es estar presente — no acumular historial.',
+        'features.title': 'El idioma deja de ser una barrera',
+        'features.subtitle': 'Y se convierte en solo un detalle. Te enfocas en la conversación, no en la traducción.',
+        'cta.title': '¿Listo para chatear sin barreras?',
+        'cta.subtitle': 'Regístrate en segundos. Es gratis, siempre.',
+        'cta.button': 'Crear mi cuenta'
+      },
+      fr: {
+        'nav.features': 'Fonctionnalités',
+        'nav.rooms': 'Salons',
+        'nav.install': 'Installer',
+        'nav.enter': 'Entrer',
+        'hero.badge': 'Traduction en temps réel',
+        'hero.highlight': 'sans barrières linguistiques',
+        'hero.subtitle': 'Chacun parle sa langue. Poly traduit.',
+        'hero.cta': 'Commencer',
+        'hero.how': 'Comment ça marche',
+        'manifesto.quote': 'Sur Poly.io, les conversations ne sont pas stockées. Elles se produisent.',
+        'manifesto.explanation': 'Les messages expirent en 24 heures. Les salons disparaissent quand ils ne sont plus utilisés. Ici, l\'accent est mis sur le présent — pas sur l\'accumulation d\'historique.',
+        'features.title': 'La langue cesse d\'être une barrière',
+        'features.subtitle': 'Et devient juste un détail. Vous vous concentrez sur la conversation, pas sur la traduction.',
+        'cta.title': 'Prêt à discuter sans barrières?',
+        'cta.subtitle': 'Inscrivez-vous en quelques secondes. C\'est gratuit, toujours.',
+        'cta.button': 'Créer mon compte'
+      },
+      de: {
+        'nav.features': 'Funktionen',
+        'nav.rooms': 'Räume',
+        'nav.install': 'Installieren',
+        'nav.enter': 'Eintreten',
+        'hero.badge': 'Echtzeit-Übersetzung',
+        'hero.highlight': 'ohne Sprachbarrieren',
+        'hero.subtitle': 'Jeder spricht seine Sprache. Poly übersetzt.',
+        'hero.cta': 'Jetzt starten',
+        'hero.how': 'Wie es funktioniert',
+        'manifesto.quote': 'Bei Poly.io werden Gespräche nicht gespeichert. Sie passieren.',
+        'manifesto.explanation': 'Nachrichten verfallen nach 24 Stunden. Räume verschwinden, wenn sie nicht mehr genutzt werden. Hier liegt der Fokus auf der Gegenwart — nicht auf dem Sammeln von Geschichte.',
+        'features.title': 'Sprache hört auf, eine Barriere zu sein',
+        'features.subtitle': 'Und wird nur noch ein Detail. Sie konzentrieren sich auf das Gespräch, nicht auf die Übersetzung.',
+        'cta.title': 'Bereit, ohne Barrieren zu chatten?',
+        'cta.subtitle': 'Registrieren Sie sich in Sekunden. Es ist kostenlos, immer.',
+        'cta.button': 'Mein Konto erstellen'
+      },
+      it: {
+        'nav.features': 'Funzionalità',
+        'nav.rooms': 'Stanze',
+        'nav.install': 'Installa',
+        'nav.enter': 'Entra',
+        'hero.badge': 'Traduzione in tempo reale',
+        'hero.highlight': 'senza barriere linguistiche',
+        'hero.subtitle': 'Ognuno parla la propria lingua. Poly traduce.',
+        'hero.cta': 'Inizia ora',
+        'hero.how': 'Come funziona',
+        'manifesto.quote': 'Su Poly.io, le conversazioni non vengono archiviate. Accadono.',
+        'manifesto.explanation': 'I messaggi scadono in 24 ore. Le stanze scompaiono quando smettono di essere usate. Qui, il focus è essere presenti — non accumulare cronologia.',
+        'features.title': 'La lingua smette di essere una barriera',
+        'features.subtitle': 'E diventa solo un dettaglio. Ti concentri sulla conversazione, non sulla traduzione.',
+        'cta.title': 'Pronto a chattare senza barriere?',
+        'cta.subtitle': 'Registrati in pochi secondi. È gratuito, sempre.',
+        'cta.button': 'Crea il mio account'
+      },
+      ja: {
+        'nav.features': '機能',
+        'nav.rooms': 'ルーム',
+        'nav.install': 'インストール',
+        'nav.enter': '入る',
+        'hero.badge': 'リアルタイム翻訳',
+        'hero.highlight': '言語の壁なし',
+        'hero.subtitle': '誰もが自分の言語で話します。Polyが翻訳します。',
+        'hero.cta': '今すぐ始める',
+        'hero.how': '仕組み',
+        'manifesto.quote': 'Poly.ioでは、会話は保存されません。それは起こります。',
+        'manifesto.explanation': 'メッセージは24時間で期限切れになります。使われなくなったルームは消えます。ここでは、履歴を蓄積するのではなく、今を大切にします。',
+        'features.title': '言語はもはや障壁ではありません',
+        'features.subtitle': 'そしてそれは単なる詳細になります。翻訳ではなく、会話に集中できます。',
+        'cta.title': '障壁なしでチャットする準備はできましたか？',
+        'cta.subtitle': '数秒で登録できます。永久に無料です。',
+        'cta.button': 'アカウントを作成'
+      },
+      ko: {
+        'nav.features': '기능',
+        'nav.rooms': '방',
+        'nav.install': '설치',
+        'nav.enter': '입장',
+        'hero.badge': '실시간 번역',
+        'hero.highlight': '언어 장벽 없이',
+        'hero.subtitle': '모두가 자신의 언어로 말합니다. Poly가 번역합니다.',
+        'hero.cta': '지금 시작',
+        'hero.how': '작동 방식',
+        'manifesto.quote': 'Poly.io에서 대화는 저장되지 않습니다. 그냥 일어납니다.',
+        'manifesto.explanation': '메시지는 24시간 후에 만료됩니다. 사용되지 않는 방은 사라집니다. 여기서는 기록을 쌓는 것이 아니라 현재에 집중합니다.',
+        'features.title': '언어는 더 이상 장벽이 아닙니다',
+        'features.subtitle': '그리고 그것은 단지 세부 사항이 됩니다. 번역이 아닌 대화에 집중하세요.',
+        'cta.title': '장벽 없이 채팅할 준비가 되셨나요?',
+        'cta.subtitle': '몇 초 만에 가입하세요. 항상 무료입니다.',
+        'cta.button': '계정 만들기'
+      },
+      zh: {
+        'nav.features': '功能',
+        'nav.rooms': '房间',
+        'nav.install': '安装',
+        'nav.enter': '进入',
+        'hero.badge': '实时翻译',
+        'hero.highlight': '无语言障碍',
+        'hero.subtitle': '每个人都说自己的语言。Poly来翻译。',
+        'hero.cta': '立即开始',
+        'hero.how': '如何运作',
+        'manifesto.quote': '在Poly.io，对话不会被存储。它们只是发生。',
+        'manifesto.explanation': '消息在24小时后过期。不再使用的房间会消失。这里，重点是活在当下——而不是积累历史。',
+        'features.title': '语言不再是障碍',
+        'features.subtitle': '它只是一个细节。你专注于对话，而不是翻译。',
+        'cta.title': '准备好无障碍聊天了吗？',
+        'cta.subtitle': '几秒钟即可注册。永久免费。',
+        'cta.button': '创建我的账户'
+      },
+      ru: {
+        'nav.features': 'Функции',
+        'nav.rooms': 'Комнаты',
+        'nav.install': 'Установить',
+        'nav.enter': 'Войти',
+        'hero.badge': 'Перевод в реальном времени',
+        'hero.highlight': 'без языковых барьеров',
+        'hero.subtitle': 'Каждый говорит на своём языке. Poly переводит.',
+        'hero.cta': 'Начать сейчас',
+        'hero.how': 'Как это работает',
+        'manifesto.quote': 'В Poly.io разговоры не сохраняются. Они происходят.',
+        'manifesto.explanation': 'Сообщения исчезают через 24 часа. Комнаты исчезают, когда перестают использоваться. Здесь акцент на настоящем — а не на накоплении истории.',
+        'features.title': 'Язык перестаёт быть барьером',
+        'features.subtitle': 'И становится лишь деталью. Вы фокусируетесь на разговоре, а не на переводе.',
+        'cta.title': 'Готовы общаться без барьеров?',
+        'cta.subtitle': 'Регистрация за секунды. Бесплатно навсегда.',
+        'cta.button': 'Создать аккаунт'
+      },
+      ar: {
+        'nav.features': 'الميزات',
+        'nav.rooms': 'الغرف',
+        'nav.install': 'تثبيت',
+        'nav.enter': 'دخول',
+        'hero.badge': 'ترجمة فورية',
+        'hero.highlight': 'بدون حواجز لغوية',
+        'hero.subtitle': 'كل شخص يتحدث بلغته. Poly يترجم.',
+        'hero.cta': 'ابدأ الآن',
+        'hero.how': 'كيف يعمل',
+        'manifesto.quote': 'في Poly.io، المحادثات لا تُحفظ. إنها تحدث.',
+        'manifesto.explanation': 'الرسائل تنتهي صلاحيتها خلال 24 ساعة. الغرف تختفي عندما تتوقف عن الاستخدام. هنا، التركيز على الحاضر — وليس تراكم التاريخ.',
+        'features.title': 'اللغة لم تعد حاجزاً',
+        'features.subtitle': 'وتصبح مجرد تفصيل. أنت تركز على المحادثة، وليس الترجمة.',
+        'cta.title': 'مستعد للدردشة بدون حواجز؟',
+        'cta.subtitle': 'سجّل في ثوانٍ. مجاني دائماً.',
+        'cta.button': 'إنشاء حسابي'
+      }
+    };
+
+    const langCodes = { pt: 'PT', en: 'EN', es: 'ES', fr: 'FR', de: 'DE', it: 'IT', ja: 'JA', ko: 'KO', zh: 'ZH', ru: 'RU', ar: 'AR' };
+    let currentLang = 'pt';
+
+    // ==================== LANGUAGE SELECTOR ====================
+    const langBtn = document.getElementById('langBtn');
+    const langDropdown = document.getElementById('langDropdown');
+    const langSelector = document.querySelector('.lang-selector');
+    const langCurrent = document.querySelector('.lang-current');
+
+    langBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      langSelector.classList.toggle('open');
+    });
+
+    document.addEventListener('click', () => {
+      langSelector.classList.remove('open');
+    });
+
+    langDropdown.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang;
+        setLanguage(lang);
+        langSelector.classList.remove('open');
+      });
+    });
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      langCurrent.textContent = langCodes[lang];
+
+      // Update active button
+      langDropdown.querySelectorAll('button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+      });
+
+      // Translate all elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (translations[lang] && translations[lang][key]) {
+          el.textContent = translations[lang][key];
+        }
+      });
+
+      // Handle RTL for Arabic
+      document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+      // Save preference
+      localStorage.setItem('poly-lang', lang);
+    }
+
+    // Load saved language
+    const savedLang = localStorage.getItem('poly-lang');
+    if (savedLang && translations[savedLang]) {
+      setLanguage(savedLang);
+    }
+
+    // ==================== TYPEWRITER EFFECT ====================
     const phrases = [
       'Chat profissional',      // Português
       'Professional chat',      // English
