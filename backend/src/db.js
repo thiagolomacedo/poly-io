@@ -804,7 +804,7 @@ async function getPublicIoFriends(limit = 50, offset = 0) {
         u.avatar_config as criador_avatar
       FROM io_friends iof
       JOIN users u ON iof.user_id = u.id
-      WHERE iof.publico = TRUE AND iof.ativo = TRUE
+      WHERE iof.publico = TRUE
       ORDER BY COALESCE(iof.likes_count, 0) DESC, iof.criado_em DESC
       LIMIT $1 OFFSET $2
     `, [limit, offset])
@@ -828,7 +828,7 @@ async function getPublicIoFriendById(ioFriendId) {
         u.nome as criador_nome
       FROM io_friends iof
       JOIN users u ON iof.user_id = u.id
-      WHERE iof.id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+      WHERE iof.id = $1 AND iof.publico = TRUE
     `, [ioFriendId])
 
     return result.rows[0] || null
@@ -842,7 +842,7 @@ async function getPublicIoFriendById(ioFriendId) {
 async function countPublicIoFriends() {
   try {
     const result = await pool.query(
-      'SELECT COUNT(*) as total FROM io_friends WHERE publico = TRUE AND ativo = TRUE'
+      'SELECT COUNT(*) as total FROM io_friends WHERE publico = TRUE'
     )
     return parseInt(result.rows[0].total)
   } catch (error) {
@@ -857,7 +857,7 @@ async function addPublicIoFriend(userId, ioFriendId) {
   try {
     // Verificar se a io friend existe e é pública
     const ioFriend = await pool.query(
-      'SELECT id, user_id FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      'SELECT id, user_id FROM io_friends WHERE id = $1 AND publico = TRUE',
       [ioFriendId]
     )
     if (ioFriend.rows.length === 0) {
@@ -936,7 +936,7 @@ async function getUserPublicIoFriends(userId) {
       FROM user_public_io_friends upif
       JOIN io_friends iof ON upif.io_friend_id = iof.id
       JOIN users u ON iof.user_id = u.id
-      WHERE upif.user_id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+      WHERE upif.user_id = $1 AND iof.publico = TRUE
       ORDER BY upif.adicionado_em DESC
     `, [userId])
 
@@ -958,7 +958,7 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
       FROM user_public_io_friends upif
       JOIN io_friends iof ON upif.io_friend_id = iof.id
       JOIN users u ON iof.user_id = u.id
-      WHERE upif.user_id = $1 AND iof.id = $2 AND iof.publico = TRUE AND iof.ativo = TRUE
+      WHERE upif.user_id = $1 AND iof.id = $2 AND iof.publico = TRUE
     `, [userId, ioFriendId])
 
     return result.rows[0] || null
@@ -975,7 +975,7 @@ async function startExperimentingIoFriend(userId, ioFriendId) {
   try {
     // Verificar se a io friend existe e é pública
     const ioFriend = await pool.query(
-      'SELECT id, user_id, nome FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      'SELECT id, user_id, nome FROM io_friends WHERE id = $1 AND publico = TRUE',
       [ioFriendId]
     )
     if (ioFriend.rows.length === 0) {
@@ -1024,7 +1024,7 @@ async function getExperimentingIoFriend(userId) {
       FROM users usr
       JOIN io_friends iof ON usr.experimenting_io_friend_id = iof.id
       JOIN users u ON iof.user_id = u.id
-      WHERE usr.id = $1 AND iof.publico = TRUE AND iof.ativo = TRUE
+      WHERE usr.id = $1 AND iof.publico = TRUE
     `, [userId])
 
     return result.rows[0] || null
@@ -1039,7 +1039,7 @@ async function adoptIoFriend(userId, ioFriendId) {
   try {
     // Buscar io friend pública
     const source = await pool.query(
-      'SELECT * FROM io_friends WHERE id = $1 AND publico = TRUE AND ativo = TRUE',
+      'SELECT * FROM io_friends WHERE id = $1 AND publico = TRUE',
       [ioFriendId]
     )
     if (source.rows.length === 0) {
