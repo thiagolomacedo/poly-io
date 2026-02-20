@@ -543,23 +543,14 @@
     }
 
     /* ==================== FLOATING IO ==================== */
-    .floating-io-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 2rem;
-      background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-card) 100%);
-      position: relative;
-      overflow: visible;
-    }
-
     .floating-io {
-      width: 200px;
-      height: 200px;
+      width: 180px;
+      height: 180px;
       border-radius: 50%;
       object-fit: cover;
       animation: floatUpDown 3s ease-in-out infinite;
       filter: drop-shadow(0 20px 40px rgba(139, 92, 246, 0.4));
+      margin-bottom: 2rem;
     }
 
     @keyframes floatUpDown {
@@ -567,14 +558,14 @@
         transform: translateY(0);
       }
       50% {
-        transform: translateY(-20px);
+        transform: translateY(-15px);
       }
     }
 
     @media (max-width: 768px) {
       .floating-io {
-        width: 150px;
-        height: 150px;
+        width: 140px;
+        height: 140px;
       }
     }
 
@@ -1536,11 +1527,6 @@
     </div>
   </section>
 
-  <!-- Floating io Friend -->
-  <div class="floating-io-wrapper">
-    <img src="/io-floating.png" alt="io Friend" class="floating-io">
-  </div>
-
   <!-- Rooms Section -->
   <section class="rooms" id="salas">
     <div class="rooms-container">
@@ -1817,6 +1803,7 @@
   <!-- CTA Section -->
   <section class="cta">
     <div class="cta-container">
+      <img src="/io-floating.png" alt="io Friend" class="floating-io">
       <h2>Pronto para conversar sem barreiras?</h2>
       <p>Cadastre-se em segundos. É gratuito, sempre.</p>
       <a href="https://poly-io.vercel.app" class="btn btn-primary btn-large">
