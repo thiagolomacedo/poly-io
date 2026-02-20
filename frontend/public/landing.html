@@ -986,6 +986,110 @@
       letter-spacing: 0.05em;
     }
 
+    /* ==================== FOUNDER SECTION ==================== */
+    .founder-section {
+      padding: 6rem 2rem;
+      background: linear-gradient(180deg, var(--bg-dark) 0%, #1a1520 50%, var(--bg-card) 100%);
+      text-align: center;
+      border-top: 1px solid rgba(255, 215, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    }
+
+    .founder-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .founder-badge-large {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 24px;
+      background: transparent;
+      border: 2px solid #ffd700;
+      color: #ffd700;
+      border-radius: 30px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+    }
+
+    .founder-star-large {
+      font-size: 1.2rem;
+      animation: founder-spin 3s linear infinite;
+    }
+
+    @keyframes founder-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .founder-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: var(--text-primary);
+    }
+
+    .founder-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 3rem;
+    }
+
+    .founder-benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    .founder-benefit {
+      background: rgba(255, 215, 0, 0.05);
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+    }
+
+    .founder-benefit:hover {
+      background: rgba(255, 215, 0, 0.1);
+      border-color: #ffd700;
+      transform: translateY(-4px);
+    }
+
+    .founder-benefit .benefit-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    .founder-benefit h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffd700;
+      margin-bottom: 0.5rem;
+    }
+
+    .founder-benefit p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 900px) {
+      .founder-benefits-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .founder-benefits-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* ==================== CTA SECTION ==================== */
     .cta {
       padding: 8rem 2rem;
@@ -1922,6 +2026,41 @@
             Nada do que você diz no Poly.io fica armazenado.
           </p>
           <span class="quote-category">Privacidade</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Founder Benefits Section -->
+  <section class="founder-section">
+    <div class="founder-container">
+      <div class="founder-badge-large">
+        <span class="founder-star-large">✦</span>
+        Membro Fundador
+      </div>
+      <h2 class="founder-title">Cadastre-se agora e ganhe benefícios exclusivos</h2>
+      <p class="founder-subtitle">Quem entrar durante o lançamento recebe vantagens permanentes!</p>
+
+      <div class="founder-benefits-grid">
+        <div class="founder-benefit">
+          <span class="benefit-icon">🏆</span>
+          <h3>Badge Exclusivo</h3>
+          <p>Selo "Fundador" com estrela dourada no seu perfil para sempre</p>
+        </div>
+        <div class="founder-benefit">
+          <span class="benefit-icon">🤖</span>
+          <h3>2 io Friends</h3>
+          <p>Crie até 2 io Friends personalizadas (usuários normais: 1)</p>
+        </div>
+        <div class="founder-benefit">
+          <span class="benefit-icon">💬</span>
+          <h3>2 Salas Públicas</h3>
+          <p>Crie até 2 salas para sua comunidade (usuários normais: 1)</p>
+        </div>
+        <div class="founder-benefit">
+          <span class="benefit-icon">🚀</span>
+          <h3>Acesso Antecipado</h3>
+          <p>Seja o primeiro a testar novas funcionalidades</p>
         </div>
       </div>
     </div>

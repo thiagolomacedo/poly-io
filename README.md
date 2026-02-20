@@ -4,6 +4,26 @@
 
 Cada pessoa escreve no seu idioma. A outra pessoa lê no idioma dela. Simples assim.
 
+## ✨ Novidades v4.2 - Membros Fundadores
+
+Sistema de benefícios para usuários que entraram durante o beta!
+
+### 👑 Benefícios do Membro Fundador
+- **Badge exclusivo** "✦ Fundador" com estrela girando no perfil
+- **2 io Friends** (usuários normais: 1)
+- **2 Salas Públicas** (usuários normais: 1)
+- Acesso antecipado a novas funcionalidades
+
+### 🔧 Sair do Beta (Roadmap)
+Quando quiser encerrar a fase de lançamento:
+1. Editar `backend/src/db.js`
+2. Mudar o default de `is_founder` de `TRUE` para `FALSE`
+3. Mudar `max_io_friends` de `2` para `1`
+4. Mudar `max_rooms` de `2` para `1`
+5. Novos usuários entrarão sem benefícios de fundador
+
+---
+
 ## ✨ Novidades v4.1 - io Friends Públicas
 
 Crie sua própria **io Friend** personalizada com nome, personalidade e avatar únicos!
