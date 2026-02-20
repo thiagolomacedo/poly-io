@@ -174,8 +174,10 @@
       border-color: var(--primary);
     }
 
-    .lang-flag {
-      font-size: 1rem;
+    .lang-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--primary);
     }
 
     .lang-current {
@@ -1425,7 +1427,10 @@
       <!-- Language Selector (always visible) -->
       <div class="lang-selector">
         <button class="lang-btn" id="langBtn">
-          <span class="lang-flag">🌐</span>
+          <svg class="lang-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
           <span class="lang-current">PT</span>
           <span class="lang-arrow">▼</span>
         </button>
