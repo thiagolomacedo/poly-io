@@ -4185,6 +4185,8 @@ async function saveIoFriend() {
       ? `${API_URL}/io-friend/${editingIoFriendId.value}`
       : `${API_URL}/io-friend`
 
+    console.log('[io Friend] Salvando:', { isEditing, method, url, editingIoFriendId: editingIoFriendId.value })
+
     const res = await fetch(url, {
       method,
       headers: {
@@ -4195,6 +4197,7 @@ async function saveIoFriend() {
     })
 
     const data = await res.json()
+    console.log('[io Friend] Resposta do servidor:', { ok: res.ok, data })
 
     if (!res.ok) {
       alert(data.error || 'Erro ao salvar')
@@ -4205,7 +4208,9 @@ async function saveIoFriend() {
     ioFriend.value = data.ioFriend
 
     // Recarregar lista de io friends
+    console.log('[io Friend] Recarregando lista...')
     await loadAllIoFriends()
+    console.log('[io Friend] Lista atualizada:', ioFriends.value.length, 'io friends')
 
     showIoFriendModal.value = false
     editingIoFriendId.value = null
