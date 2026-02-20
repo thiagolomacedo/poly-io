@@ -471,12 +471,22 @@
 
           <!-- Seção io Friends (só para o próprio perfil) -->
           <div v-if="profileUser?.id === currentUser?.id" class="io-friends-section">
+            <!-- Botão Usar io Padrão (se tem io friend ativa) -->
+            <button
+              v-if="ioFriend"
+              class="btn-use-default-io"
+              @click="useDefaultIo"
+            >
+              🤖 Usar io Padrão
+            </button>
+
             <!-- Lista de io friends do usuário (se tiver) -->
             <div v-if="ioFriends.length > 0" class="my-io-friends-list">
               <div
                 v-for="friend in ioFriends"
                 :key="friend.id"
                 class="my-io-friend-item"
+                :class="{ active: ioFriend?.id === friend.id }"
               >
                 <img
                   v-if="friend.avatar_base64"
@@ -485,6 +495,13 @@
                   class="io-friend-thumb"
                 />
                 <span class="io-friend-name">{{ friend.nome }}</span>
+                <button
+                  v-if="ioFriend?.id !== friend.id"
+                  class="btn-use-mini"
+                  @click="activateIoFriend(friend.id)"
+                  title="Usar esta io"
+                >Usar</button>
+                <span v-else class="io-active-badge">Ativa</span>
                 <button
                   class="btn-edit-mini"
                   @click="openIoFriendModal(friend)"
@@ -4277,6 +4294,60 @@ async function removeIoFriend(ioFriendId = null) {
     alert('Erro ao remover io friend')
   } finally {
     savingIoFriend.value = false
+  }
+}
+
+// Ativar uma io friend específica (usar como io no chat)
+async function activateIoFriend(ioFriendId) {
+  try {
+    const res = await fetch(`${API_URL}/io-friend/${ioFriendId}/activate`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      await loadIoFriend()
+      await loadAllIoFriends()
+      await loadConnections()
+
+      // Atualizar chat se io estiver selecionado
+      if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
+        const updatedConn = connections.value.find(c => c.email === 'io@poly.io' || c.is_io_friend)
+        if (updatedConn) {
+          selectedConnection.value = { ...updatedConn }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[io Friend] Erro ao ativar:', e)
+  }
+}
+
+// Voltar para io padrão (desativar todas as io friends)
+async function useDefaultIo() {
+  if (!confirm('Voltar para a io padrão? Suas io friends continuarão salvas.')) return
+
+  try {
+    const res = await fetch(`${API_URL}/io-friend/deactivate-all`, {
+      method: 'POST',
+      headers: authHeaders()
+    })
+
+    if (res.ok) {
+      ioFriend.value = null
+      await loadAllIoFriends()
+      await loadConnections()
+
+      // Atualizar chat se io estiver selecionado
+      if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
+        const updatedConn = connections.value.find(c => c.email === 'io@poly.io')
+        if (updatedConn) {
+          selectedConnection.value = { ...updatedConn }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[io Friend] Erro ao desativar:', e)
   }
 }
 
@@ -12609,6 +12680,51 @@ body {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
   margin-top: 8px;
+}
+
+.btn-use-default-io {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-use-default-io:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.my-io-friend-item.active {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.btn-use-mini {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-use-mini:hover {
+  opacity: 0.9;
+}
+
+.io-active-badge {
+  font-size: 0.7rem;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .btn-explore {

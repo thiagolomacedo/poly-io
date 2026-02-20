@@ -1735,6 +1735,56 @@ app.delete('/api/io-friend/:id', authMiddleware, async (req, res) => {
   }
 })
 
+// Ativar uma io friend específica (usar como io no chat)
+app.post('/api/io-friend/:id/activate', authMiddleware, async (req, res) => {
+  try {
+    const ioFriendId = parseInt(req.params.id)
+
+    // Verificar se a io friend pertence ao usuário
+    const check = await pool.query(
+      'SELECT id FROM io_friends WHERE id = $1 AND user_id = $2',
+      [ioFriendId, req.userId]
+    )
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'io friend não encontrada' })
+    }
+
+    // Desativar todas as io friends do usuário
+    await pool.query(
+      'UPDATE io_friends SET ativo = FALSE WHERE user_id = $1',
+      [req.userId]
+    )
+
+    // Ativar a io friend específica
+    await pool.query(
+      'UPDATE io_friends SET ativo = TRUE WHERE id = $1',
+      [ioFriendId]
+    )
+
+    console.log(`[io Friend] Ativada id ${ioFriendId} (user ${req.userId})`)
+    res.json({ message: 'io friend ativada!' })
+  } catch (error) {
+    console.error('[io Friend] Erro ao ativar:', error.message)
+    res.status(500).json({ error: 'Erro ao ativar io friend' })
+  }
+})
+
+// Desativar todas as io friends (voltar para io padrão)
+app.post('/api/io-friend/deactivate-all', authMiddleware, async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE io_friends SET ativo = FALSE WHERE user_id = $1',
+      [req.userId]
+    )
+
+    console.log(`[io Friend] Todas desativadas (user ${req.userId}) - usando io padrão`)
+    res.json({ message: 'Voltou para io padrão' })
+  } catch (error) {
+    console.error('[io Friend] Erro ao desativar:', error.message)
+    res.status(500).json({ error: 'Erro ao desativar io friends' })
+  }
+})
+
 // ==================== IO FRIENDS PÚBLICAS (EXPLORAR) ====================
 
 // Listar io friends públicas
