@@ -286,11 +286,11 @@ async function initDatabase() {
     console.log('[DB] Tabela io_memories OK')
 
     // ==================== TABELA IO FRIEND (Io Personalizada) ====================
-    // Cada usuário pode criar UMA io friend personalizada
+    // Usuários podem criar múltiplas io friends (fundadores: 2, normal: 1)
     await client.query(`
       CREATE TABLE IF NOT EXISTS io_friends (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         nome VARCHAR(50) NOT NULL DEFAULT 'io',
         personalidade TEXT,
         estilo_comunicacao VARCHAR(30) DEFAULT 'equilibrado',
@@ -318,6 +318,15 @@ async function initDatabase() {
     await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS exemplos_dialogo TEXT`)
     await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS publico BOOLEAN DEFAULT FALSE`)
     await client.query(`CREATE INDEX IF NOT EXISTS idx_io_friends_publico ON io_friends(publico) WHERE publico = TRUE`)
+
+    // Migração: remover constraint UNIQUE de user_id para permitir múltiplas io friends
+    try {
+      await client.query(`ALTER TABLE io_friends DROP CONSTRAINT IF EXISTS io_friends_user_id_key`)
+      console.log('[DB] Constraint UNIQUE de user_id removida (permite múltiplas io friends)')
+    } catch (e) {
+      // Constraint pode não existir, ignorar erro
+    }
+
     console.log('[DB] Tabela io_friends OK')
     // TODO: Migrar para Cloudinary quando escalar (armazenamento de imagens)
 
