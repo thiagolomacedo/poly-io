@@ -542,6 +542,42 @@
       line-height: 1.6;
     }
 
+    /* ==================== FLOATING IO ==================== */
+    .floating-io-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-card) 100%);
+      position: relative;
+      overflow: visible;
+    }
+
+    .floating-io {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      object-fit: cover;
+      animation: floatUpDown 3s ease-in-out infinite;
+      filter: drop-shadow(0 20px 40px rgba(139, 92, 246, 0.4));
+    }
+
+    @keyframes floatUpDown {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .floating-io {
+        width: 150px;
+        height: 150px;
+      }
+    }
+
     /* ==================== ROOMS SECTION ==================== */
     .rooms {
       padding: 8rem 2rem;
@@ -1499,6 +1535,11 @@
       </div>
     </div>
   </section>
+
+  <!-- Floating io Friend -->
+  <div class="floating-io-wrapper">
+    <img src="/io-floating.png" alt="io Friend" class="floating-io">
+  </div>
 
   <!-- Rooms Section -->
   <section class="rooms" id="salas">
