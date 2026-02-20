@@ -488,6 +488,14 @@
                 class="my-io-friend-item"
                 :class="{ active: ioFriend?.id === friend.id }"
               >
+                <button
+                  class="btn-star"
+                  :class="{ active: ioFriend?.id === friend.id }"
+                  @click="activateIoFriend(friend.id)"
+                  :title="ioFriend?.id === friend.id ? 'Fixada no topo' : 'Fixar no topo'"
+                >
+                  {{ ioFriend?.id === friend.id ? '★' : '☆' }}
+                </button>
                 <img
                   v-if="friend.avatar_base64"
                   :src="friend.avatar_base64"
@@ -495,13 +503,6 @@
                   class="io-friend-thumb"
                 />
                 <span class="io-friend-name">{{ friend.nome }}</span>
-                <button
-                  v-if="ioFriend?.id !== friend.id"
-                  class="btn-use-mini"
-                  @click="activateIoFriend(friend.id)"
-                  title="Usar esta io"
-                >Usar</button>
-                <span v-else class="io-active-badge">Ativa</span>
                 <button
                   class="btn-edit-mini"
                   @click="openIoFriendModal(friend)"
@@ -12704,27 +12705,23 @@ body {
   background: rgba(168, 85, 247, 0.15);
 }
 
-.btn-use-mini {
-  background: linear-gradient(135deg, #10b981, #059669);
+.btn-star {
+  background: none;
   border: none;
-  border-radius: 4px;
-  color: #fff;
-  padding: 4px 8px;
-  font-size: 0.75rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0;
+  transition: all 0.2s;
 }
 
-.btn-use-mini:hover {
-  opacity: 0.9;
+.btn-star:hover {
+  color: #fbbf24;
+  transform: scale(1.1);
 }
 
-.io-active-badge {
-  font-size: 0.7rem;
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.2);
-  padding: 2px 6px;
-  border-radius: 4px;
+.btn-star.active {
+  color: #fbbf24;
 }
 
 .btn-explore {
