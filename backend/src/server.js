@@ -4030,6 +4030,24 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+// Estatísticas públicas (para landing page)
+app.get('/api/stats/public', async (req, res) => {
+  try {
+    const usersResult = await pool.query('SELECT COUNT(*) as total FROM users')
+    const roomsResult = await pool.query("SELECT COUNT(*) as total FROM rooms WHERE status = 'active'")
+    const ioFriendsResult = await pool.query('SELECT COUNT(*) as total FROM io_friends WHERE publico = TRUE')
+
+    res.json({
+      users: parseInt(usersResult.rows[0].total),
+      rooms: parseInt(roomsResult.rows[0].total),
+      ioFriends: parseInt(ioFriendsResult.rows[0].total)
+    })
+  } catch (error) {
+    console.error('[Stats] Erro:', error.message)
+    res.json({ users: 0, rooms: 0, ioFriends: 0 })
+  }
+})
+
 // ==================== SOCKET.IO ====================
 
 io.on('connection', (socket) => {

@@ -1584,16 +1584,16 @@
 
       <div class="hero-stats animate-in delay-4">
         <div class="hero-stat">
+          <div class="hero-stat-value" id="userCount">--</div>
+          <div class="hero-stat-label">Usuários</div>
+        </div>
+        <div class="hero-stat">
           <div class="hero-stat-value">11</div>
           <div class="hero-stat-label">Idiomas</div>
         </div>
         <div class="hero-stat">
           <div class="hero-stat-value">100%</div>
           <div class="hero-stat-label">Gratuito</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-value">0</div>
-          <div class="hero-stat-label">Dados armazenados</div>
         </div>
       </div>
     </div>
@@ -2410,6 +2410,26 @@
 
     // Iniciar o efeito
     type();
+
+    // ==================== USER COUNT ====================
+    async function fetchUserCount() {
+      try {
+        const response = await fetch('https://poly-io-api.onrender.com/api/stats/public');
+        const data = await response.json();
+        const userCountEl = document.getElementById('userCount');
+        if (data.users > 0) {
+          userCountEl.textContent = data.users;
+        } else {
+          userCountEl.textContent = '0';
+        }
+      } catch (error) {
+        console.log('Stats não disponível');
+        document.getElementById('userCount').textContent = '--';
+      }
+    }
+
+    // Buscar contagem ao carregar
+    fetchUserCount();
   </script>
 
 </body>
