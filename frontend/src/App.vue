@@ -1415,6 +1415,31 @@
             >
               {{ darkMode ? '☀️' : '🌙' }}
             </button>
+            <!-- Controle de tamanho de fonte -->
+            <div class="font-size-control">
+              <button
+                class="btn-font-size"
+                @click="showFontSizeMenu = !showFontSizeMenu"
+                title="Tamanho da fonte (Acessibilidade)"
+              >
+                <span class="font-icon">Aa</span>
+              </button>
+              <div v-if="showFontSizeMenu" class="font-size-menu" @click.stop>
+                <p class="font-size-label">Tamanho da fonte</p>
+                <input
+                  type="range"
+                  min="14"
+                  max="22"
+                  step="2"
+                  v-model="messageFontSize"
+                  @input="applyFontSize"
+                  class="font-size-slider"
+                />
+                <div class="font-size-preview">
+                  <span>{{ messageFontSize }}px</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2649,6 +2674,10 @@ let typingTimeout = null // Timer para resetar o indicador
 const notificacaoGlobalMudo = ref(localStorage.getItem('poly_mute_all') === 'true')
 const darkMode = ref(localStorage.getItem('poly_theme') !== 'light') // dark por padrão
 const conexoesMudas = ref(JSON.parse(localStorage.getItem('poly_mute_connections') || '[]'))
+
+// Acessibilidade - tamanho da fonte
+const messageFontSize = ref(parseInt(localStorage.getItem('poly_font_size')) || 14)
+const showFontSizeMenu = ref(false)
 
 // Modo narrativo da io (híbrido)
 const ioNarrativeMode = ref(false)
@@ -8020,6 +8049,19 @@ function applyTheme() {
   }
 }
 
+// Acessibilidade - aplicar tamanho da fonte
+function applyFontSize() {
+  localStorage.setItem('poly_font_size', messageFontSize.value)
+  document.documentElement.style.setProperty('--message-font-size', messageFontSize.value + 'px')
+}
+
+// Fechar menu de fonte ao clicar fora
+function closeFontSizeMenu(e) {
+  if (!e.target.closest('.font-size-control')) {
+    showFontSizeMenu.value = false
+  }
+}
+
 function toggleMuteConnection(connectionId) {
   const index = conexoesMudas.value.indexOf(connectionId)
   if (index === -1) {
@@ -8364,6 +8406,12 @@ function updateApp() {
 onMounted(async () => {
   // Aplicar tema salvo
   applyTheme()
+
+  // Aplicar tamanho de fonte salvo
+  applyFontSize()
+
+  // Listener para fechar menu de fonte ao clicar fora
+  document.addEventListener('click', closeFontSizeMenu)
 
   // Aguardar Service Worker estar pronto (importante para PWA)
   if ('serviceWorker' in navigator) {
@@ -9087,6 +9135,106 @@ body {
 .btn-theme-toggle:hover {
   border-color: var(--accent);
   background: var(--bg-hover);
+}
+
+/* Controle de tamanho de fonte (Acessibilidade) */
+.font-size-control {
+  position: relative;
+}
+
+.btn-font-size {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-font-size:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.font-icon {
+  font-family: serif;
+}
+
+.font-size-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 180px;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.font-size-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.font-size-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.font-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #6366f1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.font-size-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.font-size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #6366f1;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.font-size-preview {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+/* Light theme */
+:root.light-theme .font-size-menu {
+  background: #fff;
+  border-color: #e5e7eb;
 }
 
 /* Botão silenciar conexão */
@@ -10645,8 +10793,8 @@ body {
 }
 
 .message-text {
-  font-size: 0.9rem;
-  line-height: 1.4;
+  font-size: var(--message-font-size, 14px);
+  line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
