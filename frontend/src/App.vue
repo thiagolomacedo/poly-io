@@ -13064,6 +13064,118 @@ body {
   opacity: 0.9;
 }
 
+/* ==================== LIGHT THEME: PERFIL ==================== */
+
+/* Seção código de conexão */
+:root.light-theme .friend-code-section {
+  background: #6366f1;
+}
+
+:root.light-theme .friend-code-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:root.light-theme .friend-code {
+  color: #fff;
+}
+
+:root.light-theme .btn-copy {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+:root.light-theme .btn-copy:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+:root.light-theme .btn-share-link {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+:root.light-theme .btn-share-link:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Botões de editar social */
+:root.light-theme .btn-edit-social {
+  background: #6366f1;
+  color: #fff;
+}
+
+:root.light-theme .btn-edit-social:hover {
+  background: #5558e3;
+}
+
+/* Inputs e selects */
+:root.light-theme .social-select,
+:root.light-theme .social-input {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #1f2937;
+}
+
+:root.light-theme .social-buttons .btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* io Friends list */
+:root.light-theme .my-io-friend-item {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+:root.light-theme .my-io-friend-item.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+:root.light-theme .io-friend-name {
+  color: #fff;
+}
+
+:root.light-theme .btn-star {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root.light-theme .btn-star:hover,
+:root.light-theme .btn-star.active {
+  color: #fbbf24;
+}
+
+:root.light-theme .btn-edit-mini,
+:root.light-theme .btn-delete-mini {
+  filter: brightness(0) invert(1);
+}
+
+:root.light-theme .btn-use-default-io {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+:root.light-theme .btn-use-default-io:hover {
+  background: #5558e3;
+}
+
+:root.light-theme .founder-io-limit {
+  color: #6b7280;
+}
+
+/* Profile tip */
+:root.light-theme .profile-tip {
+  color: #6b7280;
+}
+
+/* Badge fundador - manter dourado */
+:root.light-theme .founder-badge {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1f2937;
+}
+
 /* Modal Explorar */
 .explore-modal {
   max-width: 600px;
