@@ -365,6 +365,27 @@ async function initDatabase() {
     // Coluna de contador de likes (cache para performance)
     await client.query(`ALTER TABLE io_friends ADD COLUMN IF NOT EXISTS likes_count INTEGER DEFAULT 0`)
 
+    // ==================== TABELA CACHE DE TRADUÇÕES ====================
+    // Cache permanente de traduções para economizar chamadas à API
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS translation_cache (
+        id SERIAL PRIMARY KEY,
+        texto_original VARCHAR(500) NOT NULL,
+        idioma_origem VARCHAR(10) NOT NULL,
+        idioma_destino VARCHAR(10) NOT NULL,
+        traducao VARCHAR(1000) NOT NULL,
+        uso_count INTEGER DEFAULT 1,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        ultimo_uso TIMESTAMP DEFAULT NOW(),
+        UNIQUE(texto_original, idioma_origem, idioma_destino)
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_translation_cache_lookup
+      ON translation_cache(texto_original, idioma_origem, idioma_destino)
+    `)
+    console.log('[DB] Tabela translation_cache OK')
+
     console.log('[DB] Banco de dados inicializado com sucesso!')
 
   } catch (error) {
@@ -968,6 +989,90 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
   }
 }
 
+// ==================== FUNÇÕES CACHE DE TRADUÇÕES ====================
+
+// Limite máximo de caracteres para cachear (textos muito grandes são únicos)
+const TRANSLATION_CACHE_MAX_LENGTH = 500
+
+// Buscar tradução no cache
+async function getTranslationCache(texto, idiomaOrigem, idiomaDestino) {
+  try {
+    // Normalizar texto (minúsculo, sem espaços extras)
+    const textoNormalizado = texto.toLowerCase().trim().replace(/\s+/g, ' ')
+
+    // Não cachear textos muito longos
+    if (textoNormalizado.length > TRANSLATION_CACHE_MAX_LENGTH) {
+      return null
+    }
+
+    const result = await pool.query(`
+      UPDATE translation_cache
+      SET uso_count = uso_count + 1, ultimo_uso = NOW()
+      WHERE texto_original = $1 AND idioma_origem = $2 AND idioma_destino = $3
+      RETURNING traducao, uso_count
+    `, [textoNormalizado, idiomaOrigem, idiomaDestino])
+
+    if (result.rows.length > 0) {
+      console.log(`  [Cache HIT] "${texto.substring(0, 30)}..." (usado ${result.rows[0].uso_count}x)`)
+      return result.rows[0].traducao
+    }
+
+    return null
+  } catch (error) {
+    console.error('[Cache] Erro ao buscar:', error.message)
+    return null
+  }
+}
+
+// Salvar tradução no cache
+async function saveTranslationCache(texto, idiomaOrigem, idiomaDestino, traducao) {
+  try {
+    // Normalizar texto
+    const textoNormalizado = texto.toLowerCase().trim().replace(/\s+/g, ' ')
+
+    // Não cachear textos muito longos
+    if (textoNormalizado.length > TRANSLATION_CACHE_MAX_LENGTH) {
+      return false
+    }
+
+    // Não cachear se tradução é igual ao original (não traduziu de verdade)
+    if (textoNormalizado === traducao.toLowerCase().trim()) {
+      return false
+    }
+
+    await pool.query(`
+      INSERT INTO translation_cache (texto_original, idioma_origem, idioma_destino, traducao)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (texto_original, idioma_origem, idioma_destino)
+      DO UPDATE SET uso_count = translation_cache.uso_count + 1, ultimo_uso = NOW()
+    `, [textoNormalizado, idiomaOrigem, idiomaDestino, traducao])
+
+    console.log(`  [Cache SAVE] "${texto.substring(0, 30)}..." → "${traducao.substring(0, 30)}..."`)
+    return true
+  } catch (error) {
+    console.error('[Cache] Erro ao salvar:', error.message)
+    return false
+  }
+}
+
+// Estatísticas do cache
+async function getTranslationCacheStats() {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*) as total_entries,
+        SUM(uso_count) as total_hits,
+        ROUND(AVG(uso_count), 2) as avg_hits_per_entry,
+        pg_size_pretty(pg_total_relation_size('translation_cache')) as tamanho
+      FROM translation_cache
+    `)
+    return result.rows[0]
+  } catch (error) {
+    console.error('[Cache] Erro ao buscar stats:', error.message)
+    return null
+  }
+}
+
 // ==================== FUNÇÕES EXPERIMENTAR IO FRIEND ====================
 
 // Iniciar experimento com io friend pública (substitui temporariamente a io)
@@ -1153,5 +1258,10 @@ module.exports = {
   startExperimentingIoFriend,
   stopExperimentingIoFriend,
   getExperimentingIoFriend,
-  adoptIoFriend
+  adoptIoFriend,
+  // Funções cache de traduções
+  getTranslationCache,
+  saveTranslationCache,
+  getTranslationCacheStats,
+  TRANSLATION_CACHE_MAX_LENGTH
 }

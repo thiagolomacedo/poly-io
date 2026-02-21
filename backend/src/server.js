@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -1106,6 +1106,12 @@ async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
   const traducaoCurta = traduzirFraseCurta(texto, idiomaOrigem, idiomaDestino)
   if (traducaoCurta) return traducaoCurta
 
+  // 🔥 CACHE: Verificar se já temos essa tradução cacheada
+  const traducaoCache = await getTranslationCache(texto, idiomaOrigem, idiomaDestino)
+  if (traducaoCache) {
+    return traducaoCache
+  }
+
   // Pré-processar gírias PT-BR para melhor tradução
   let textoParaTraduzir = texto
   if (idiomaOrigem === 'pt') {
@@ -1118,31 +1124,41 @@ async function traduzirTexto(texto, idiomaOrigem, idiomaDestino) {
 
   let azureOrigem = idiomaOrigem === 'zh' ? 'zh-Hans' : idiomaOrigem
   let azureDestino = idiomaDestino === 'zh' ? 'zh-Hans' : idiomaDestino
+  let traducaoFinal = null
 
   // 1. Azure (se configurado)
-  if (AZURE_KEY) {
+  if (AZURE_KEY && !traducaoFinal) {
     try {
-      return await traduzirComAzure(textoParaTraduzir, azureOrigem, azureDestino)
+      traducaoFinal = await traduzirComAzure(textoParaTraduzir, azureOrigem, azureDestino)
     } catch (error) {
       console.log('  [Azure] Erro:', error.message)
     }
   }
 
   // 2. Lingva (gratuito e ILIMITADO - usa Google Translate)
-  try {
-    return await traduzirComLingva(textoParaTraduzir, idiomaOrigem, idiomaDestino)
-  } catch (error) {
-    console.log('  [Lingva] Todas as instâncias falharam')
+  if (!traducaoFinal) {
+    try {
+      traducaoFinal = await traduzirComLingva(textoParaTraduzir, idiomaOrigem, idiomaDestino)
+    } catch (error) {
+      console.log('  [Lingva] Todas as instâncias falharam')
+    }
   }
 
   // 3. MyMemory (fallback - tem limite de 50k chars/dia)
-  try {
-    return await traduzirComMyMemory(textoParaTraduzir, idiomaOrigem, idiomaDestino)
-  } catch (error) {
-    console.log('  [MyMemory] Erro:', error.message)
+  if (!traducaoFinal) {
+    try {
+      traducaoFinal = await traduzirComMyMemory(textoParaTraduzir, idiomaOrigem, idiomaDestino)
+    } catch (error) {
+      console.log('  [MyMemory] Erro:', error.message)
+    }
   }
 
-  return texto
+  // 🔥 CACHE: Salvar tradução para uso futuro
+  if (traducaoFinal && traducaoFinal !== texto) {
+    await saveTranslationCache(texto, idiomaOrigem, idiomaDestino, traducaoFinal)
+  }
+
+  return traducaoFinal || texto
 }
 
 // ==================== ROTAS DE AUTENTICAÇÃO ====================
@@ -4240,6 +4256,17 @@ app.get('/api/stats/public', async (req, res) => {
   } catch (error) {
     console.error('[Stats] Erro:', error.message)
     res.json({ users: 0, rooms: 0, ioFriends: 0 })
+  }
+})
+
+// Estatísticas do cache de traduções (para monitoramento)
+app.get('/api/stats/cache', authMiddleware, async (req, res) => {
+  try {
+    const stats = await getTranslationCacheStats()
+    res.json(stats || { error: 'Não foi possível obter estatísticas' })
+  } catch (error) {
+    console.error('[Cache Stats] Erro:', error.message)
+    res.status(500).json({ error: error.message })
   }
 })
 
