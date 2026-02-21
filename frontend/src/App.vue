@@ -9141,14 +9141,14 @@ body {
   opacity: 1;
 }
 
-/* Botões de mover */
+/* Botões de mover - setas brancas */
 .btn-move {
   width: 22px;
   height: 22px;
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #a78bfa;
+  color: #fff;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: bold;
@@ -9156,36 +9156,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
 }
 
 .btn-move:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.2);
-  color: #c4b5fd;
-  text-shadow: 0 0 12px rgba(196, 181, 253, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 
 .btn-move:disabled {
   opacity: 0.25;
   cursor: not-allowed;
-  text-shadow: none;
 }
 
-/* Light theme: setas pretas visíveis */
+/* Light theme: setas escuras */
 :root.light-theme .btn-move {
   color: #374151;
-  text-shadow: none;
-  background: rgba(0, 0, 0, 0.08);
 }
 
 :root.light-theme .btn-move:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.1);
   color: #111;
-}
-
-:root.light-theme .btn-move:disabled {
-  opacity: 0.3;
-  background: transparent;
 }
 
 /* Botão fixar */
@@ -9631,6 +9621,16 @@ body {
 
 .user-item.active {
   background: #6366f1;
+}
+
+/* Light theme: seleção com fundo mais claro */
+:root.light-theme .user-item.active {
+  background: rgba(99, 102, 241, 0.25);
+}
+
+:root.light-theme .user-item.active .user-info .name,
+:root.light-theme .user-item.active .user-info .lang {
+  color: #1f2937;
 }
 
 .user-avatar {
