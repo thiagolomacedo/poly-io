@@ -4381,6 +4381,124 @@ app.get('/api/stats/cache', authMiddleware, async (req, res) => {
   }
 })
 
+// ==================== ADMIN MONITORING ====================
+
+// Verificar se é admin (id = 1)
+function isAdmin(userId) {
+  return userId === 1
+}
+
+// Estatísticas completas para monitoramento (admin only)
+app.get('/api/admin/stats', authMiddleware, async (req, res) => {
+  try {
+    // Verificar se é admin
+    if (!isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Acesso negado' })
+    }
+
+    // Estatísticas de usuários
+    const usersResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_users,
+        COUNT(*) FILTER (WHERE is_founder = true) as founders,
+        COUNT(*) FILTER (WHERE is_paid = true) as paid_users,
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as new_today,
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as new_week
+      FROM users
+    `)
+
+    // Estatísticas de io Friend
+    const ioFriendsResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_io_friends,
+        COUNT(*) FILTER (WHERE publico = true) as public_io_friends
+      FROM io_friends
+    `)
+
+    // Uso diário de io (hoje)
+    const ioDailyResult = await pool.query(`
+      SELECT
+        COUNT(DISTINCT user_id) as users_using_io_today,
+        SUM(msg_count) as total_io_messages_today,
+        AVG(msg_count)::int as avg_messages_per_user
+      FROM io_daily_usage
+      WHERE data = CURRENT_DATE
+    `)
+
+    // Cache de traduções
+    const cacheStats = await getTranslationCacheStats()
+
+    // Conexões (amizades)
+    const connectionsResult = await pool.query(`
+      SELECT COUNT(*) as total_connections FROM connections
+    `)
+
+    // Salas
+    const roomsResult = await pool.query(`
+      SELECT COUNT(*) as total_rooms FROM rooms
+    `)
+
+    // Usuários online
+    const onlineCount = usuariosOnline.size
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      users: {
+        total: parseInt(usersResult.rows[0].total_users),
+        founders: parseInt(usersResult.rows[0].founders),
+        paid: parseInt(usersResult.rows[0].paid_users),
+        newToday: parseInt(usersResult.rows[0].new_today),
+        newThisWeek: parseInt(usersResult.rows[0].new_week),
+        online: onlineCount
+      },
+      ioFriend: {
+        totalCreated: parseInt(ioFriendsResult.rows[0].total_io_friends),
+        public: parseInt(ioFriendsResult.rows[0].public_io_friends),
+        usersUsingToday: parseInt(ioDailyResult.rows[0].users_using_io_today) || 0,
+        messagesToday: parseInt(ioDailyResult.rows[0].total_io_messages_today) || 0,
+        avgMessagesPerUser: parseInt(ioDailyResult.rows[0].avg_messages_per_user) || 0
+      },
+      translationCache: cacheStats,
+      connections: parseInt(connectionsResult.rows[0].total_connections),
+      rooms: parseInt(roomsResult.rows[0].total_rooms),
+      limits: {
+        groq: { daily: 14400, description: '14.4K requests/dia' },
+        ioFounder: IO_DAILY_LIMITS.founder,
+        ioNormal: IO_DAILY_LIMITS.normal,
+        ioPaid: IO_DAILY_LIMITS.paid
+      }
+    })
+  } catch (error) {
+    console.error('[Admin Stats] Erro:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Histórico de uso io (últimos 7 dias) - admin only
+app.get('/api/admin/io-history', authMiddleware, async (req, res) => {
+  try {
+    if (!isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Acesso negado' })
+    }
+
+    const result = await pool.query(`
+      SELECT
+        data,
+        COUNT(DISTINCT user_id) as users,
+        SUM(msg_count) as messages
+      FROM io_daily_usage
+      WHERE data >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY data
+      ORDER BY data DESC
+    `)
+
+    res.json(result.rows)
+  } catch (error) {
+    console.error('[Admin io History] Erro:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // ==================== SOCKET.IO ====================
 
 io.on('connection', (socket) => {
