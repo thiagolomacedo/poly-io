@@ -9964,6 +9964,24 @@ body {
   color: #fff;
 }
 
+/* Light theme: dropdown roxo com texto branco */
+:root.light-theme .idioma-select {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+:root.light-theme .idioma-select:hover,
+:root.light-theme .idioma-select:focus {
+  border-color: #4f46e5;
+  background: #4f46e5;
+}
+
+:root.light-theme .idioma-select option {
+  background: #6366f1;
+  color: #fff;
+}
+
 .translation-arrow {
   color: #666;
   font-size: 0.9rem;
