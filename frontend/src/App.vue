@@ -9171,15 +9171,21 @@ body {
   text-shadow: none;
 }
 
-/* Light theme: setas pretas */
+/* Light theme: setas pretas visíveis */
 :root.light-theme .btn-move {
-  color: #1f2937;
+  color: #374151;
   text-shadow: none;
+  background: rgba(0, 0, 0, 0.08);
 }
 
 :root.light-theme .btn-move:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.1);
-  color: #000;
+  background: rgba(0, 0, 0, 0.15);
+  color: #111;
+}
+
+:root.light-theme .btn-move:disabled {
+  opacity: 0.3;
+  background: transparent;
 }
 
 /* Botão fixar */
