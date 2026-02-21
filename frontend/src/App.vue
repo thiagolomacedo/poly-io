@@ -9178,6 +9178,16 @@ body {
   color: #111;
 }
 
+/* Light theme: setas brancas quando selecionado */
+:root.light-theme .user-item.active .btn-move {
+  color: #fff;
+}
+
+:root.light-theme .user-item.active .btn-move:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 /* Botão fixar */
 .btn-pin {
   width: 24px;
