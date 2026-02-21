@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats, canSendIoMessage, incrementIoDailyCount, IO_DAILY_LIMITS } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -3289,6 +3289,42 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
     if (IO_USER_ID && conn.destinatario_id === IO_USER_ID) {
       console.log('[io IA] Mensagem recebida:', textoTraduzido)
 
+      // 🔒 VERIFICAR LIMITE DIÁRIO antes de responder
+      const limiteCheck = await canSendIoMessage(req.userId)
+
+      if (!limiteCheck.allowed && limiteCheck.reason === 'DAILY_LIMIT') {
+        console.log(`[io IA] Limite diário atingido para user ${req.userId}: ${limiteCheck.currentCount}/${limiteCheck.limit} (${limiteCheck.userType})`)
+
+        // Mensagem amigável informando o limite
+        const msgLimite = limiteCheck.userType === 'founder'
+          ? `Ei! 💜 Você já usou suas ${limiteCheck.limit} mensagens de hoje comigo. Como Membro Fundador, você tem um limite maior que o normal! Volte amanhã e continuamos nossa conversa, tá? 🌙`
+          : `Oi! 💜 Você atingiu o limite de ${limiteCheck.limit} mensagens por dia comigo. Volte amanhã para continuarmos! Como Membro Fundador você teria 50 mensagens/dia. 🌟`
+
+        // Traduzir mensagem de limite para o idioma do usuário
+        const msgLimiteTraduzida = await traduzirTexto(msgLimite, 'pt', conn.remetente_idioma)
+
+        // Salvar mensagem de limite no banco
+        const limitMsg = await pool.query(`
+          INSERT INTO messages (connection_id, sender_id, texto_original, idioma_original, texto_traduzido, idioma_destino)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id, enviado_em
+        `, [req.params.connectionId, IO_USER_ID, msgLimite, 'pt', msgLimiteTraduzida, conn.remetente_idioma])
+
+        // Emitir via Socket
+        io.emit('nova-mensagem', {
+          id: limitMsg.rows[0].id,
+          texto: msgLimiteTraduzida,
+          textoOriginal: msgLimite,
+          textoTraduzido: msgLimiteTraduzida,
+          senderId: IO_USER_ID,
+          recipientId: req.userId,
+          timestamp: limitMsg.rows[0].enviado_em,
+          connectionId: parseInt(req.params.connectionId)
+        })
+
+        return // Não continua para gerar resposta da IA
+      }
+
       // Emitir "está digitando..." para simular resposta humana
       const userSocketId = usuariosOnline.get(req.userId)
 
@@ -3386,6 +3422,10 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
         enviadoEm: iaMsg.rows[0].enviado_em,
         destinatarioId: req.userId
       })
+
+      // 🔒 INCREMENTAR contador diário após resposta bem-sucedida
+      await incrementIoDailyCount(req.userId)
+      console.log(`[io IA] Contador incrementado para user ${req.userId}`)
     }
   } catch (error) {
     console.error('[Chat] Erro ao enviar:', error.message)

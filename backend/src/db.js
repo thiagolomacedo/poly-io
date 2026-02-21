@@ -131,6 +131,10 @@ async function initDatabase() {
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT TRUE
     `)
+    // Se é usuário pago (para limites expandidos)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE
+    `)
     // Limite de io friends que pode criar (fundador: 2, normal: 1)
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS max_io_friends INTEGER DEFAULT 2
@@ -265,6 +269,22 @@ async function initDatabase() {
       ALTER TABLE io_reminders ADD COLUMN IF NOT EXISTS recorrente BOOLEAN DEFAULT FALSE
     `)
     console.log('[DB] Tabela io_reminders OK')
+
+    // ==================== TABELA CONTADOR DIÁRIO IO FRIEND ====================
+    // Conta quantas mensagens cada usuário enviou pra io Friend por dia
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS io_daily_usage (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        data DATE NOT NULL DEFAULT CURRENT_DATE,
+        msg_count INTEGER DEFAULT 0,
+        UNIQUE(user_id, data)
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_io_daily_usage_user_date ON io_daily_usage(user_id, data)
+    `)
+    console.log('[DB] Tabela io_daily_usage OK')
 
     // ==================== TABELA DE MEMÓRIAS DA IO ====================
     // Memória persistente individual por usuário
@@ -989,6 +1009,114 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
   }
 }
 
+// ==================== FUNÇÕES CONTADOR DIÁRIO IO FRIEND ====================
+
+// Limites de mensagens por dia
+const IO_DAILY_LIMITS = {
+  founder: 50,   // Membros fundadores (Beta)
+  normal: 20,    // Usuários normais (pós-Beta)
+  paid: 500      // Usuários pagos (futuro)
+}
+
+// Buscar contagem de mensagens do usuário hoje
+async function getIoDailyCount(userId) {
+  try {
+    const result = await pool.query(`
+      SELECT msg_count FROM io_daily_usage
+      WHERE user_id = $1 AND data = CURRENT_DATE
+    `, [userId])
+    return result.rows[0]?.msg_count || 0
+  } catch (error) {
+    console.error('[io Daily] Erro ao buscar contagem:', error.message)
+    return 0
+  }
+}
+
+// Incrementar contagem de mensagens do usuário
+async function incrementIoDailyCount(userId) {
+  try {
+    await pool.query(`
+      INSERT INTO io_daily_usage (user_id, data, msg_count)
+      VALUES ($1, CURRENT_DATE, 1)
+      ON CONFLICT (user_id, data)
+      DO UPDATE SET msg_count = io_daily_usage.msg_count + 1
+    `, [userId])
+    return true
+  } catch (error) {
+    console.error('[io Daily] Erro ao incrementar:', error.message)
+    return false
+  }
+}
+
+// Verificar se usuário pode enviar mensagem pra io
+async function canSendIoMessage(userId) {
+  try {
+    // Buscar info do usuário (is_founder, is_paid)
+    const userResult = await pool.query(
+      'SELECT is_founder, is_paid FROM users WHERE id = $1',
+      [userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return { allowed: false, reason: 'Usuário não encontrado' }
+    }
+
+    const user = userResult.rows[0]
+
+    // Determinar limite baseado no tipo de usuário
+    let limit = IO_DAILY_LIMITS.normal // 20 por padrão
+    let userType = 'normal'
+
+    if (user.is_paid) {
+      limit = IO_DAILY_LIMITS.paid // 500
+      userType = 'paid'
+    } else if (user.is_founder) {
+      limit = IO_DAILY_LIMITS.founder // 50
+      userType = 'founder'
+    }
+
+    // Buscar contagem atual
+    const currentCount = await getIoDailyCount(userId)
+
+    if (currentCount >= limit) {
+      return {
+        allowed: false,
+        reason: 'DAILY_LIMIT',
+        currentCount,
+        limit,
+        userType
+      }
+    }
+
+    return {
+      allowed: true,
+      currentCount,
+      limit,
+      remaining: limit - currentCount,
+      userType
+    }
+  } catch (error) {
+    console.error('[io Daily] Erro ao verificar limite:', error.message)
+    // Em caso de erro, permite (fail-open)
+    return { allowed: true, error: error.message }
+  }
+}
+
+// Limpar contagens antigas (rodar periodicamente)
+async function cleanOldIoDailyUsage() {
+  try {
+    const result = await pool.query(`
+      DELETE FROM io_daily_usage
+      WHERE data < CURRENT_DATE - INTERVAL '7 days'
+    `)
+    if (result.rowCount > 0) {
+      console.log(`[io Daily] ${result.rowCount} registros antigos removidos`)
+    }
+  } catch (error) {
+    console.error('[io Daily] Erro ao limpar:', error.message)
+  }
+}
+
 // ==================== FUNÇÕES CACHE DE TRADUÇÕES ====================
 
 // Limite máximo de caracteres para cachear (textos muito grandes são únicos)
@@ -1263,5 +1391,11 @@ module.exports = {
   getTranslationCache,
   saveTranslationCache,
   getTranslationCacheStats,
-  TRANSLATION_CACHE_MAX_LENGTH
+  TRANSLATION_CACHE_MAX_LENGTH,
+  // Funções contador diário io Friend
+  getIoDailyCount,
+  incrementIoDailyCount,
+  canSendIoMessage,
+  cleanOldIoDailyUsage,
+  IO_DAILY_LIMITS
 }
