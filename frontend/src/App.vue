@@ -9996,6 +9996,12 @@ body {
   color: #6366f1;
 }
 
+/* Light theme: badge roxo com texto branco */
+:root.light-theme .translation-badge {
+  background: #6366f1;
+  color: #fff;
+}
+
 .btn-icon {
   width: 36px;
   height: 36px;
