@@ -9148,24 +9148,38 @@ body {
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #888;
+  color: #a78bfa;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: bold;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
 }
 
 .btn-move:hover:not(:disabled) {
-  background: #333;
-  color: #fff;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c4b5fd;
+  text-shadow: 0 0 12px rgba(196, 181, 253, 0.8);
 }
 
 .btn-move:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: not-allowed;
+  text-shadow: none;
+}
+
+/* Light theme: setas pretas */
+:root.light-theme .btn-move {
+  color: #1f2937;
+  text-shadow: none;
+}
+
+:root.light-theme .btn-move:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+  color: #000;
 }
 
 /* Botão fixar */
@@ -12196,8 +12210,15 @@ body {
     font-size: 0.75rem;
   }
 
-  .io-counter-badge .badge-icon {
-    font-size: 0.75rem;
+  /* Setas de mover contato sempre visíveis no mobile */
+  .contact-actions {
+    opacity: 1;
+  }
+
+  .btn-move {
+    width: 26px;
+    height: 26px;
+    font-size: 1rem;
   }
 
   .idioma-select {
