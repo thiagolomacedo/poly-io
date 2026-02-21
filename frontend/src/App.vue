@@ -10581,6 +10581,20 @@ body {
 .message.sent .message-content {
   background: #6366f1;
   border-bottom-right-radius: 4px;
+  color: #fff;
+}
+
+/* Light theme: texto branco no balão roxo */
+:root.light-theme .message.sent .message-content {
+  color: #fff;
+}
+
+:root.light-theme .message.sent .message-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:root.light-theme .message.sent .read-status {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .message.received .message-content {
