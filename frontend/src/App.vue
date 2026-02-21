@@ -1923,6 +1923,28 @@
                 <span class="status" :class="[selectedConnection.status || 'offline']">{{ getStatusLabel(selectedConnection.status) }}</span>
               </div>
             </div>
+            <!-- Contador de mensagens io Friend (ao lado do nome) -->
+            <div
+              v-if="selectedConnection?.email === 'io@poly.io' || selectedConnection?.is_io_friend"
+              class="io-daily-counter"
+              :class="{
+                'warning': ioDailyUsage.percentage >= 70 && ioDailyUsage.percentage < 90,
+                'danger': ioDailyUsage.percentage >= 90
+              }"
+              :title="`${ioDailyUsage.remaining} mensagens restantes hoje`"
+            >
+              <div class="io-counter-badge">
+                <div class="badge-progress-bar">
+                  <div
+                    class="badge-progress-fill"
+                    :style="{ width: ioDailyUsage.percentage + '%' }"
+                  ></div>
+                </div>
+                <span class="badge-icon">💬</span>
+                <span class="badge-count">{{ ioDailyUsage.count }}</span>
+                <span class="badge-limit">/{{ ioDailyUsage.limit }}</span>
+              </div>
+            </div>
             <!-- Dropdown de experimento ao lado do nome -->
             <div v-if="selectedConnection?.is_experimenting" class="experiment-dropdown-wrapper">
               <button
@@ -1954,28 +1976,6 @@
                   </div>
                   <p class="experiment-item-desc">Volta para sua io original. O experimento será encerrado.</p>
                 </div>
-              </div>
-            </div>
-            <!-- Contador de mensagens io Friend (híbrido: barra + badge) -->
-            <div
-              v-if="selectedConnection?.email === 'io@poly.io' || selectedConnection?.is_io_friend"
-              class="io-daily-counter"
-              :class="{
-                'warning': ioDailyUsage.percentage >= 70 && ioDailyUsage.percentage < 90,
-                'danger': ioDailyUsage.percentage >= 90
-              }"
-              :title="`${ioDailyUsage.remaining} mensagens restantes hoje`"
-            >
-              <div class="io-counter-progress-bar">
-                <div
-                  class="io-counter-progress-fill"
-                  :style="{ width: ioDailyUsage.percentage + '%' }"
-                ></div>
-              </div>
-              <div class="io-counter-badge">
-                <span class="badge-icon">💬</span>
-                <span class="badge-count">{{ ioDailyUsage.count }}</span>
-                <span class="badge-limit">/{{ ioDailyUsage.limit }}</span>
               </div>
             </div>
             <div class="chat-actions">
@@ -9821,74 +9821,81 @@ body {
   color: var(--text-secondary);
 }
 
-/* Contador diário io Friend (híbrido: barra + badge) */
+/* Contador diário io Friend (badge com barra interna) */
 .io-daily-counter {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: 16px;
+  margin-left: 12px;
 }
 
-.io-counter-progress-bar {
-  width: 60px;
-  height: 5px;
-  background: #333;
-  border-radius: 3px;
+/* Badge pill com barra de progresso interna */
+.io-counter-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1e1e3f;
+  border: 1px solid #6366f1;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   overflow: hidden;
 }
 
-.io-counter-progress-fill {
+/* Barra de progresso dentro do badge (fundo) */
+.badge-progress-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: transparent;
+}
+
+.badge-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #10b981, #6366f1);
-  border-radius: 3px;
+  background: rgba(99, 102, 241, 0.15);
   transition: width 0.3s ease;
 }
 
-.io-daily-counter.warning .io-counter-progress-fill {
-  background: linear-gradient(90deg, #f59e0b, #ef4444);
-}
-
-.io-daily-counter.danger .io-counter-progress-fill {
-  background: #ef4444;
-}
-
-/* Badge pill */
-.io-counter-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #1e1e3f;
-  border: 1px solid #6366f1;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-}
-
 .io-counter-badge .badge-icon {
-  font-size: 0.85rem;
+  position: relative;
+  z-index: 1;
+  font-size: 0.9rem;
 }
 
 .io-counter-badge .badge-count {
+  position: relative;
+  z-index: 1;
   font-weight: 700;
   color: #fff;
 }
 
 .io-counter-badge .badge-limit {
+  position: relative;
+  z-index: 1;
   color: #6366f1;
 }
 
-/* Estados do badge */
+/* Estado Warning (70-90%) */
 .io-daily-counter.warning .io-counter-badge {
   border-color: #f59e0b;
+}
+
+.io-daily-counter.warning .badge-progress-fill {
+  background: rgba(245, 158, 11, 0.2);
 }
 
 .io-daily-counter.warning .io-counter-badge .badge-limit {
   color: #f59e0b;
 }
 
+/* Estado Danger (90-100%) */
 .io-daily-counter.danger .io-counter-badge {
   border-color: #ef4444;
   animation: pulse-danger 1.5s infinite;
+}
+
+.io-daily-counter.danger .badge-progress-fill {
+  background: rgba(239, 68, 68, 0.25);
 }
 
 .io-daily-counter.danger .io-counter-badge .badge-limit {
@@ -12176,18 +12183,17 @@ body {
 
   /* Contador io no mobile */
   .io-daily-counter {
-    margin-right: 6px;
-    gap: 6px;
-  }
-
-  .io-counter-progress-bar {
-    width: 40px;
-    height: 4px;
+    margin-left: 8px;
   }
 
   .io-counter-badge {
-    padding: 4px 8px;
+    padding: 4px 10px;
     font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .io-counter-badge .badge-icon {
+    font-size: 0.75rem;
   }
 
   .io-counter-badge .badge-icon {
