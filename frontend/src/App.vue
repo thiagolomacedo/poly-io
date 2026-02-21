@@ -9168,22 +9168,12 @@ body {
   cursor: not-allowed;
 }
 
-/* Light theme: setas escuras */
+/* Light theme: setas brancas (fundo fica roxo no hover/active) */
 :root.light-theme .btn-move {
-  color: #374151;
-}
-
-:root.light-theme .btn-move:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.1);
-  color: #111;
-}
-
-/* Light theme: setas brancas quando selecionado */
-:root.light-theme .user-item.active .btn-move {
   color: #fff;
 }
 
-:root.light-theme .user-item.active .btn-move:hover:not(:disabled) {
+:root.light-theme .btn-move:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
@@ -9633,14 +9623,23 @@ body {
   background: #6366f1;
 }
 
-/* Light theme: seleção com fundo mais claro */
+/* Light theme: hover e seleção com fundo roxo */
+:root.light-theme .user-item:hover {
+  background: #6366f1;
+}
+
+:root.light-theme .user-item:hover .user-info .name,
+:root.light-theme .user-item:hover .user-info .lang {
+  color: #fff;
+}
+
 :root.light-theme .user-item.active {
-  background: rgba(99, 102, 241, 0.25);
+  background: #6366f1;
 }
 
 :root.light-theme .user-item.active .user-info .name,
 :root.light-theme .user-item.active .user-info .lang {
-  color: #1f2937;
+  color: #fff;
 }
 
 .user-avatar {
