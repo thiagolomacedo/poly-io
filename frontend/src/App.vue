@@ -12662,6 +12662,27 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Light theme: salas com fundo roxo e texto branco */
+:root.light-theme .room-item {
+  background: #6366f1;
+}
+
+:root.light-theme .room-item:hover {
+  background: #5558e3;
+}
+
+:root.light-theme .room-item.active {
+  background: #4f46e5;
+}
+
+:root.light-theme .room-item .room-info .name {
+  color: #fff;
+}
+
+:root.light-theme .room-item .room-info .desc {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .btn-create-room {
   width: 100%;
   padding: 12px;
