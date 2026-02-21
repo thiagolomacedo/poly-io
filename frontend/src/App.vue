@@ -1956,6 +1956,24 @@
                 </div>
               </div>
             </div>
+            <!-- Contador de mensagens io Friend -->
+            <div
+              v-if="selectedConnection?.email === 'io@poly.io' || selectedConnection?.is_io_friend"
+              class="io-daily-counter"
+              :class="{
+                'warning': ioDailyUsage.percentage >= 70 && ioDailyUsage.percentage < 90,
+                'danger': ioDailyUsage.percentage >= 90
+              }"
+              :title="`${ioDailyUsage.remaining} mensagens restantes hoje`"
+            >
+              <div class="io-counter-progress-bar">
+                <div
+                  class="io-counter-progress-fill"
+                  :style="{ width: ioDailyUsage.percentage + '%' }"
+                ></div>
+              </div>
+              <span class="io-counter-text">{{ ioDailyUsage.count }}/{{ ioDailyUsage.limit }}</span>
+            </div>
             <div class="chat-actions">
               <select
                 v-model="idiomaRecepcao"
@@ -2987,6 +3005,7 @@ const nameInputRef = ref(null)
 const showIoFriendModal = ref(false)
 const ioFriend = ref(null)              // io friend ativa (para chat)
 const ioFriends = ref([])               // Todas as io friends do usuário (fundadores podem ter múltiplas)
+const ioDailyUsage = ref({ count: 0, limit: 50, percentage: 0, remaining: 50 }) // Uso diário io Friend
 const editingIoFriendId = ref(null)     // ID da io friend sendo editada (null = criando nova)
 const savingIoFriend = ref(false)
 const generatingAvatar = ref(false)
@@ -4136,6 +4155,21 @@ async function loadIoFriend() {
     }
   } catch (e) {
     console.error('[io Friend] Erro ao carregar:', e)
+  }
+}
+
+// Carregar uso diário de mensagens io Friend
+async function loadIoDailyUsage() {
+  try {
+    const res = await fetch(`${API_URL}/io/daily-usage`, {
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      ioDailyUsage.value = data
+    }
+  } catch (e) {
+    console.error('[io Daily Usage] Erro ao carregar:', e)
   }
 }
 
@@ -5790,6 +5824,9 @@ async function initializeApp() {
   // Carregar io friend do usuário (se existir)
   await loadIoFriend()
 
+  // Carregar uso diário de mensagens io Friend
+  await loadIoDailyUsage()
+
   // Carregar todas as io friends do usuário (fundadores podem ter múltiplas)
   await loadAllIoFriends()
 
@@ -6261,6 +6298,11 @@ async function sendMessage() {
       headers: authHeaders(),
       body: JSON.stringify({ texto, repliedToId })
     })
+
+    // Atualizar contador se enviou mensagem para io/io_friend
+    if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
+      loadIoDailyUsage()
+    }
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
     newMessage.value = texto // Restaura se falhou
@@ -9775,6 +9817,57 @@ body {
   color: var(--text-secondary);
 }
 
+/* Contador diário io Friend */
+.io-daily-counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 16px;
+}
+
+.io-counter-progress-bar {
+  width: 80px;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.io-counter-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #6366f1);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.io-daily-counter.warning .io-counter-progress-fill {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.io-daily-counter.danger .io-counter-progress-fill {
+  background: #ef4444;
+  animation: pulse-danger 1.5s infinite;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.io-counter-text {
+  font-size: 0.75rem;
+  color: #888;
+  font-family: monospace;
+}
+
+.io-daily-counter.warning .io-counter-text {
+  color: #f59e0b;
+}
+
+.io-daily-counter.danger .io-counter-text {
+  color: #ef4444;
+}
+
 .chat-actions {
   display: flex;
   align-items: center;
@@ -12047,6 +12140,21 @@ body {
   /* Chat header compacto no mobile */
   .chat-actions {
     gap: 6px;
+  }
+
+  /* Contador io no mobile */
+  .io-daily-counter {
+    margin-right: 8px;
+    gap: 6px;
+  }
+
+  .io-counter-progress-bar {
+    width: 50px;
+    height: 4px;
+  }
+
+  .io-counter-text {
+    font-size: 0.65rem;
   }
 
   .idioma-select {

@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats, canSendIoMessage, incrementIoDailyCount, IO_DAILY_LIMITS } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats, canSendIoMessage, getIoDailyCount, incrementIoDailyCount, IO_DAILY_LIMITS } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -1624,6 +1624,50 @@ app.get('/api/io-friend', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[io Friend] Erro ao buscar:', error.message)
     res.status(500).json({ error: 'Erro ao buscar io friend' })
+  }
+})
+
+// Buscar uso diário de mensagens io Friend
+app.get('/api/io/daily-usage', authMiddleware, async (req, res) => {
+  try {
+    // Buscar info do usuário para determinar o limite
+    const userResult = await pool.query(
+      'SELECT is_founder, is_paid FROM users WHERE id = $1',
+      [req.userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    const user = userResult.rows[0]
+
+    // Determinar limite baseado no tipo de usuário
+    let limit = IO_DAILY_LIMITS.normal // 20
+    let userType = 'normal'
+
+    if (user.is_paid) {
+      limit = IO_DAILY_LIMITS.paid // 500
+      userType = 'paid'
+    } else if (user.is_founder) {
+      limit = IO_DAILY_LIMITS.founder // 50
+      userType = 'founder'
+    }
+
+    // Buscar contagem atual
+    const count = await getIoDailyCount(req.userId)
+    const percentage = Math.min(Math.round((count / limit) * 100), 100)
+
+    res.json({
+      count,
+      limit,
+      percentage,
+      userType,
+      remaining: Math.max(0, limit - count)
+    })
+  } catch (error) {
+    console.error('[io Daily Usage] Erro:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar uso diário' })
   }
 })
 
