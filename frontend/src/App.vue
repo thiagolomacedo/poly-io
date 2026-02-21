@@ -1956,7 +1956,7 @@
                 </div>
               </div>
             </div>
-            <!-- Contador de mensagens io Friend -->
+            <!-- Contador de mensagens io Friend (híbrido: barra + badge) -->
             <div
               v-if="selectedConnection?.email === 'io@poly.io' || selectedConnection?.is_io_friend"
               class="io-daily-counter"
@@ -1972,7 +1972,11 @@
                   :style="{ width: ioDailyUsage.percentage + '%' }"
                 ></div>
               </div>
-              <span class="io-counter-text">{{ ioDailyUsage.count }}/{{ ioDailyUsage.limit }}</span>
+              <div class="io-counter-badge">
+                <span class="badge-icon">💬</span>
+                <span class="badge-count">{{ ioDailyUsage.count }}</span>
+                <span class="badge-limit">/{{ ioDailyUsage.limit }}</span>
+              </div>
             </div>
             <div class="chat-actions">
               <select
@@ -9817,17 +9821,17 @@ body {
   color: var(--text-secondary);
 }
 
-/* Contador diário io Friend */
+/* Contador diário io Friend (híbrido: barra + badge) */
 .io-daily-counter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-right: 16px;
 }
 
 .io-counter-progress-bar {
-  width: 80px;
-  height: 6px;
+  width: 60px;
+  height: 5px;
   background: #333;
   border-radius: 3px;
   overflow: hidden;
@@ -9846,26 +9850,54 @@ body {
 
 .io-daily-counter.danger .io-counter-progress-fill {
   background: #ef4444;
+}
+
+/* Badge pill */
+.io-counter-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1e1e3f;
+  border: 1px solid #6366f1;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+}
+
+.io-counter-badge .badge-icon {
+  font-size: 0.85rem;
+}
+
+.io-counter-badge .badge-count {
+  font-weight: 700;
+  color: #fff;
+}
+
+.io-counter-badge .badge-limit {
+  color: #6366f1;
+}
+
+/* Estados do badge */
+.io-daily-counter.warning .io-counter-badge {
+  border-color: #f59e0b;
+}
+
+.io-daily-counter.warning .io-counter-badge .badge-limit {
+  color: #f59e0b;
+}
+
+.io-daily-counter.danger .io-counter-badge {
+  border-color: #ef4444;
   animation: pulse-danger 1.5s infinite;
+}
+
+.io-daily-counter.danger .io-counter-badge .badge-limit {
+  color: #ef4444;
 }
 
 @keyframes pulse-danger {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
-}
-
-.io-counter-text {
-  font-size: 0.75rem;
-  color: #888;
-  font-family: monospace;
-}
-
-.io-daily-counter.warning .io-counter-text {
-  color: #f59e0b;
-}
-
-.io-daily-counter.danger .io-counter-text {
-  color: #ef4444;
 }
 
 .chat-actions {
@@ -12144,17 +12176,22 @@ body {
 
   /* Contador io no mobile */
   .io-daily-counter {
-    margin-right: 8px;
+    margin-right: 6px;
     gap: 6px;
   }
 
   .io-counter-progress-bar {
-    width: 50px;
+    width: 40px;
     height: 4px;
   }
 
-  .io-counter-text {
-    font-size: 0.65rem;
+  .io-counter-badge {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .io-counter-badge .badge-icon {
+    font-size: 0.75rem;
   }
 
   .idioma-select {
