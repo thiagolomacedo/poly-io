@@ -9397,6 +9397,23 @@ body {
   line-height: 1.4;
 }
 
+/* Light theme: cores do texto do status */
+:root.light-theme .status-dropdown-item.online .status-name {
+  color: #10b981;
+}
+
+:root.light-theme .status-dropdown-item.ausente .status-name {
+  color: #f59e0b;
+}
+
+:root.light-theme .status-dropdown-item.ocupado .status-name {
+  color: #ef4444;
+}
+
+:root.light-theme .status-dropdown-item.invisivel .status-name {
+  color: #fff;
+}
+
 /* Status colors for avatars */
 .user-avatar.online::after {
   content: '';
