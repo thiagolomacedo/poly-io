@@ -546,9 +546,9 @@
             🔍 Explorar Conexões IA
           </button>
 
-          <!-- Botão Monitor (só para admin - id 1) -->
+          <!-- Botão Monitor (só para admin vendo próprio perfil) -->
           <a
-            v-if="currentUser?.id === 1"
+            v-if="currentUser?.id === 1 && profileUser?.id === currentUser?.id"
             href="https://poly-io-api.onrender.com/monitor"
             target="_blank"
             class="btn-explore btn-monitor-link"
