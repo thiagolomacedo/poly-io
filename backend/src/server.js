@@ -4554,6 +4554,37 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
       WHERE data = CURRENT_DATE
     `)
 
+    // Uso diário de traduções 1x1 (hoje)
+    const translationDailyResult = await pool.query(`
+      SELECT
+        COUNT(DISTINCT user_id) as users_translating_today,
+        SUM(translation_count) as total_translations_today,
+        AVG(translation_count)::int as avg_translations_per_user,
+        MAX(translation_count) as max_translations_user
+      FROM translation_daily_usage
+      WHERE data = CURRENT_DATE
+    `)
+
+    // Usuários que bateram o limite de tradução hoje
+    const translationLimitHitResult = await pool.query(`
+      SELECT COUNT(*) as users_at_limit
+      FROM translation_daily_usage tdu
+      JOIN users u ON tdu.user_id = u.id
+      WHERE tdu.data = CURRENT_DATE
+        AND (
+          (u.id <= 50 AND tdu.translation_count >= 50) OR
+          (u.id > 50 AND tdu.translation_count >= 30)
+        )
+    `)
+
+    // Early adopters vs normais
+    const userTypesResult = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE id <= 50) as early_adopters,
+        COUNT(*) FILTER (WHERE id > 50) as normal_users
+      FROM users
+    `)
+
     // Cache de traduções
     const cacheStats = await getTranslationCacheStats()
 
@@ -4575,6 +4606,8 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
       users: {
         total: parseInt(usersResult.rows[0].total_users),
         founders: parseInt(usersResult.rows[0].founders),
+        earlyAdopters: parseInt(userTypesResult.rows[0].early_adopters) || 0,
+        normalUsers: parseInt(userTypesResult.rows[0].normal_users) || 0,
         paid: parseInt(usersResult.rows[0].paid_users),
         newToday: 0,
         newThisWeek: 0,
@@ -4587,14 +4620,24 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
         messagesToday: parseInt(ioDailyResult.rows[0].total_io_messages_today) || 0,
         avgMessagesPerUser: parseInt(ioDailyResult.rows[0].avg_messages_per_user) || 0
       },
+      translations1x1: {
+        usersToday: parseInt(translationDailyResult.rows[0].users_translating_today) || 0,
+        totalToday: parseInt(translationDailyResult.rows[0].total_translations_today) || 0,
+        avgPerUser: parseInt(translationDailyResult.rows[0].avg_translations_per_user) || 0,
+        maxByUser: parseInt(translationDailyResult.rows[0].max_translations_user) || 0,
+        usersAtLimit: parseInt(translationLimitHitResult.rows[0].users_at_limit) || 0
+      },
       translationCache: cacheStats,
       connections: parseInt(connectionsResult.rows[0].total_connections),
       rooms: parseInt(roomsResult.rows[0].total_rooms),
       limits: {
         groq: { daily: 14400, description: '14.4K requests/dia' },
-        ioFounder: IO_DAILY_LIMITS.founder,
+        ioEarlyAdopter: IO_DAILY_LIMITS.early_adopter,
         ioNormal: IO_DAILY_LIMITS.normal,
-        ioPaid: IO_DAILY_LIMITS.paid
+        ioPaid: IO_DAILY_LIMITS.paid,
+        translationEarlyAdopter: TRANSLATION_DAILY_LIMITS.early_adopter,
+        translationNormal: TRANSLATION_DAILY_LIMITS.normal,
+        translationPaid: TRANSLATION_DAILY_LIMITS.paid
       }
     })
   } catch (error) {
@@ -4684,11 +4727,12 @@ function getMonitorHTML() {
 <div class="header"><h1>Poly.io Monitor</h1><div class="header-actions"><span id="lastUpdate">-</span><span class="status-badge loading" id="statusBadge">-</span><button class="btn" onclick="requestNotificationPermission()">🔔</button><button class="btn" onclick="loadStats()">Atualizar</button></div></div>
 <div id="alertsContainer"></div>
 <div class="dashboard">
-<div class="card"><div class="card-header"><span class="card-title">Usuários</span><span class="card-icon">👥</span></div><div class="card-value" id="totalUsers">-</div><div class="card-subtitle"><span id="foundersCount">-</span> fundadores</div></div>
+<div class="card"><div class="card-header"><span class="card-title">Usuários</span><span class="card-icon">👥</span></div><div class="card-value" id="totalUsers">-</div><div class="card-subtitle"><span id="earlyAdoptersCount">-</span> early adopters</div></div>
 <div class="card"><div class="card-header"><span class="card-title">Online</span><span class="card-icon">🟢</span></div><div class="card-value green" id="onlineUsers">-</div><div class="card-subtitle">conectados</div></div>
 <div class="card"><div class="card-header"><span class="card-title">Novos Hoje</span><span class="card-icon">✨</span></div><div class="card-value purple" id="newToday">-</div><div class="card-subtitle"><span id="newWeek">-</span> esta semana</div></div>
 <div class="card"><div class="card-header"><span class="card-title">Conexões</span><span class="card-icon">🔗</span></div><div class="card-value" id="connections">-</div><div class="card-subtitle"><span id="rooms">-</span> salas</div></div>
 <div class="card span-2"><div class="card-header"><span class="card-title">io Friend Hoje</span><span class="card-icon">🤖</span></div><div class="stats-grid"><div class="stat-item"><div class="stat-value" id="ioUsersToday">-</div><div class="stat-label">Usuários</div></div><div class="stat-item"><div class="stat-value" id="ioMessagesToday">-</div><div class="stat-label">Mensagens</div></div><div class="stat-item"><div class="stat-value" id="ioAvgMessages">-</div><div class="stat-label">Média</div></div></div><div class="progress-container"><div class="progress-label"><span>Groq (14.4K/dia)</span><span id="groqUsagePercent">-</span></div><div class="progress-bar"><div class="progress-fill green" id="groqProgressBar" style="width:0"></div></div></div></div>
+<div class="card span-2"><div class="card-header"><span class="card-title">Traduções 1x1 Hoje</span><span class="card-icon">💬</span></div><div class="stats-grid"><div class="stat-item"><div class="stat-value" id="transUsersToday">-</div><div class="stat-label">Usuários</div></div><div class="stat-item"><div class="stat-value" id="transTotal">-</div><div class="stat-label">Traduções</div></div><div class="stat-item"><div class="stat-value" id="transAvg">-</div><div class="stat-label">Média</div></div><div class="stat-item"><div class="stat-value yellow" id="transAtLimit">-</div><div class="stat-label">No Limite</div></div></div></div>
 <div class="card span-2"><div class="card-header"><span class="card-title">Cache Traduções</span><span class="card-icon">🌐</span></div><div class="stats-grid"><div class="stat-item"><div class="stat-value" id="cacheEntries">-</div><div class="stat-label">Entradas</div></div><div class="stat-item"><div class="stat-value" id="cacheHits">-</div><div class="stat-label">Hits</div></div><div class="stat-item"><div class="stat-value green" id="cacheSavings">-</div><div class="stat-label">Economia</div></div></div></div>
 </div>
 <div class="chart-section"><h2>io Friend - Últimos 7 dias</h2><div class="chart-container"><div class="chart-bars" id="chartBars"></div><div class="chart-labels" id="chartLabels"></div></div></div>
@@ -4699,8 +4743,8 @@ function getMonitorHTML() {
 const API_URL='/api';let token=localStorage.getItem('poly_admin_token');
 async function login(){const email=document.getElementById('email').value,password=document.getElementById('password').value,err=document.getElementById('loginError');err.textContent='Conectando...';err.style.display='block';err.style.color='#f59e0b';try{const r=await fetch(API_URL+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,senha:password})});const d=await r.json();if(!r.ok){err.textContent=d.error||'Erro';err.style.color='#ef4444';return}token=d.token;localStorage.setItem('poly_admin_token',token);err.style.display='none';document.getElementById('loginContainer').style.display='none';document.getElementById('dashboard').style.display='block';loadStats();setInterval(loadStats,60000)}catch(e){err.textContent='Erro: '+e.message;err.style.color='#ef4444'}}
 if(token){document.getElementById('loginContainer').style.display='none';document.getElementById('dashboard').style.display='block';loadStats();setInterval(loadStats,60000)}
-async function loadStats(){const badge=document.getElementById('statusBadge');badge.className='status-badge loading';badge.textContent='...';try{const r=await fetch(API_URL+'/admin/stats',{headers:{Authorization:'Bearer '+token}});if(r.status===403||r.status===401){localStorage.removeItem('poly_admin_token');location.reload();return}const d=await r.json();if(d.error){throw new Error(d.error)}document.getElementById('totalUsers').textContent=d.users.total;document.getElementById('foundersCount').textContent=d.users.founders;document.getElementById('onlineUsers').textContent=d.users.online;document.getElementById('newToday').textContent=d.users.newToday;document.getElementById('newWeek').textContent=d.users.newThisWeek;document.getElementById('connections').textContent=d.connections;document.getElementById('rooms').textContent=d.rooms;document.getElementById('ioUsersToday').textContent=d.ioFriend.usersUsingToday;document.getElementById('ioMessagesToday').textContent=d.ioFriend.messagesToday;document.getElementById('ioAvgMessages').textContent=d.ioFriend.avgMessagesPerUser;const gu=(d.ioFriend.messagesToday/14400)*100;document.getElementById('groqUsagePercent').textContent=gu.toFixed(1)+'%';const gb=document.getElementById('groqProgressBar');gb.style.width=Math.min(gu,100)+'%';gb.className='progress-fill '+(gu>80?'red':gu>50?'yellow':'green');if(d.translationCache){document.getElementById('cacheEntries').textContent=d.translationCache.total_entries||0;document.getElementById('cacheHits').textContent=d.translationCache.total_hits||0;const sv=d.translationCache.total_hits?Math.round((d.translationCache.total_hits/(d.translationCache.total_hits+d.translationCache.total_entries))*100):0;document.getElementById('cacheSavings').textContent=sv+'%'}updateRecs(d);loadChart();loadIAEvents();checkAlerts(d);badge.className='status-badge online';badge.textContent='OK';document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString()}catch(e){badge.className='status-badge offline';badge.textContent='Erro';console.error('Monitor error:',e)}}
-function updateRecs(d){let h='';if(d.users.total<500)h+=rec('ok','🖥️','Render','Free OK até 500 usuários');else if(d.users.total<5000)h+=rec('warning','🖥️','Render','Considere Starter $7/mês');else h+=rec('danger','🖥️','Render','Upgrade urgente!');if(d.users.total<10000)h+=rec('ok','🗄️','Neon','Free OK até 10K usuários');else h+=rec('warning','🗄️','Neon','Considere Launch $19/mês');const gu=(d.ioFriend.messagesToday/14400)*100;if(gu<50)h+=rec('ok','🤖','Groq',gu.toFixed(0)+'% do limite');else if(gu<80)h+=rec('warning','🤖','Groq',gu.toFixed(0)+'% - monitorar');else h+=rec('danger','🤖','Groq',gu.toFixed(0)+'% - crítico!');document.getElementById('recommendations').innerHTML=h}
+async function loadStats(){const badge=document.getElementById('statusBadge');badge.className='status-badge loading';badge.textContent='...';try{const r=await fetch(API_URL+'/admin/stats',{headers:{Authorization:'Bearer '+token}});if(r.status===403||r.status===401){localStorage.removeItem('poly_admin_token');location.reload();return}const d=await r.json();if(d.error){throw new Error(d.error)}document.getElementById('totalUsers').textContent=d.users.total;document.getElementById('earlyAdoptersCount').textContent=d.users.earlyAdopters||d.users.founders;document.getElementById('onlineUsers').textContent=d.users.online;document.getElementById('newToday').textContent=d.users.newToday;document.getElementById('newWeek').textContent=d.users.newThisWeek;document.getElementById('connections').textContent=d.connections;document.getElementById('rooms').textContent=d.rooms;document.getElementById('ioUsersToday').textContent=d.ioFriend.usersUsingToday;document.getElementById('ioMessagesToday').textContent=d.ioFriend.messagesToday;document.getElementById('ioAvgMessages').textContent=d.ioFriend.avgMessagesPerUser;const gu=(d.ioFriend.messagesToday/14400)*100;document.getElementById('groqUsagePercent').textContent=gu.toFixed(1)+'%';const gb=document.getElementById('groqProgressBar');gb.style.width=Math.min(gu,100)+'%';gb.className='progress-fill '+(gu>80?'red':gu>50?'yellow':'green');if(d.translations1x1){document.getElementById('transUsersToday').textContent=d.translations1x1.usersToday;document.getElementById('transTotal').textContent=d.translations1x1.totalToday;document.getElementById('transAvg').textContent=d.translations1x1.avgPerUser;document.getElementById('transAtLimit').textContent=d.translations1x1.usersAtLimit}if(d.translationCache){document.getElementById('cacheEntries').textContent=d.translationCache.total_entries||0;document.getElementById('cacheHits').textContent=d.translationCache.total_hits||0;const sv=d.translationCache.total_hits?Math.round((d.translationCache.total_hits/(d.translationCache.total_hits+d.translationCache.total_entries))*100):0;document.getElementById('cacheSavings').textContent=sv+'%'}updateRecs(d);loadChart();loadIAEvents();checkAlerts(d);badge.className='status-badge online';badge.textContent='OK';document.getElementById('lastUpdate').textContent=new Date().toLocaleTimeString()}catch(e){badge.className='status-badge offline';badge.textContent='Erro';console.error('Monitor error:',e)}}
+function updateRecs(d){let h='';if(d.users.total<500)h+=rec('ok','🖥️','Render','Free OK até 500 usuários');else if(d.users.total<5000)h+=rec('warning','🖥️','Render','Considere Starter $7/mês');else h+=rec('danger','🖥️','Render','Upgrade urgente!');if(d.users.total<10000)h+=rec('ok','🗄️','Neon','Free OK até 10K usuários');else h+=rec('warning','🗄️','Neon','Considere Launch $19/mês');const gu=(d.ioFriend.messagesToday/14400)*100;if(gu<50)h+=rec('ok','🤖','Groq',gu.toFixed(0)+'% do limite');else if(gu<80)h+=rec('warning','🤖','Groq',gu.toFixed(0)+'% - monitorar');else h+=rec('danger','🤖','Groq',gu.toFixed(0)+'% - crítico!');if(d.translations1x1){const atLimit=d.translations1x1.usersAtLimit||0;if(atLimit===0)h+=rec('ok','💬','Traduções','Nenhum usuário no limite');else if(atLimit<5)h+=rec('warning','💬','Traduções',atLimit+' usuário(s) no limite hoje');else h+=rec('danger','💬','Traduções',atLimit+' usuários no limite - considere upgrade')}document.getElementById('recommendations').innerHTML=h}
 function rec(s,i,t,p){return '<div class="rec-card '+s+'"><div class="rec-icon">'+i+'</div><div class="rec-content"><h3>'+t+'</h3><p>'+p+'</p></div></div>'}
 async function loadChart(){try{const r=await fetch(API_URL+'/admin/io-history',{headers:{Authorization:'Bearer '+token}});const data=await r.json();if(data.error)return;const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];const last7=[];for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);last7.push({date:d.toISOString().split('T')[0],day:days[d.getDay()],messages:0,users:0})}data.forEach(row=>{const idx=last7.findIndex(d=>d.date===row.data.split('T')[0]);if(idx>=0){last7[idx].messages=parseInt(row.messages)||0;last7[idx].users=parseInt(row.users)||0}});const max=Math.max(...last7.map(d=>d.messages),1);let barsHtml='',labelsHtml='';last7.forEach(d=>{const h=Math.max((d.messages/max)*140,4);barsHtml+='<div class="chart-bar" style="height:'+h+'px"><span class="bar-users">'+d.users+' usr</span><span class="bar-value">'+d.messages+'</span></div>';labelsHtml+='<div class="chart-label">'+d.day+'</div>'});document.getElementById('chartBars').innerHTML=barsHtml;document.getElementById('chartLabels').innerHTML=labelsHtml}catch(e){console.error('Chart error:',e)}}
 let notifiedAlerts={};function checkAlerts(d){const alerts=[];const groqPct=(d.ioFriend.messagesToday/14400)*100;if(groqPct>=90)alerts.push({id:'groq90',type:'danger',icon:'🚨',title:'Groq Crítico!',desc:'Uso em '+groqPct.toFixed(0)+'% - limite quase atingido'});else if(groqPct>=70)alerts.push({id:'groq70',type:'warning',icon:'⚠️',title:'Groq Alto',desc:'Uso em '+groqPct.toFixed(0)+'% - monitore o consumo'});if(d.users.total>=450)alerts.push({id:'users450',type:'warning',icon:'👥',title:'Usuários Alto',desc:d.users.total+'/500 - considere upgrade do Render'});if(d.users.total>=480)alerts.push({id:'users480',type:'danger',icon:'🚨',title:'Limite Próximo!',desc:d.users.total+'/500 usuários - upgrade urgente'});if(d.users.online>=50)alerts.push({id:'online50',type:'warning',icon:'🟢',title:'Muitos Online',desc:d.users.online+' usuários simultâneos'});let html='';alerts.forEach(a=>{html+='<div class="alert-banner '+a.type+'"><span class="alert-icon">'+a.icon+'</span><div class="alert-content"><div class="alert-title">'+a.title+'</div><div class="alert-desc">'+a.desc+'</div></div><button class="alert-close" onclick="this.parentElement.remove()">✕</button></div>';if(!notifiedAlerts[a.id]&&Notification.permission==='granted'){new Notification('Poly.io Monitor',{body:a.title+': '+a.desc,icon:'🔔'});notifiedAlerts[a.id]=true}});document.getElementById('alertsContainer').innerHTML=html}
