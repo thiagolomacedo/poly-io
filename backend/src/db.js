@@ -1065,7 +1065,7 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
 // Limites de mensagens io friend por dia (baseado no ID do usuário)
 // Primeiros 50 usuários (id <= 50) = early adopters com benefícios
 const IO_DAILY_LIMITS = {
-  early_adopter: 20,  // Primeiros 50 usuários (id <= 50)
+  early_adopter: 50,  // Primeiros 50 usuários (id <= 50) - mantém limite original
   normal: 10,         // Usuários normais (id > 50)
   paid: 50,           // Usuários Pro
   premium: 200        // Usuários Premium
