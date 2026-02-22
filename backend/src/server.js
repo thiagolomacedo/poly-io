@@ -19,7 +19,7 @@ try {
   console.log('[Server] Aviso: form-data ou node-fetch não disponível:', e.message)
 }
 
-const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats, canSendIoMessage, getIoDailyCount, incrementIoDailyCount, IO_DAILY_LIMITS } = require('./db')
+const { pool, initDatabase, limparMensagensExpiradas, verificarSalasInativas, generateFriendCode, generateRoomInviteCode, getIoMemories, saveIoMemory, deleteIoMemory, clearIoMemories, countIoMemories, MEMORY_LIMIT, getMemoryLimit, MEMORY_LIMITS, getIoFriend, getAllIoFriends, createIoFriend, updateIoFriend, deleteIoFriend, getPublicIoFriends, getPublicIoFriendById, countPublicIoFriends, addPublicIoFriend, removePublicIoFriend, getUserPublicIoFriends, getUserPublicIoFriendById, startExperimentingIoFriend, stopExperimentingIoFriend, getExperimentingIoFriend, adoptIoFriend, getTranslationCache, saveTranslationCache, getTranslationCacheStats, canSendIoMessage, getIoDailyCount, incrementIoDailyCount, IO_DAILY_LIMITS, canTranslate, getTranslationDailyCount, incrementTranslationDailyCount, TRANSLATION_DAILY_LIMITS, cleanOldTranslationDailyUsage, getUserType } = require('./db')
 console.log('[Server] Imports concluídos')
 
 // ==================== CONFIGURAÇÃO ====================
@@ -2399,6 +2399,87 @@ app.get('/api/users/:id', authMiddleware, async (req, res) => {
   }
 })
 
+// Buscar limites do usuário
+app.get('/api/users/limits/me', authMiddleware, async (req, res) => {
+  try {
+    // Buscar info do usuário
+    const userResult = await pool.query(
+      'SELECT id, is_paid, plan_type, is_early_adopter, max_io_friends, max_rooms FROM users WHERE id = $1',
+      [req.userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    const user = userResult.rows[0]
+    const userType = getUserType(req.userId, user.is_paid, user.plan_type)
+
+    // Buscar contagens atuais
+    const translationCount = await getTranslationDailyCount(req.userId)
+    const ioMessageCount = await getIoDailyCount(req.userId)
+    const memoryLimit = await getMemoryLimit(req.userId)
+
+    // Buscar contagem de memórias
+    const memoryCountResult = await pool.query(
+      'SELECT COUNT(*) as total FROM io_memories WHERE user_id = $1',
+      [req.userId]
+    )
+    const memoryCount = parseInt(memoryCountResult.rows[0].total)
+
+    // Buscar contagem de io friends criadas
+    const ioFriendsCountResult = await pool.query(
+      'SELECT COUNT(*) as total FROM io_friends WHERE user_id = $1',
+      [req.userId]
+    )
+    const ioFriendsCount = parseInt(ioFriendsCountResult.rows[0].total)
+
+    // Buscar contagem de salas criadas
+    const roomsCountResult = await pool.query(
+      'SELECT COUNT(*) as total FROM rooms WHERE owner_id = $1',
+      [req.userId]
+    )
+    const roomsCount = parseInt(roomsCountResult.rows[0].total)
+
+    res.json({
+      userType,
+      isEarlyAdopter: user.is_early_adopter || req.userId <= 50,
+      isPaid: user.is_paid,
+      planType: user.plan_type,
+      limits: {
+        translations: {
+          used: translationCount,
+          limit: TRANSLATION_DAILY_LIMITS[userType],
+          remaining: Math.max(0, TRANSLATION_DAILY_LIMITS[userType] - translationCount)
+        },
+        ioMessages: {
+          used: ioMessageCount,
+          limit: IO_DAILY_LIMITS[userType],
+          remaining: Math.max(0, IO_DAILY_LIMITS[userType] - ioMessageCount)
+        },
+        memories: {
+          used: memoryCount,
+          limit: memoryLimit,
+          remaining: Math.max(0, memoryLimit - memoryCount)
+        },
+        ioFriends: {
+          used: ioFriendsCount,
+          limit: user.max_io_friends,
+          remaining: Math.max(0, user.max_io_friends - ioFriendsCount)
+        },
+        rooms: {
+          used: roomsCount,
+          limit: user.max_rooms,
+          remaining: Math.max(0, user.max_rooms - roomsCount)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('[Limits] Erro ao buscar limites:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar limites' })
+  }
+})
+
 // Atualizar perfil
 app.put('/api/users/:id', authMiddleware, async (req, res) => {
   if (parseInt(req.params.id) !== req.userId) {
@@ -3285,9 +3366,26 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
 
     // Detectar idioma (usa idioma do perfil do remetente como fallback)
     const idiomaOriginal = isImagineMessage ? conn.remetente_idioma : detectarIdioma(texto, conn.remetente_idioma)
-    const textoTraduzido = isImagineMessage ? texto : await traduzirTexto(texto, idiomaOriginal, conn.destinatario_idioma)
 
-    console.log(`[Chat] ${req.userId} → ${conn.destinatario_id}: "${texto.substring(0, 50)}..." → "${textoTraduzido.substring(0, 50)}..."`)
+    // Verificar limite de traduções 1x1 (apenas se precisar traduzir)
+    let textoTraduzido = texto
+    let traducaoLimitada = false
+
+    if (!isImagineMessage && idiomaOriginal !== conn.destinatario_idioma) {
+      const translationCheck = await canTranslate(req.userId)
+
+      if (translationCheck.allowed) {
+        textoTraduzido = await traduzirTexto(texto, idiomaOriginal, conn.destinatario_idioma)
+        await incrementTranslationDailyCount(req.userId)
+      } else {
+        // Limite atingido - enviar sem tradução
+        textoTraduzido = texto
+        traducaoLimitada = true
+        console.log(`[Chat] Limite de traduções atingido para user ${req.userId} (${translationCheck.currentCount}/${translationCheck.limit})`)
+      }
+    }
+
+    console.log(`[Chat] ${req.userId} → ${conn.destinatario_id}: "${texto.substring(0, 50)}..." → "${textoTraduzido.substring(0, 50)}..."${traducaoLimitada ? ' [LIMITE]' : ''}`)
 
     // Buscar dados da mensagem sendo respondida (se houver)
     let repliedToText = null
@@ -3327,7 +3425,8 @@ app.post('/api/chat/:connectionId', authMiddleware, async (req, res) => {
       enviadoEm: msgResult.rows[0].enviado_em,
       repliedToId: repliedToId || null,
       repliedToText: repliedToText,
-      repliedToSender: repliedToSender
+      repliedToSender: repliedToSender,
+      traducaoLimitada: traducaoLimitada
     }
 
     // Emitir via Socket
@@ -5479,6 +5578,11 @@ async function startServer() {
     setInterval(verificarSalasInativas, 24 * 60 * 60 * 1000)
     // Rodar uma vez ao iniciar também
     verificarSalasInativas()
+
+    // Limpar contadores diários antigos (traduções e io friend) uma vez por dia
+    setInterval(cleanOldTranslationDailyUsage, 24 * 60 * 60 * 1000)
+    cleanOldTranslationDailyUsage()
+    console.log('[Cleanup] Limpeza de contadores diários ativada')
 
     // io: Verificar mensagens proativas a cada 6 horas
     if (GROQ_API_KEY) {

@@ -126,32 +126,46 @@ async function initDatabase() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS maior_idade_confirmado BOOLEAN DEFAULT FALSE
     `)
 
-    // ==================== CAMPOS DE MEMBRO FUNDADOR ====================
-    // Se é membro fundador (cadastrou durante o beta)
+    // ==================== CAMPOS DE PLANOS E LIMITES ====================
+    // Se é membro fundador (cadastrou durante o beta) - LEGADO
     await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT TRUE
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_founder BOOLEAN DEFAULT FALSE
     `)
     // Se é usuário pago (para limites expandidos)
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE
     `)
-    // Limite de io friends que pode criar (fundador: 2, normal: 1)
+    // Tipo de plano: null (grátis), 'pro', 'premium'
     await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_io_friends INTEGER DEFAULT 2
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_type VARCHAR(20)
     `)
-    // Limite de salas que pode criar (fundador: 2, normal: 1)
+    // Data de início do plano pago
     await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_rooms INTEGER DEFAULT 2
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_started_at TIMESTAMP
+    `)
+    // Se é early adopter (id <= 50) - benefícios permanentes
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_early_adopter BOOLEAN DEFAULT FALSE
+    `)
+    // Limite de io friends que pode criar
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_io_friends INTEGER DEFAULT 1
+    `)
+    // Limite de salas que pode criar
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS max_rooms INTEGER DEFAULT 1
     `)
 
-    // Marcar todos os usuários existentes como fundadores
+    // Marcar primeiros 50 usuários como early adopters com benefícios (2 io friends, 2 salas)
     await client.query(`
-      UPDATE users SET is_founder = TRUE, max_io_friends = 2, max_rooms = 2 WHERE is_founder IS NULL
+      UPDATE users SET is_early_adopter = TRUE, is_founder = TRUE, max_io_friends = 2, max_rooms = 2
+      WHERE id <= 50
     `)
 
-    // Garantir que TODOS os fundadores tenham os limites corretos (2 io friends, 2 salas)
+    // Usuários após o 50 têm limites padrão (1 io friend, 1 sala)
     await client.query(`
-      UPDATE users SET max_io_friends = 2, max_rooms = 2 WHERE is_founder = TRUE AND (max_io_friends < 2 OR max_rooms < 2)
+      UPDATE users SET max_io_friends = 1, max_rooms = 1
+      WHERE id > 50 AND is_paid = FALSE AND plan_type IS NULL
     `)
 
     console.log('[DB] Tabela users OK')
@@ -285,6 +299,22 @@ async function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_io_daily_usage_user_date ON io_daily_usage(user_id, data)
     `)
     console.log('[DB] Tabela io_daily_usage OK')
+
+    // ==================== TABELA CONTADOR DIÁRIO DE TRADUÇÕES 1x1 ====================
+    // Conta quantas traduções cada usuário usou por dia no chat 1x1
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS translation_daily_usage (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        data DATE NOT NULL DEFAULT CURRENT_DATE,
+        translation_count INTEGER DEFAULT 0,
+        UNIQUE(user_id, data)
+      )
+    `)
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_translation_daily_usage_user_date ON translation_daily_usage(user_id, data)
+    `)
+    console.log('[DB] Tabela translation_daily_usage OK')
 
     // ==================== TABELA DE MEMÓRIAS DA IO ====================
     // Memória persistente individual por usuário
@@ -557,8 +587,26 @@ async function limparMensagensExpiradas() {
 
 // ==================== FUNÇÕES DE MEMÓRIA DA IO ====================
 
-// Limite de memórias por usuário (versão teste - sem planos pagos)
+// Limite de memórias por usuário (LEGADO - usar getMemoryLimit)
 const MEMORY_LIMIT = 50
+
+// Buscar limite de memórias dinâmico baseado no tipo de usuário
+async function getMemoryLimit(userId) {
+  try {
+    const userResult = await pool.query(
+      'SELECT is_paid, plan_type FROM users WHERE id = $1',
+      [userId]
+    )
+    if (userResult.rows.length === 0) return MEMORY_LIMITS.normal
+
+    const user = userResult.rows[0]
+    const userType = getUserType(userId, user.is_paid, user.plan_type)
+    return MEMORY_LIMITS[userType] || MEMORY_LIMITS.normal
+  } catch (error) {
+    console.error('[Memory] Erro ao buscar limite:', error.message)
+    return MEMORY_LIMITS.normal
+  }
+}
 
 // Buscar memórias do usuário
 async function getIoMemories(userId, limit = 20) {
@@ -580,6 +628,9 @@ async function getIoMemories(userId, limit = 20) {
 // Salvar nova memória
 async function saveIoMemory(userId, fact, category = 'general', importance = 1) {
   try {
+    // Buscar limite dinâmico baseado no tipo de usuário
+    const memoryLimit = await getMemoryLimit(userId)
+
     // Verificar limite de memórias
     const countResult = await pool.query(
       'SELECT COUNT(*) as total FROM io_memories WHERE user_id = $1',
@@ -587,7 +638,7 @@ async function saveIoMemory(userId, fact, category = 'general', importance = 1) 
     )
     const total = parseInt(countResult.rows[0].total)
 
-    if (total >= MEMORY_LIMIT) {
+    if (total >= memoryLimit) {
       // Apagar a memória mais antiga e menos importante
       await pool.query(`
         DELETE FROM io_memories
@@ -1011,11 +1062,37 @@ async function getUserPublicIoFriendById(userId, ioFriendId) {
 
 // ==================== FUNÇÕES CONTADOR DIÁRIO IO FRIEND ====================
 
-// Limites de mensagens por dia
+// Limites de mensagens io friend por dia (baseado no ID do usuário)
+// Primeiros 50 usuários (id <= 50) = early adopters com benefícios
 const IO_DAILY_LIMITS = {
-  founder: 50,   // Membros fundadores (Beta)
-  normal: 20,    // Usuários normais (pós-Beta)
-  paid: 500      // Usuários pagos (futuro)
+  early_adopter: 20,  // Primeiros 50 usuários (id <= 50)
+  normal: 10,         // Usuários normais (id > 50)
+  paid: 50,           // Usuários Pro
+  premium: 200        // Usuários Premium
+}
+
+// Limites de traduções 1x1 por dia
+const TRANSLATION_DAILY_LIMITS = {
+  early_adopter: 50,  // Primeiros 50 usuários (id <= 50)
+  normal: 30,         // Usuários normais (id > 50)
+  paid: 200,          // Usuários Pro
+  premium: 999999     // Usuários Premium (ilimitado)
+}
+
+// Limites de memórias por tipo de usuário
+const MEMORY_LIMITS = {
+  early_adopter: 50,  // Primeiros 50 usuários
+  normal: 30,         // Usuários normais
+  paid: 100,          // Usuários Pro
+  premium: 500        // Usuários Premium
+}
+
+// Determinar tipo de usuário baseado no ID e status de pagamento
+function getUserType(userId, isPaid = false, planType = null) {
+  if (planType === 'premium') return 'premium'
+  if (isPaid || planType === 'pro') return 'paid'
+  if (userId <= 50) return 'early_adopter'
+  return 'normal'
 }
 
 // Buscar contagem de mensagens do usuário hoje
@@ -1051,9 +1128,9 @@ async function incrementIoDailyCount(userId) {
 // Verificar se usuário pode enviar mensagem pra io
 async function canSendIoMessage(userId) {
   try {
-    // Buscar info do usuário (is_founder, is_paid)
+    // Buscar info do usuário
     const userResult = await pool.query(
-      'SELECT is_founder, is_paid FROM users WHERE id = $1',
+      'SELECT is_paid, plan_type FROM users WHERE id = $1',
       [userId]
     )
 
@@ -1063,17 +1140,9 @@ async function canSendIoMessage(userId) {
 
     const user = userResult.rows[0]
 
-    // Determinar limite baseado no tipo de usuário
-    let limit = IO_DAILY_LIMITS.normal // 20 por padrão
-    let userType = 'normal'
-
-    if (user.is_paid) {
-      limit = IO_DAILY_LIMITS.paid // 500
-      userType = 'paid'
-    } else if (user.is_founder) {
-      limit = IO_DAILY_LIMITS.founder // 50
-      userType = 'founder'
-    }
+    // Determinar tipo e limite baseado no ID e plano
+    const userType = getUserType(userId, user.is_paid, user.plan_type)
+    const limit = IO_DAILY_LIMITS[userType]
 
     // Buscar contagem atual
     const currentCount = await getIoDailyCount(userId)
@@ -1114,6 +1183,111 @@ async function cleanOldIoDailyUsage() {
     }
   } catch (error) {
     console.error('[io Daily] Erro ao limpar:', error.message)
+  }
+}
+
+// ==================== FUNÇÕES CONTADOR DIÁRIO DE TRADUÇÕES 1x1 ====================
+
+// Buscar contagem de traduções do usuário hoje
+async function getTranslationDailyCount(userId) {
+  try {
+    const result = await pool.query(`
+      SELECT translation_count FROM translation_daily_usage
+      WHERE user_id = $1 AND data = CURRENT_DATE
+    `, [userId])
+    return result.rows[0]?.translation_count || 0
+  } catch (error) {
+    console.error('[Translation Daily] Erro ao buscar contagem:', error.message)
+    return 0
+  }
+}
+
+// Incrementar contagem de traduções do usuário
+async function incrementTranslationDailyCount(userId) {
+  try {
+    await pool.query(`
+      INSERT INTO translation_daily_usage (user_id, data, translation_count)
+      VALUES ($1, CURRENT_DATE, 1)
+      ON CONFLICT (user_id, data)
+      DO UPDATE SET translation_count = translation_daily_usage.translation_count + 1
+    `, [userId])
+    return true
+  } catch (error) {
+    console.error('[Translation Daily] Erro ao incrementar:', error.message)
+    return false
+  }
+}
+
+// Verificar se usuário pode traduzir mensagem 1x1
+async function canTranslate(userId) {
+  try {
+    // Buscar info do usuário
+    const userResult = await pool.query(
+      'SELECT is_paid, plan_type FROM users WHERE id = $1',
+      [userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return { allowed: false, reason: 'Usuário não encontrado' }
+    }
+
+    const user = userResult.rows[0]
+
+    // Determinar tipo e limite baseado no ID e plano
+    const userType = getUserType(userId, user.is_paid, user.plan_type)
+    const limit = TRANSLATION_DAILY_LIMITS[userType]
+
+    // Premium tem ilimitado
+    if (userType === 'premium') {
+      return {
+        allowed: true,
+        currentCount: 0,
+        limit: 999999,
+        remaining: 999999,
+        userType,
+        unlimited: true
+      }
+    }
+
+    // Buscar contagem atual
+    const currentCount = await getTranslationDailyCount(userId)
+
+    if (currentCount >= limit) {
+      return {
+        allowed: false,
+        reason: 'TRANSLATION_LIMIT',
+        currentCount,
+        limit,
+        userType
+      }
+    }
+
+    return {
+      allowed: true,
+      currentCount,
+      limit,
+      remaining: limit - currentCount,
+      userType
+    }
+  } catch (error) {
+    console.error('[Translation Daily] Erro ao verificar limite:', error.message)
+    // Em caso de erro, permite (fail-open)
+    return { allowed: true, error: error.message }
+  }
+}
+
+// Limpar contagens antigas de traduções
+async function cleanOldTranslationDailyUsage() {
+  try {
+    const result = await pool.query(`
+      DELETE FROM translation_daily_usage
+      WHERE data < CURRENT_DATE - INTERVAL '7 days'
+    `)
+    if (result.rowCount > 0) {
+      console.log(`[Translation Daily] ${result.rowCount} registros antigos removidos`)
+    }
+  } catch (error) {
+    console.error('[Translation Daily] Erro ao limpar:', error.message)
   }
 }
 
@@ -1366,7 +1540,9 @@ module.exports = {
   deleteIoMemory,
   clearIoMemories,
   countIoMemories,
+  getMemoryLimit,
   MEMORY_LIMIT,
+  MEMORY_LIMITS,
   // Funções io friend
   getIoFriend,
   getAllIoFriends,
@@ -1397,5 +1573,13 @@ module.exports = {
   incrementIoDailyCount,
   canSendIoMessage,
   cleanOldIoDailyUsage,
-  IO_DAILY_LIMITS
+  IO_DAILY_LIMITS,
+  // Funções contador diário de traduções 1x1
+  getTranslationDailyCount,
+  incrementTranslationDailyCount,
+  canTranslate,
+  cleanOldTranslationDailyUsage,
+  TRANSLATION_DAILY_LIMITS,
+  // Funções auxiliares de tipo de usuário
+  getUserType
 }
