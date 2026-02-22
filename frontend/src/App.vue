@@ -11891,8 +11891,26 @@ body {
 }
 
 .btn-monitor-link {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
   text-decoration: none;
-  margin-top: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-monitor-link:hover {
+  background: linear-gradient(135deg, #2a2a4e, #1e3a5f);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
 }
 
 .founder-star {
