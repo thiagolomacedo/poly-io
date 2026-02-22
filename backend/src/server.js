@@ -2426,9 +2426,9 @@ app.get('/api/users/limits/me', authMiddleware, async (req, res) => {
     )
     const ioFriendsCount = parseInt(ioFriendsCountResult.rows[0].total)
 
-    // Buscar contagem de salas criadas
+    // Buscar contagem de salas criadas (ativas, não deletadas)
     const roomsCountResult = await pool.query(
-      'SELECT COUNT(*) as total FROM rooms WHERE owner_id = $1',
+      "SELECT COUNT(*) as total FROM rooms WHERE owner_id = $1 AND status != 'deleted'",
       [req.userId]
     )
     const roomsCount = parseInt(roomsCountResult.rows[0].total)
