@@ -4690,6 +4690,36 @@ app.get('/api/admin/ia-events', authMiddleware, async (req, res) => {
   }
 })
 
+// Limpar salas deletadas/inativas de um usuário (admin only)
+app.post('/api/admin/cleanup-rooms', authMiddleware, async (req, res) => {
+  try {
+    if (!isAdmin(req.userId)) {
+      return res.status(403).json({ error: 'Acesso negado' })
+    }
+
+    const { userId } = req.body
+    const targetUserId = userId || req.userId
+
+    // Deletar salas com status 'deleted' ou 'hidden' permanentemente
+    const deleted = await pool.query(`
+      DELETE FROM rooms
+      WHERE owner_id = $1 AND status IN ('deleted', 'hidden')
+      RETURNING id, name, status
+    `, [targetUserId])
+
+    console.log(`[Admin] ${deleted.rowCount} salas limpas do usuário ${targetUserId}`)
+
+    res.json({
+      success: true,
+      deletedCount: deleted.rowCount,
+      deletedRooms: deleted.rows
+    })
+  } catch (error) {
+    console.error('[Admin Cleanup] Erro:', error.message)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Página de monitoramento admin (servida pelo backend)
 app.get('/monitor', (req, res) => {
   res.send(getMonitorHTML())
