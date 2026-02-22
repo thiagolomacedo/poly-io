@@ -12655,29 +12655,19 @@ body {
   background: #00ff55 !important;
   color: #000 !important;
   box-shadow: 0 0 10px #00ff55, 0 0 20px #00ff55, 0 0 30px #00ff55;
-  animation: neon-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes neon-pulse {
-  0%, 100% {
-    box-shadow: 0 0 10px #00ff55, 0 0 20px #00ff55, 0 0 30px #00ff55;
-  }
-  50% {
-    box-shadow: 0 0 15px #00ff55, 0 0 30px #00ff55, 0 0 45px #00ff55, 0 0 60px #00ff55;
-  }
 }
 
 .btn-video:disabled {
-  opacity: 0.4;
+  opacity: 0.7;
   cursor: not-allowed;
-  background: #666 !important;
-  box-shadow: none;
-  animation: none;
+  background: #ff3355 !important;
+  color: #fff !important;
+  box-shadow: 0 0 8px #ff3355, 0 0 15px #ff3355;
 }
 
 .btn-video:not(:disabled):hover {
   background: #00ff88 !important;
-  box-shadow: 0 0 20px #00ff88, 0 0 40px #00ff88, 0 0 60px #00ff88;
+  box-shadow: 0 0 15px #00ff55, 0 0 30px #00ff55, 0 0 40px #00ff55;
 }
 
 /* Botão de gorjeta Ko-fi */
