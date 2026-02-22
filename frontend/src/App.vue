@@ -537,6 +537,49 @@
             </p>
           </div>
 
+          <!-- Seção Seus Limites (só no próprio perfil) -->
+          <div v-if="profileUser?.id === currentUser?.id && userLimits" class="limits-section">
+            <h4 class="limits-title">📊 Seus Limites</h4>
+            <div class="limits-grid">
+              <div class="limit-item">
+                <span class="limit-icon">🌐</span>
+                <span class="limit-label">Traduções</span>
+                <span class="limit-value" :class="{ 'warning': userLimits.limits?.translations?.remaining <= 5 }">
+                  {{ userLimits.limits?.translations?.used || 0 }}/{{ userLimits.limits?.translations?.limit || 0 }}
+                </span>
+              </div>
+              <div class="limit-item">
+                <span class="limit-icon">🤖</span>
+                <span class="limit-label">io Friend</span>
+                <span class="limit-value" :class="{ 'warning': userLimits.limits?.ioMessages?.remaining <= 5 }">
+                  {{ userLimits.limits?.ioMessages?.used || 0 }}/{{ userLimits.limits?.ioMessages?.limit || 0 }}
+                </span>
+              </div>
+              <div class="limit-item">
+                <span class="limit-icon">🧠</span>
+                <span class="limit-label">Memórias</span>
+                <span class="limit-value">
+                  {{ userLimits.limits?.memories?.used || 0 }}/{{ userLimits.limits?.memories?.limit || 0 }}
+                </span>
+              </div>
+              <div class="limit-item">
+                <span class="limit-icon">👤</span>
+                <span class="limit-label">io Friends</span>
+                <span class="limit-value">
+                  {{ userLimits.limits?.ioFriends?.used || 0 }}/{{ userLimits.limits?.ioFriends?.limit || 0 }}
+                </span>
+              </div>
+              <div class="limit-item">
+                <span class="limit-icon">🚪</span>
+                <span class="limit-label">Salas</span>
+                <span class="limit-value">
+                  {{ userLimits.limits?.rooms?.used || 0 }}/{{ userLimits.limits?.rooms?.limit || 0 }}
+                </span>
+              </div>
+            </div>
+            <p class="limits-reset-info">Os limites diários resetam à meia-noite</p>
+          </div>
+
           <!-- Botão Explorar io Friends Públicas -->
           <button
             v-if="profileUser?.id === currentUser?.id"
@@ -1980,6 +2023,28 @@
                 <span class="badge-limit">/{{ ioDailyUsage.limit }}</span>
               </div>
             </div>
+            <!-- Contador de traduções 1x1 (só com idioma diferente) -->
+            <div
+              v-if="selectedConnection?.idioma && selectedConnection.idioma !== currentUser?.idioma && !selectedConnection?.is_io_friend && selectedConnection?.email !== 'io@poly.io'"
+              class="io-daily-counter translation-counter"
+              :class="{
+                'warning': translationDailyUsage.percentage >= 70 && translationDailyUsage.percentage < 90,
+                'danger': translationDailyUsage.percentage >= 90
+              }"
+              :title="`${translationDailyUsage.remaining} traduções restantes hoje`"
+            >
+              <div class="io-counter-badge translation-badge">
+                <div class="badge-progress-bar">
+                  <div
+                    class="badge-progress-fill"
+                    :style="{ width: translationDailyUsage.percentage + '%' }"
+                  ></div>
+                </div>
+                <span class="badge-icon">🌐</span>
+                <span class="badge-count">{{ translationDailyUsage.count }}</span>
+                <span class="badge-limit">/{{ translationDailyUsage.limit }}</span>
+              </div>
+            </div>
             <!-- Dropdown de experimento ao lado do nome -->
             <div v-if="selectedConnection?.is_experimenting" class="experiment-dropdown-wrapper">
               <button
@@ -3049,6 +3114,8 @@ const showIoFriendModal = ref(false)
 const ioFriend = ref(null)              // io friend ativa (para chat)
 const ioFriends = ref([])               // Todas as io friends do usuário (fundadores podem ter múltiplas)
 const ioDailyUsage = ref({ count: 0, limit: 50, percentage: 0, remaining: 50 }) // Uso diário io Friend
+const translationDailyUsage = ref({ count: 0, limit: 50, percentage: 0, remaining: 50 }) // Uso diário traduções 1x1
+const userLimits = ref(null) // Limites gerais do usuário (para seção "Seus Limites")
 const editingIoFriendId = ref(null)     // ID da io friend sendo editada (null = criando nova)
 const savingIoFriend = ref(false)
 const generatingAvatar = ref(false)
@@ -4049,6 +4116,11 @@ async function openProfile(user) {
   editingKofi.value = false
   editingName.value = false
   showProfileModal.value = true
+
+  // Carregar limites se for o próprio perfil
+  if (user.id === currentUser.value?.id) {
+    loadTranslationDailyUsage()
+  }
 }
 
 // Editar nome
@@ -4213,6 +4285,31 @@ async function loadIoDailyUsage() {
     }
   } catch (e) {
     console.error('[io Daily Usage] Erro ao carregar:', e)
+  }
+}
+
+// Carregar uso diário de traduções 1x1
+async function loadTranslationDailyUsage() {
+  try {
+    const res = await fetch(`${API_URL}/users/limits/me`, {
+      headers: authHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      userLimits.value = data
+      // Extrair dados de tradução para o contador
+      if (data.limits?.translations) {
+        const t = data.limits.translations
+        translationDailyUsage.value = {
+          count: t.used,
+          limit: t.limit,
+          percentage: Math.min(Math.round((t.used / t.limit) * 100), 100),
+          remaining: t.remaining
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[Translation Daily Usage] Erro ao carregar:', e)
   }
 }
 
@@ -5870,6 +5967,9 @@ async function initializeApp() {
   // Carregar uso diário de mensagens io Friend
   await loadIoDailyUsage()
 
+  // Carregar limites e uso diário de traduções
+  await loadTranslationDailyUsage()
+
   // Carregar todas as io friends do usuário (fundadores podem ter múltiplas)
   await loadAllIoFriends()
 
@@ -6345,6 +6445,11 @@ async function sendMessage() {
     // Atualizar contador se enviou mensagem para io/io_friend
     if (selectedConnection.value?.email === 'io@poly.io' || selectedConnection.value?.is_io_friend) {
       loadIoDailyUsage()
+    }
+
+    // Atualizar contador de traduções se conversa é com idioma diferente
+    if (selectedConnection.value?.idioma && selectedConnection.value.idioma !== currentUser.value?.idioma) {
+      loadTranslationDailyUsage()
     }
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
@@ -10111,6 +10216,44 @@ body {
   50% { opacity: 0.6; }
 }
 
+/* Contador de traduções 1x1 (verde) */
+.translation-counter .translation-badge {
+  border-color: #10b981;
+}
+
+.translation-counter .badge-progress-fill {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.translation-counter .badge-limit {
+  color: #10b981;
+}
+
+.translation-counter.warning .translation-badge {
+  border-color: #f59e0b;
+}
+
+.translation-counter.warning .badge-progress-fill {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.translation-counter.warning .badge-limit {
+  color: #f59e0b;
+}
+
+.translation-counter.danger .translation-badge {
+  border-color: #ef4444;
+  animation: pulse-danger 1.5s infinite;
+}
+
+.translation-counter.danger .badge-progress-fill {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.translation-counter.danger .badge-limit {
+  color: #ef4444;
+}
+
 .chat-actions {
   display: flex;
   align-items: center;
@@ -11922,6 +12065,67 @@ body {
 @keyframes founder-star-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Seção Seus Limites no perfil */
+.limits-section {
+  width: 100%;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.limits-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #10b981;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.limits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.limit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.limit-icon {
+  font-size: 1rem;
+}
+
+.limit-label {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.limit-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.limit-value.warning {
+  color: #f59e0b;
+}
+
+.limits-reset-info {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  opacity: 0.7;
 }
 
 /* Código de Amigo */
