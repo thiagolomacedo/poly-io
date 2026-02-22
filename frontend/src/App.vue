@@ -330,16 +330,6 @@
             {{ profileUser?.id === 1 ? 'CEO Fundador' : 'Fundador' }}
           </div>
 
-          <!-- Botão Monitor (só para CEO - id 1) -->
-          <a
-            v-if="profileUser?.id === 1 && currentUser?.id === 1"
-            href="https://poly-io-api.onrender.com/monitor"
-            target="_blank"
-            class="btn-monitor"
-          >
-            📊 Monitor
-          </a>
-
           <!-- Código de Conexão -->
           <div v-if="profileUser?.codigo_amigo" class="friend-code-section">
             <p class="friend-code-label">Código de Conexão</p>
@@ -555,6 +545,16 @@
           >
             🔍 Explorar Conexões IA
           </button>
+
+          <!-- Botão Monitor (só para admin - id 1) -->
+          <a
+            v-if="currentUser?.id === 1"
+            href="https://poly-io-api.onrender.com/monitor"
+            target="_blank"
+            class="btn-explore btn-monitor-link"
+          >
+            📊 Monitor Admin
+          </a>
 
           <!-- Botão Adicionar Conexão (só para outros usuários sem conexão) -->
           <button
@@ -11890,24 +11890,9 @@ body {
   margin-bottom: 16px;
 }
 
-.btn-monitor {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
+.btn-monitor-link {
   text-decoration: none;
-  margin-bottom: 16px;
-  transition: all 0.2s;
-}
-
-.btn-monitor:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  margin-top: 8px;
 }
 
 .founder-star {
