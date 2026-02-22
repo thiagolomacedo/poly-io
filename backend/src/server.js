@@ -1664,7 +1664,7 @@ app.get('/api/io/daily-usage', authMiddleware, async (req, res) => {
   try {
     // Buscar info do usuário para determinar o limite
     const userResult = await pool.query(
-      'SELECT is_founder, is_paid FROM users WHERE id = $1',
+      'SELECT is_paid, plan_type FROM users WHERE id = $1',
       [req.userId]
     )
 
@@ -1674,17 +1674,9 @@ app.get('/api/io/daily-usage', authMiddleware, async (req, res) => {
 
     const user = userResult.rows[0]
 
-    // Determinar limite baseado no tipo de usuário
-    let limit = IO_DAILY_LIMITS.normal // 20
-    let userType = 'normal'
-
-    if (user.is_paid) {
-      limit = IO_DAILY_LIMITS.paid // 500
-      userType = 'paid'
-    } else if (user.is_founder) {
-      limit = IO_DAILY_LIMITS.founder // 50
-      userType = 'founder'
-    }
+    // Determinar tipo e limite baseado no ID e plano
+    const userType = getUserType(req.userId, user.is_paid, user.plan_type)
+    const limit = IO_DAILY_LIMITS[userType]
 
     // Buscar contagem atual
     const count = await getIoDailyCount(req.userId)
