@@ -4,6 +4,40 @@
 
 Cada pessoa escreve no seu idioma. A outra pessoa lê no idioma dela. Simples assim.
 
+## ✨ Novidades v4.3 - Monitor Admin & Melhorias (21/02/2026)
+
+### 📊 Monitor de Infraestrutura
+Dashboard completo para monitorar a saude do sistema:
+- **URL**: https://poly-io-api.onrender.com/monitor
+- Usuarios totais, fundadores e online
+- Uso do io Friend (mensagens/dia)
+- Grafico de uso dos ultimos 7 dias
+- Status das IAs (Groq, OpenRouter, HuggingFace)
+- Log de eventos das IAs em tempo real
+- Alertas automaticos quando limites sao atingidos
+- Notificacoes do navegador
+
+### 🤖 Contador io Friend
+- Badge com barra de progresso no chat
+- Mostra X/50 mensagens usadas hoje
+- Cores: verde (ok), amarelo (70%), vermelho (90%)
+
+### ♿ Acessibilidade
+- Controle de tamanho de fonte (14-22px)
+- Botao "Aa" no chat para ajustar
+
+### 🎨 Melhorias Tema Claro
+- Correcoes de contraste e legibilidade
+- Fundos roxos com textos brancos
+- Setas de ordenacao visiveis
+
+### 🔄 Sistema de Fallback IAs
+- Groq como IA principal
+- OpenRouter como backup automatico
+- Log de todas as chamadas para monitoramento
+
+---
+
 ## ✨ Novidades v4.2 - Membros Fundadores
 
 Sistema de benefícios para usuários que entraram durante o beta!
@@ -175,8 +209,11 @@ C:\Poly.io\
 |--------|------------|
 | Frontend | Vue.js 3 + Vite |
 | Backend | Node.js + Express |
+| Banco de Dados | PostgreSQL (Neon) |
 | Tempo Real | Socket.io |
-| Tradução | Azure Translator / MyMemory |
+| IA Chat | Groq (llama) + OpenRouter (fallback) |
+| IA Imagens | HuggingFace (FLUX) |
+| Traducao | Azure Translator / MyMemory |
 | Deploy | Vercel + Render |
 
 ---
@@ -199,14 +236,21 @@ C:\Poly.io\
 
 ## Custos
 
-| Serviço | Custo |
-|---------|-------|
-| Vercel | Grátis |
-| Render | Grátis |
-| Azure Translator | Grátis (2M chars/mês) |
-| MyMemory | Grátis |
+| Serviço | Limite Free | Upgrade |
+|---------|-------------|---------|
+| Vercel (Frontend) | Ilimitado | - |
+| Render (Backend) | 500 usuarios | $7/mes |
+| Neon (Banco) | 10K usuarios | $19/mes |
+| Groq (IA) | 14.4K req/dia | - |
+| OpenRouter (Fallback) | Pay-as-you-go | ~$0.001/msg |
+| Azure Translator | 2M chars/mes | - |
 
-**Total: R$ 0,00** 🎉
+**Total atual: R$ 0,00** 🎉
+
+### Quando fazer upgrade?
+- **500+ usuarios**: Render Starter ($7/mes)
+- **10K+ usuarios**: Neon Launch ($19/mes)
+- **Alto uso IA**: Monitorar via /monitor
 
 ---
 

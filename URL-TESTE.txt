@@ -1,0 +1,103 @@
+============================================
+POLY.IO - INFORMACOES IMPORTANTES
+============================================
+
+SERVIDOR BACKEND:
+https://poly-io-api.onrender.com
+
+TESTE SE ESTA ONLINE:
+https://poly-io-api.onrender.com/api/auth/login
+(Se aparecer {"error":"..."} = servidor online)
+
+
+============================================
+MONITOR ADMIN
+============================================
+
+URL: https://poly-io-api.onrender.com/monitor
+
+Login: Suas credenciais Poly.io (CEO - ID 1)
+
+O QUE MOSTRA:
+- Usuarios totais e fundadores
+- Usuarios online em tempo real
+- Conexoes e salas
+- Uso do io Friend (mensagens/dia)
+- Cache de traducoes (economia)
+- Grafico ultimos 7 dias
+- Status das IAs (Groq/OpenRouter/HuggingFace)
+- Log de eventos das IAs
+- Alertas automaticos
+
+ALERTAS CONFIGURADOS:
+- Groq 70%: Aviso amarelo
+- Groq 90%: Alerta critico
+- 450 usuarios: Considerar upgrade
+- 480 usuarios: Upgrade urgente
+- 50+ online: Muitos simultaneos
+
+ACESSO RAPIDO:
+- Botao "Monitor Admin" no seu perfil
+
+
+============================================
+LIMITES FREE TIER
+============================================
+
+RENDER (Backend):
+- Ate 500 usuarios: FREE
+- 500-5000: Starter $7/mes
+- 5000+: Pro $25/mes
+
+NEON (Banco de dados):
+- Ate 10K usuarios: FREE
+- 10K+: Launch $19/mes
+
+GROQ (IA Principal):
+- 14.400 requests/dia: FREE
+- Fallback: OpenRouter
+
+VERCEL (Frontend):
+- Ilimitado: FREE
+
+
+============================================
+FEATURES IMPLEMENTADAS (21/02/2026)
+============================================
+
+1. CONTADOR IO FRIEND
+   - Badge com barra de progresso
+   - Cores: verde/amarelo/vermelho
+   - Mostra X/50 mensagens usadas
+
+2. ACESSIBILIDADE
+   - Controle de tamanho de fonte (14-22px)
+   - Botao "Aa" no chat
+
+3. TEMA CLARO
+   - Todas as correcoes de cor
+   - Fundos roxos, textos brancos
+
+4. MONITOR ADMIN
+   - Dashboard completo
+   - Graficos de uso
+   - Alertas automaticos
+   - Log das IAs
+   - Notificacoes do navegador
+
+5. FALLBACK IAs
+   - Groq (principal)
+   - OpenRouter (backup)
+   - Log de todas as chamadas
+
+
+============================================
+ARQUIVOS DE PREVIEW
+============================================
+
+C:\Poly.io\PREVIEW-CONTADOR-IO.html
+C:\Poly.io\PREVIEW-BADGE-FUNDADOR.html
+C:\Poly.io\PREVIEW-BADGE-PERFIL.html
+C:\Poly.io\CUSTOS-INFRAESTRUTURA.html
+C:\Poly.io\UPGRADE-INFRAESTRUTURA.html
+
